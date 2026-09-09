@@ -69,14 +69,28 @@ router.get('/draws.xlsx', async (req, res) => {
     headingRow.getCell(6).value = race.scheduledLabel || 'TBC';
     headingRow.getCell(6).font = boldFont;
 
-    writeRow(['Pos', race.isMassStart ? 'Slide' : 'Lane', 'Name', 'Surname', 'Club', 'Age', 'Sex', 'PSA ID'], { font: boldFont });
-
     const laneEntries = Object.entries(race.laneEntries).sort((a, b) => Number(a[0]) - Number(b[0]));
+
+    // Detect K2/C2 — any occupied lane with 2 athletes
+    const isCrewRace = laneEntries.some(([, info]) => {
+      if (!info) return false;
+      const entry = database.entries[info.entryId];
+      return entry && entry.athleteIds.length > 1;
+    });
+
+    if (isCrewRace) {
+      writeRow([
+        'Pos', race.isMassStart ? 'Slide' : 'Lane',
+        'Name (Paddler 1)', 'Surname (Paddler 1)', 'Club (Paddler 1)', 'Age', 'Sex', 'PSA ID (P1)',
+        'Name (Paddler 2)', 'Surname (Paddler 2)', 'Club (Paddler 2)', 'Age', 'Sex', 'PSA ID (P2)',
+      ], { font: boldFont });
+    } else {
+      writeRow(['Pos', race.isMassStart ? 'Slide' : 'Lane', 'Name', 'Surname', 'Club', 'Age', 'Sex', 'PSA ID'], { font: boldFont });
+    }
+
     const rowsToShow = race.isMassStart
-      ? laneEntries.filter(([, info]) => info) // mass-start: only real entries, no fixed slot count
+      ? laneEntries.filter(([, info]) => info)
       : (() => {
-          // Lane races: always show every lane 1..venueLanes, even empty
-          // ones, same as the reference sheet's fixed 9-row blocks.
           const byLane = {};
           laneEntries.forEach(([lane, info]) => { byLane[lane] = info; });
           const all = [];
@@ -86,46 +100,50 @@ router.get('/draws.xlsx', async (req, res) => {
 
     rowsToShow.forEach(([laneOrSlide, info]) => {
       if (!info) {
-        writeRow(['-', Number(laneOrSlide), '-', '-', '-', '-', '-', '-']);
+        if (isCrewRace) {
+          writeRow(['-', Number(laneOrSlide), '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-']);
+        } else {
+          writeRow(['-', Number(laneOrSlide), '-', '-', '-', '-', '-', '-']);
+        }
         return;
       }
+
       const result = race.results[info.entryId];
       const pos = result && result.status === 'OK' ? result.position : '-';
       const entry = database.entries[info.entryId];
-
-      // A K2/K4/C2/C4 boat holds more than one paddler. Write a row for
-      // EACH crew member — previously only names[0]/athleteIds[0] was
-      // used, so the second paddler in a double silently vanished from
-      // this sheet even though the Race Program screen showed both.
-      // Lane repeats on every crew row so it's obvious they're the same
-      // boat; Pos appears once per boat so it can't be misread as two
-      // separate results.
       const athleteIds = entry && entry.athleteIds.length ? entry.athleteIds : [null];
-      athleteIds.forEach((athleteId, crewIndex) => {
+      const ageCategory = info.ageCategory || '';
+      const gender = info.gender || '';
+
+      if (isCrewRace) {
+        const paddlerData = [0, 1].map(i => {
+          const athleteId = athleteIds[i] || null;
+          const athlete = athleteId ? database.athletes[athleteId] : null;
+          const fullName = athlete
+            ? `${athlete.firstName} ${athlete.surname || ''}`.trim()
+            : (info.names[i] || '-');
+          const firstName = fullName ? fullName.split(' ')[0] : '-';
+          const surname = fullName ? fullName.split(' ').slice(1).join(' ') || '-' : '-';
+          const clubCode = athlete && athlete.club ? getClubCode(database, athlete.club) : (i === 0 ? info.clubCode || '-' : '-');
+          const psaId = athlete ? athlete.psaId || '-' : '-';
+          return [firstName, surname, clubCode, ageCategory, gender, psaId];
+        });
+        writeRow([pos, Number(laneOrSlide), ...paddlerData[0], ...paddlerData[1]]);
+      } else {
+        const athleteId = athleteIds[0] || null;
         const athlete = athleteId ? database.athletes[athleteId] : null;
         const fullName = athlete
           ? `${athlete.firstName} ${athlete.surname || ''}`.trim()
-          : (info.names[crewIndex] || '');
+          : (info.names[0] || '');
         const firstName = fullName ? fullName.split(' ')[0] : '';
         const surname = fullName ? fullName.split(' ').slice(1).join(' ') : '';
         const clubCode = athlete && athlete.club ? getClubCode(database, athlete.club) : (info.clubCode || '');
         const psaId = athlete ? athlete.psaId || '-' : '-';
-        const ageCategory = info.ageCategory || '';
-        const gender = info.gender || '';
-        writeRow([
-          crewIndex === 0 ? pos : '',
-          Number(laneOrSlide),
-          firstName,
-          surname,
-          clubCode,
-          ageCategory,
-          gender,
-          psaId,
-        ]);
-      });
+        writeRow([pos, Number(laneOrSlide), firstName, surname, clubCode, ageCategory, gender, psaId]);
+      }
     });
 
-    rowIdx += 1; // blank separator row between race blocks
+    rowIdx += 1;
   });
 
   res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
