@@ -980,9 +980,6 @@ function sortKeyAfter(items, afterIndex) {
 router.post('/breaks', (req, res) => {
   const database = db.load();
   const { meetId, day, label, durationMinutes, afterRaceId } = req.body;
-  console.log('[break] afterRaceId received:', afterRaceId, 'type:', typeof afterRaceId);
-  console.log('[break] race found:', !!database.races[afterRaceId]);
-  console.log('[break] all race ids:', Object.keys(database.races).slice(0,5));
   if (!database.meets[meetId]) return res.status(400).json({ error: 'Meet not found.' });
   const dur = Number(durationMinutes);
   if (!dur || dur <= 0) return res.status(400).json({ error: 'durationMinutes must be a positive number.' });
@@ -990,19 +987,38 @@ router.post('/breaks', (req, res) => {
   const dayNum = day ? Number(day) : 1;
 
   let sortKey;
-  if (afterRaceId && database.races[afterRaceId]) {
-    // Place the break just after this race's number (e.g. after race 4 → sortKey 4.5)
-    const afterRace = database.races[afterRaceId];
-    // Find the next race's number to interpolate between them
-    const eventIds = new Set(Object.values(database.events).filter((e) => e.meetId === meetId).map((e) => e.id));
-    const nextRace = Object.values(database.races)
-      .filter((r) => eventIds.has(r.eventId) && r.status === 'pending' && r.raceNumber > afterRace.raceNumber)
-      .sort((a, b) => a.raceNumber - b.raceNumber)[0];
-    sortKey = nextRace
-      ? (afterRace.raceNumber + nextRace.raceNumber) / 2
-      : afterRace.raceNumber + 0.5;
+  if (afterRaceId && afterRaceId !== '') {
+    // Try direct ID lookup first
+    const afterRace = database.races[String(afterRaceId)];
+    if (afterRace) {
+      const eventIds = new Set(Object.values(database.events).filter((e) => e.meetId === meetId).map((e) => e.id));
+      const nextRace = Object.values(database.races)
+        .filter((r) => eventIds.has(r.eventId) && r.status === 'pending' && r.raceNumber > afterRace.raceNumber)
+        .sort((a, b) => a.raceNumber - b.raceNumber)[0];
+      sortKey = nextRace
+        ? (afterRace.raceNumber + nextRace.raceNumber) / 2
+        : afterRace.raceNumber + 0.5;
+    } else {
+      // Fallback: treat afterRaceId as a raceNumber
+      const eventIds = new Set(Object.values(database.events).filter((e) => e.meetId === meetId).map((e) => e.id));
+      const allRaces = Object.values(database.races)
+        .filter((r) => eventIds.has(r.eventId) && r.status === 'pending')
+        .sort((a, b) => a.raceNumber - b.raceNumber);
+      const num = Number(afterRaceId);
+      const afterRaceByNum = allRaces.find((r) => r.raceNumber === num);
+      if (afterRaceByNum) {
+        const nextRace = allRaces.find((r) => r.raceNumber > afterRaceByNum.raceNumber);
+        sortKey = nextRace
+          ? (afterRaceByNum.raceNumber + nextRace.raceNumber) / 2
+          : afterRaceByNum.raceNumber + 0.5;
+      } else {
+        // Last resort: append after all races
+        const last = allRaces[allRaces.length - 1];
+        sortKey = last ? last.raceNumber + 0.5 : 0.5;
+      }
+    }
   } else {
-    // No race specified — put before all races (sortKey 0)
+    // No race specified — put before everything
     const eventIds = new Set(Object.values(database.events).filter((e) => e.meetId === meetId).map((e) => e.id));
     const firstRace = Object.values(database.races)
       .filter((r) => eventIds.has(r.eventId) && r.status === 'pending')

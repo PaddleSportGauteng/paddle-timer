@@ -138,13 +138,29 @@ router.get('/schedule.pdf', (req, res) => {
       .map((e) => e.id)
   );
 
-  const races = Object.values(database.races)
+  // Combine races and breaks, sorted by day then sortKey (race number for races, float for breaks)
+  const raceItems = Object.values(database.races)
     .filter((r) => eventIds.has(r.eventId))
     .map((r) => ({
-      ...enrichRace(database, { ...r, event: database.events[r.eventId] }),
+      type: 'race',
+      sortKey: r.raceNumber,
       day: r.day || (database.events[r.eventId] && database.events[r.eventId].day) || 1,
-    }))
-    .sort((a, b) => a.day !== b.day ? a.day - b.day : a.raceNumber - b.raceNumber);
+      ...enrichRace(database, { ...r, event: database.events[r.eventId] }),
+    }));
+
+  const breakItems = Object.values(database.breaks)
+    .filter((b) => b.meetId === meetId)
+    .map((b) => ({
+      type: 'break',
+      sortKey: b.sortKey,
+      day: b.day || 1,
+      label: b.label,
+      scheduledLabel: b.scheduledLabel,
+      raceNumber: null,
+    }));
+
+  const races = [...raceItems, ...breakItems]
+    .sort((a, b) => a.day !== b.day ? a.day - b.day : a.sortKey - b.sortKey);
 
   res.setHeader('Content-Type', 'application/pdf');
   res.setHeader('Content-Disposition', 'attachment; filename="schedule-planning.pdf"');
@@ -223,6 +239,26 @@ router.get('/schedule.pdf', (req, res) => {
     }
 
     const y = doc.y;
+
+    // Break row — orange tint, italic label
+    if (race.type === 'break') {
+      doc.rect(left, y - 1, pageWidth, rowH).fill('#FFF3E0');
+      doc.fontSize(9).font('Helvetica-Oblique').fillColor('#8A5A12');
+      doc.text('', cNum, y, { width: wNum });
+      doc.text(`D${race.day}`, cDay, y, { width: wDay });
+      doc.text(`— ${race.label}${race.durationMinutes ? ' ('+race.durationMinutes+' min)' : ''} —`, cEvent, y, { width: wEvent });
+      if (race.scheduledLabel) {
+        doc.font('Helvetica-Bold');
+        doc.text(race.scheduledLabel, cTime, y, { width: wTime, align: 'center' });
+      } else {
+        doc.rect(cTime, y, wTime, rowH - 3).strokeColor('#F3C98B').lineWidth(0.5).stroke();
+      }
+      doc.fillColor('#000');
+      doc.y = y + rowH;
+      rowIndex++;
+      return;
+    }
+
     if (rowIndex % 2 === 0) {
       doc.rect(left, y - 1, pageWidth, rowH).fill('#F7F8FA');
       doc.fillColor('#000');
