@@ -3,186 +3,315 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Race Office — Paddle Timer</title>
+<title>Race Office — GCU Paddle Timer</title>
 <link rel="stylesheet" href="style.css">
+<style>
+  .step-card { background:#fff; border:1px solid var(--line); border-radius:12px; padding:24px; margin-bottom:20px; }
+  .step-card h2 { margin:0 0 6px; font-size:18px; color:var(--navy); }
+  .step-card p { margin:0 0 18px; color:var(--gray); font-size:14px; }
+
+  /* Event name input */
+  .event-name-input { width:100%; padding:11px 14px; font-size:16px; border:1px solid var(--line); border-radius:8px; box-sizing:border-box; margin-bottom:18px; }
+  .event-name-input:focus { outline:none; border-color:var(--orange); }
+
+  /* Discipline cards */
+  .discipline-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:18px; }
+  .disc-card { border:2px solid var(--line); border-radius:10px; padding:16px 12px; cursor:pointer; text-align:center; transition:border-color 0.15s, background 0.15s; }
+  .disc-card.active { border-color:var(--orange); background:#FFF3E0; }
+  .disc-card h3 { margin:0 0 4px; font-size:16px; color:var(--navy); }
+  .disc-card p { margin:0; font-size:12px; color:var(--gray); }
+
+  /* Lane buttons */
+  .lane-label { font-size:13px; color:var(--gray); margin-bottom:8px; }
+  .lane-btns { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:18px; }
+  .lane-btn-num { width:44px; height:44px; border-radius:8px; border:2px solid var(--line); background:#fff; font-size:15px; font-weight:700; cursor:pointer; transition:border-color 0.15s, background 0.15s; }
+  .lane-btn-num.active { border-color:var(--orange); background:#FFF3E0; color:var(--orange); }
+
+  /* Days */
+  .days-row { display:flex; align-items:center; gap:12px; margin-bottom:18px; }
+  .days-row label { font-size:13px; color:var(--gray); white-space:nowrap; }
+  .days-row input { width:70px; padding:8px; border:1px solid var(--line); border-radius:8px; font-size:15px; text-align:center; }
+
+  /* File input styling */
+  .file-row { display:flex; align-items:center; gap:12px; margin-bottom:6px; }
+  .file-row label.file-btn { padding:9px 16px; border:1px solid var(--line); border-radius:8px; background:#fff; cursor:pointer; font-size:14px; white-space:nowrap; }
+  .file-row label.file-btn:hover { background:#f5f5f5; }
+  #fileChosen { font-size:14px; color:var(--gray); }
+  #fileInput { display:none; }
+
+  .create-btn { width:100%; padding:14px; font-size:16px; font-weight:700; background:var(--orange); color:#fff; border:none; border-radius:10px; cursor:pointer; margin-top:6px; }
+  .create-btn:hover { background:#d4420a; }
+  .create-btn:disabled { opacity:0.6; cursor:not-allowed; }
+
+  /* Post-import cards */
+  .post-card { background:#fff; border:1px solid var(--line); border-radius:12px; padding:20px; margin-bottom:16px; display:none; }
+  .post-card h2 { margin:0 0 10px; font-size:16px; color:var(--navy); }
+
+  /* Existing meet banner */
+  .meet-banner { background:#EAF1FA; border:1px solid #B8D0EA; border-radius:10px; padding:14px 18px; margin-bottom:20px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
+  .meet-banner strong { color:var(--navy); font-size:15px; }
+  .meet-banner .meta { font-size:13px; color:var(--gray); }
+</style>
 </head>
 <body>
 <header class="topbar">
-  <a href="/" class="title">🛶 PADDLE TIMER</a>
-  <nav><a href="/admin.html">Race Office</a><a href="/race-sort.html">Race Sort</a><a href="/draw.html">Draw</a><a href="/program.html">Race Program</a><a href="/tower.html">Tower</a><a href="/weigh.html">Weigh</a><a href="/results.html">Results</a><a href="/board.html">Board</a></nav>
+  <a href="/" class="title">🛶 GCU PADDLE TIMER</a>
+  <nav>
+    <a href="/admin.html">Race Office</a>
+    <a href="/race-sort.html">Race Sort</a>
+    <a href="/draw.html">Draw</a>
+    <a href="/program.html">Race Program</a>
+    <a href="/tower.html">Tower</a>
+    <a href="/weigh.html">Weigh</a>
+    <a href="/results.html">Results</a>
+    <a href="/board.html">Board</a>
+  </nav>
   <div id="meetBar"></div>
 </header>
+
 <main>
   <h1>Race Office</h1>
-  <div class="flag" id="meetWarning" style="display:none">No meet selected — pick or create one at the top-right first.</div>
 
-  <div class="card">
-    <h2 style="margin-top:0">1. Import entries</h2>
-    <p style="color:var(--gray);font-size:14px">Upload the closed-entries spreadsheet export (the "System Race data" sheet). Goes into the currently selected meet.</p>
-    <input type="file" id="fileInput" accept=".xlsx,.xlsm,.xls">
-    <div style="margin-top:10px"><button class="primary" onclick="doImport(this)">Import</button></div>
-    <div id="importResult"></div>
+  <!-- Existing meet banner (shown when a meet is already selected) -->
+  <div class="meet-banner" id="existingMeetBanner" style="display:none">
+    <div>
+      <strong id="existingMeetName"></strong>
+      <div class="meta" id="existingMeetMeta"></div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button onclick="document.getElementById('createSection').style.display='block';document.getElementById('existingMeetBanner').style.display='none'">+ Create new event</button>
+      <a href="/race-sort.html"><button class="primary">Go to Race Sort →</button></a>
+    </div>
   </div>
 
-  <div class="card" id="raceDaysCard" style="display:none">
-    <h2 style="margin-top:0">2. Race days</h2>
-    <p style="color:var(--gray);font-size:14px">This meet is set up for <b id="numDaysLabel"></b>. Assign which distance/boat class runs on which day — e.g. K1 1000m/500m/200m on day 1, K2 500m/200m on day 2. Everything defaults to day 1 until you set it here. Race Sort and Race Program can then be filtered to just one day at a time.</p>
+  <!-- Step 1: Create event + import -->
+  <div class="step-card" id="createSection">
+    <h2>Step 1 — Create a new event</h2>
+    <p>Each competition is stored separately so you build up a history over time.</p>
+
+    <input class="event-name-input" type="text" id="eventName" placeholder="Event name, e.g. GCU Sprint Champs 2026">
+
+    <div class="lane-label">Discipline</div>
+    <div class="discipline-grid">
+      <div class="disc-card active" id="disc-sprint" onclick="pickDisc('sprint')">
+        <h3>Sprint</h3>
+        <p>Lane racing · 200m–1000m</p>
+      </div>
+      <div class="disc-card" id="disc-marathon" onclick="pickDisc('marathon')">
+        <h3>Marathon</h3>
+        <p>Mass start · Long distance</p>
+      </div>
+      <div class="disc-card" id="disc-river" onclick="pickDisc('river')">
+        <h3>River</h3>
+        <p>Batch starts · Wild water</p>
+      </div>
+    </div>
+
+    <div class="lane-label">Number of lanes at this venue</div>
+    <div class="lane-btns" id="laneBtns"></div>
+
+    <div class="days-row">
+      <label>How many days is this event?</label>
+      <input type="number" id="numDays" value="1" min="1" max="7">
+    </div>
+
+    <div class="lane-label">Entries spreadsheet (the "System Race data" tab)</div>
+    <div class="file-row">
+      <label class="file-btn" for="fileInput">Choose file</label>
+      <input type="file" id="fileInput" accept=".xlsx,.xlsm,.xls" onchange="onFileChosen(this)">
+      <span id="fileChosen">No file chosen</span>
+    </div>
+
+    <button class="create-btn" id="createBtn" onclick="createAndImport(this)">Create event &amp; import entries →</button>
+    <div id="importResult" style="margin-top:12px"></div>
+  </div>
+
+  <!-- Step 2: Race days (multi-day only, shown after import) -->
+  <div class="post-card" id="raceDaysCard">
+    <h2>2. Race days</h2>
+    <p style="color:var(--gray);font-size:14px">Assign which distance/boat class runs on which day.</p>
     <div id="dayGroupsTable">Loading…</div>
   </div>
 
-  <div class="card" id="clubCodesCard" style="display:none">
-    <h2 style="margin-top:0">3. Club codes</h2>
-    <p style="color:var(--gray);font-size:14px">Code and union are set automatically for every club against the official PSA reference on import — nothing to upload. A club not on that list still gets a guessed code so it's not blank; edit it below if needed, or merge it if it's really just a duplicate spelling of a club already in the list.</p>
+  <!-- Step 3: Club codes (shown after import) -->
+  <div class="post-card" id="clubCodesCard">
+    <h2>3. Club codes</h2>
+    <p style="color:var(--gray);font-size:14px">Auto-set from the PSA reference. Edit below if any look wrong, or merge duplicate spellings.</p>
     <div id="clubCodesTable">Loading…</div>
   </div>
 
-  <div class="card">
-    <h2 style="margin-top:0">Next step</h2>
-    <p style="color:var(--gray);font-size:14px">Once entries (and days, if multi-day) look right, head to <a href="/race-sort.html"><b>Race Sort</b></a> to combine small age groups, then <a href="/program.html"><b>Race Program</b></a> to draw heats/finals and finalise to the Tower.</p>
+  <!-- Next step -->
+  <div class="post-card" id="nextStepCard">
+    <h2>✅ Entries imported — next step</h2>
+    <p style="color:var(--gray);font-size:14px">Head to <a href="/race-sort.html"><b>Race Sort</b></a> to combine small age groups into shared starts, then <a href="/program.html"><b>Race Program</b></a> to draw heats/finals and finalise to the Tower.</p>
+    <a href="/race-sort.html"><button class="primary" style="font-size:15px;padding:12px 24px">Go to Race Sort →</button></a>
   </div>
 </main>
+
 <script src="common.js"></script>
 <script>
-async function doImport(btn){
-  const meetId = getMeetId();
-  if(!meetId){ alert('Pick a meet first (top-right).'); return; }
+// ── Lane picker ───────────────────────────────────────────────────
+let selectedLanes = 9;
+let selectedDisc = 'sprint';
+
+(function buildLaneBtns(){
+  const el = document.getElementById('laneBtns');
+  [2,3,4,5,6,7,8,9].forEach(n => {
+    const b = document.createElement('button');
+    b.className = 'lane-btn-num' + (n === 9 ? ' active' : '');
+    b.textContent = n;
+    b.onclick = () => {
+      selectedLanes = n;
+      document.querySelectorAll('.lane-btn-num').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+    };
+    el.appendChild(b);
+  });
+})();
+
+function pickDisc(d) {
+  selectedDisc = d;
+  ['sprint','marathon','river'].forEach(x =>
+    document.getElementById('disc-'+x).classList.toggle('active', x === d)
+  );
+}
+
+// ── File chosen display ───────────────────────────────────────────
+function onFileChosen(input) {
+  document.getElementById('fileChosen').textContent = input.files[0] ? input.files[0].name : 'No file chosen';
+}
+
+// ── Create meet + import in one step ─────────────────────────────
+async function createAndImport(btn) {
+  const name = document.getElementById('eventName').value.trim();
+  if (!name) { alert('Enter an event name first.'); return; }
   const f = document.getElementById('fileInput').files[0];
-  if(!f){ alert('Choose a file first'); return; }
+  if (!f) { alert('Choose the Canoe SA entries spreadsheet first.'); return; }
+
   const el = document.getElementById('importResult');
   btn.disabled = true;
-  btn.textContent = 'Importing…';
+  btn.textContent = 'Creating event & importing…';
   el.innerHTML = '<p style="color:var(--gray)">Reading spreadsheet…</p>';
+
   try {
+    // 1. Create the meet
+    const numDays = parseInt(document.getElementById('numDays').value) || 1;
+    const mRes = await fetch('/api/meets', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, raceType: selectedDisc, lanes: selectedLanes, numDays })
+    });
+    const meet = await mRes.json();
+    if (!mRes.ok) { el.innerHTML = `<div class="flag">${meet.error}</div>`; return; }
+    setMeetId(meet.id);
+
+    // 2. Import entries into the new meet
     const fd = new FormData();
     fd.append('file', f);
-    fd.append('meetId', meetId);
-    const res = await fetch('/api/entries/import', { method:'POST', body: fd });
-    const data = await res.json();
-    if(!res.ok){ el.innerHTML = `<div class="flag">${data.error}</div>`; return; }
+    fd.append('meetId', meet.id);
+    const iRes = await fetch('/api/entries/import', { method: 'POST', body: fd });
+    const data = await iRes.json();
+    if (!iRes.ok) { el.innerHTML = `<div class="flag">${data.error}</div>`; return; }
+
     let html = `<div class="flag" style="background:#E4F5EC;border-color:#9ED8B8;color:#1E8E5A">
-      Imported: ${data.entriesCreated} entries, ${data.athletesCreated} new athletes, ${data.eventsCreated} new events (of ${data.rowsRead} rows read).
-      ${data.duplicatesSkipped ? `${data.duplicatesSkipped} row(s) matched an athlete already entered in that event and were skipped, not duplicated.` : ''}
+      ✅ Created <b>${name}</b> — imported ${data.entriesCreated} entries, ${data.athletesCreated} athletes, ${data.eventsCreated} events.
+      ${data.duplicatesSkipped ? `${data.duplicatesSkipped} duplicate rows skipped.` : ''}
     </div>`;
-    if(data.flags.length){
-      html += `<h3>Needs a look (${data.flags.length})</h3>`;
+    if (data.flags && data.flags.length) {
+      html += `<h3 style="margin-top:12px">Needs a look (${data.flags.length})</h3>`;
       data.flags.forEach(f => html += `<div class="flag">${f}</div>`);
     }
     el.innerHTML = html;
-    loadDayGroups();
+
+    // Show post-import cards
+    document.getElementById('nextStepCard').style.display = 'block';
+    loadDayGroups(meet.id, numDays);
     loadClubCodes();
+
   } catch (err) {
-    console.error(err);
-    el.innerHTML = `<div class="flag">Import failed: ${err.message}. Check the black server window for details, or try again.</div>`;
+    el.innerHTML = `<div class="flag">Failed: ${err.message}</div>`;
   } finally {
     btn.disabled = false;
-    btn.textContent = 'Import';
+    btn.textContent = 'Create event & import entries →';
   }
 }
 
-let currentMeetNumDays = 1;
-
-async function loadDayGroups(){
-  const meetId = getMeetId();
-  if(!meetId) return;
-  const meets = await (await fetch('/api/meets')).json();
-  const meet = meets.find(m => m.id === meetId);
-  currentMeetNumDays = (meet && meet.numDays) || 1;
-
+// ── Day groups ────────────────────────────────────────────────────
+async function loadDayGroups(meetId, numDays) {
   const card = document.getElementById('raceDaysCard');
-  if(currentMeetNumDays <= 1){ card.style.display = 'none'; return; }
+  if (numDays <= 1) { card.style.display = 'none'; return; }
   card.style.display = 'block';
-  document.getElementById('numDaysLabel').textContent = `${currentMeetNumDays} days`;
-
   const el = document.getElementById('dayGroupsTable');
   try {
     const groups = await (await fetch(`/api/programme/day-groups?meetId=${encodeURIComponent(meetId)}`)).json();
-    if(groups.length === 0){ el.innerHTML = '<p style="color:var(--gray)">Import entries first.</p>'; return; }
-    const dayOptions = Array.from({length: currentMeetNumDays}, (_, i) => i+1);
-    const rows = groups.map(g => `
+    if (!groups.length) { el.innerHTML = '<p style="color:var(--gray)">No events yet.</p>'; return; }
+    const dayOptions = Array.from({length: numDays}, (_, i) => i+1);
+    el.innerHTML = `<table>${groups.map(g => `
       <tr>
-        <td>${g.distance} ${g.boatClass}${g.isMassStart?' (mass start)':''}</td>
-        <td class="mono">${g.entryCount}</td>
-        <td>
-          <select onchange="assignDay('${g.distance}','${g.boatClass}', this.value)">
-            ${dayOptions.map(d => `<option value="${d}" ${g.days.includes(d) && g.days.length===1 ? 'selected':''}>Day ${d}</option>`).join('')}
-          </select>
-          ${g.days.length>1 ? '<small style="color:var(--gray)">mixed — pick to unify</small>' : ''}
-        </td>
-      </tr>`).join('');
-    el.innerHTML = `<table><tr><th>Distance / class</th><th>Entries</th><th>Day</th></tr>${rows}</table>`;
-  } catch (err) {
-    console.error(err);
-    el.innerHTML = `<div class="flag">Couldn't load day groups: ${err.message}</div>`;
-  }
+        <td>${g.distance} ${g.boatClass}</td>
+        <td>${g.entryCount} entries</td>
+        <td><select onchange="assignDay('${g.distance}','${g.boatClass}',this.value,'${meetId}')">
+          ${dayOptions.map(d => `<option value="${d}" ${g.days.includes(d)&&g.days.length===1?'selected':''}>Day ${d}</option>`).join('')}
+        </select></td>
+      </tr>`).join('')}</table>`;
+  } catch (err) { el.innerHTML = `<div class="flag">${err.message}</div>`; }
 }
 
-async function assignDay(distance, boatClass, day){
-  const meetId = getMeetId();
-  const res = await fetch('/api/programme/assign-day', {
+async function assignDay(distance, boatClass, day, meetId) {
+  await fetch('/api/programme/assign-day', {
     method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({meetId, distance, boatClass, day: Number(day)})
   });
-  const data = await res.json();
-  if(!res.ok){ alert(data.error); return; }
-  loadDayGroups();
 }
 
-async function loadClubCodes(){
+// ── Club codes ────────────────────────────────────────────────────
+async function loadClubCodes() {
   const card = document.getElementById('clubCodesCard');
   const el = document.getElementById('clubCodesTable');
   try {
     const data = await (await fetch('/api/entries/club-codes')).json();
     const clubs = Object.keys(data).sort();
-    if(clubs.length === 0){ card.style.display = 'none'; return; }
+    if (!clubs.length) { card.style.display = 'none'; return; }
     card.style.display = 'block';
-    const rows = clubs.map(name => `
-      <tr>
+    el.innerHTML = `<table><tr><th>Club</th><th>Code</th><th>Union</th></tr>
+      ${clubs.map(name => `<tr>
         <td>${name}</td>
-        <td><input type="text" value="${data[name].code}" maxlength="6" style="width:80px;text-transform:uppercase" onchange="editClubCode('${name.replace(/'/g,"\\'")}', this.value)"></td>
-        <td style="color:var(--gray);font-size:13px">${data[name].union || '—'}</td>
-        <td>
-          <select id="mergeTarget-${clubs.indexOf(name)}" style="max-width:200px">
-            <option value="">— pick a club —</option>
-            ${clubs.filter(n => n !== name).map(n => `<option value="${n}">${n}</option>`).join('')}
-          </select>
-          <button style="font-size:12px" onclick="mergeClub('${name.replace(/'/g,"\\'")}', ${clubs.indexOf(name)})">Merge into this →</button>
-        </td>
-      </tr>`).join('');
-    el.innerHTML = `<table><tr><th>Club</th><th>Code</th><th>Union</th><th>Duplicate spelling? Merge it</th></tr>${rows}</table>`;
-  } catch (err) {
-    console.error(err);
-    card.style.display = 'none';
-  }
+        <td><input type="text" value="${data[name].code}" maxlength="6" style="width:70px;text-transform:uppercase" onchange="editClubCode('${name.replace(/'/g,"\\'")}',this.value)"></td>
+        <td style="color:var(--gray);font-size:13px">${data[name].union||'—'}</td>
+      </tr>`).join('')}
+    </table>`;
+  } catch (err) { card.style.display = 'none'; }
 }
 
-async function editClubCode(clubName, code){
-  const res = await fetch('/api/entries/club-codes', {
-    method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({clubName, code})
+async function editClubCode(clubName, code) {
+  await fetch('/api/entries/club-codes', {
+    method:'PATCH', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({clubName, code})
   });
-  const data = await res.json();
-  if(!res.ok){ alert(data.error); return; }
-  loadClubCodes();
 }
 
-async function mergeClub(fromName, idx){
-  const toName = document.getElementById(`mergeTarget-${idx}`).value;
-  if(!toName){ alert('Pick which club this is actually the same as.'); return; }
-  const ok = await customConfirm(`Merge "${fromName}" into "${toName}"? Every athlete currently listed under "${fromName}" will move to "${toName}", and "${fromName}" will disappear from this list. This can't be undone.`);
-  if(!ok) return;
-  const res = await fetch('/api/entries/merge-clubs', {
-    method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({fromName, toName})
-  });
-  const data = await res.json();
-  if(!res.ok){ alert(data.error); return; }
-  alert(`Merged ${data.merged} athlete(s) into "${toName}" (code: ${data.code}).`);
-  loadClubCodes();
-}
-
-async function init(){
+// ── Init ──────────────────────────────────────────────────────────
+async function init() {
   await initMeetBar('meetBar');
-  if(!getMeetId()){ document.getElementById('meetWarning').style.display = 'block'; return; }
-  await loadDayGroups();
-  await loadClubCodes();
+  const meetId = getMeetId();
+  if (meetId) {
+    // A meet already exists — show the banner instead of the create form
+    try {
+      const meets = await (await fetch('/api/meets')).json();
+      const meet = meets.find(m => m.id === meetId);
+      if (meet) {
+        document.getElementById('existingMeetName').textContent = meet.name;
+        document.getElementById('existingMeetMeta').textContent =
+          `${meet.raceType||'Sprint'} · ${meet.lanes||9} lanes · created ${new Date(meet.createdAt).toLocaleDateString()}`;
+        document.getElementById('existingMeetBanner').style.display = 'flex';
+        document.getElementById('createSection').style.display = 'none';
+        loadClubCodes();
+        return;
+      }
+    } catch(e) {}
+  }
+  // No meet yet — show create form
+  document.getElementById('createSection').style.display = 'block';
 }
 init();
 </script>
