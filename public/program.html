@@ -362,13 +362,18 @@ async function loadRaceList(keepOpen){
           return sa - sb;
         });
         let currentDay = null;
-        sorted.forEach(r => {
+        sorted.forEach((r, i) => {
           const rDay = r.day || 1;
+          const nextDay = sorted[i+1] ? (sorted[i+1].day || 1) : null;
           if(rDay !== currentDay){
             currentDay = rDay;
             html += `<div style="background:var(--navy);color:#fff;font-weight:700;font-size:14px;padding:8px 14px;border-radius:6px;margin:12px 0 6px">DAY ${currentDay}</div>`;
           }
           html += raceBlockHtml(r);
+          // End of day marker when day changes or at the very end
+          if(nextDay !== rDay){
+            html += `<div style="border:2px dashed var(--line);border-radius:6px;padding:8px 14px;text-align:center;font-size:13px;font-weight:700;color:var(--gray);margin:6px 0 12px;letter-spacing:0.05em">— END OF DAY ${rDay} —</div>`;
+          }
         });
       } else {
         // Single day — already sorted by schedule order from server

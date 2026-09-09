@@ -224,7 +224,7 @@ router.get('/schedule.pdf', (req, res) => {
   let currentDay = null;
   let rowIndex = 0;
 
-  races.forEach((race) => {
+  races.forEach((race, idx) => {
     // Day separator
     if (race.day !== currentDay) {
       currentDay = race.day;
@@ -285,6 +285,20 @@ router.get('/schedule.pdf', (req, res) => {
     doc.fillColor('#000');
     doc.y = y + rowH;
     rowIndex++;
+
+    // End of day marker when the next item is a different day (or last item)
+    const nextRace = races[idx + 1];
+    if (!nextRace || (nextRace.day || 1) !== (race.day || 1)) {
+      if (doc.y > doc.page.height - doc.page.margins.bottom - rowH * 2) {
+        doc.addPage();
+      }
+      const ey = doc.y + 2;
+      doc.fontSize(8).font('Helvetica-Bold').fillColor('#aaa');
+      doc.text(`— END OF DAY ${race.day || 1} —`, left, ey, { width: pageWidth, align: 'center' });
+      doc.moveTo(left, doc.y + 2).lineTo(right, doc.y + 2).strokeColor('#ccc').lineWidth(0.5).stroke();
+      doc.y += 10;
+      doc.fillColor('#000');
+    }
   });
 
   doc.end();
