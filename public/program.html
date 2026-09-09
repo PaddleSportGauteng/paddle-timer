@@ -275,7 +275,20 @@ async function finalise(){
   loadRaceList();
 }
 
-async function loadRaceList(){
+async function loadRaceList(keepOpen){
+  // keepOpen: Set of raceIds that should stay expanded after re-render.
+  // If not passed, snapshot which blocks are currently open so a silent
+  // refresh (e.g. auto-poll) doesn't collapse anything the user opened.
+  if(!keepOpen){
+    keepOpen = new Set();
+    document.querySelectorAll('.race-lanes').forEach(el => {
+      if(el.style.display !== 'none'){
+        const id = el.id.replace('lanes-','');
+        keepOpen.add(id);
+      }
+    });
+  }
+
   const meetId = getMeetId();
   const el = document.getElementById('raceList');
   const mergeBarEl = document.getElementById('mergeBar');
@@ -320,6 +333,13 @@ async function loadRaceList(){
 
     if(races.length===0){ el.innerHTML = '<p style="color:var(--gray)">No races generated yet.</p>'; } else {
       el.innerHTML = races.map(r => raceBlockHtml(r)).join('');
+      // Restore any blocks that were open before the re-render
+      keepOpen.forEach(raceId => {
+        const lanesEl = document.getElementById(`lanes-${raceId}`);
+        const iconEl = document.getElementById(`toggle-${raceId}`);
+        if(lanesEl){ lanesEl.style.display = 'block'; }
+        if(iconEl){ iconEl.textContent = '▼'; }
+      });
     }
     const afterSel = document.getElementById('newBreakAfter');
     afterSel.innerHTML = '<option value="0">— start of the day —</option>' + races.map((r,i) => {
@@ -431,7 +451,7 @@ async function renumberSlide(raceId, oldSlide){
   });
   const data = await res.json();
   if(!res.ok){ alert(data.error); return; }
-  loadRaceList();
+  loadRaceList(new Set([raceId]));
 }
 
 async function editLaps(raceId, totalLaps){
