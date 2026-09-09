@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>GCU Paddle Timer</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="title">🛶 GCU PADDLE TIMER</div>
+  <div id="meetBar"></div>
+</header>
+<main>
+  <h1>What's this device for?</h1>
+  <p style="color:var(--gray)">Pick the right event at the top-right, then choose a role for this device. Every device on the same wifi opens this same address.</p>
+  <div class="roles-grid">
+    <a class="role-card" href="/admin.html">
+      <div class="emoji">🗂️</div>
+      <h3>Race Office</h3>
+      <p>Create event, upload Canoe SA entries, scratch paddlers.</p>
+    </a>
+    <a class="role-card" href="/race-sort.html">
+      <div class="emoji">🔀</div>
+      <h3>Race Sort</h3>
+      <p>Combine age groups into shared starts — do this before Draw.</p>
+    </a>
+    <a class="role-card" href="/draw.html">
+      <div class="emoji">🎯</div>
+      <h3>Draw</h3>
+      <p>Generate heats/finals, assign lane draws per event.</p>
+    </a>
+    <a class="role-card" href="/program.html">
+      <div class="emoji">📋</div>
+      <h3>Race Program</h3>
+      <p>Set start times, sequence the day, finalise to the Tower.</p>
+    </a>
+    <a class="role-card" href="/tower.html">
+      <div class="emoji">⏱️</div>
+      <h3>Tower</h3>
+      <p>Start the clock, tap lanes as boats cross the finish line.</p>
+    </a>
+    <a class="role-card" href="/weigh.html">
+      <div class="emoji">⚖️</div>
+      <h3>Weigh Station</h3>
+      <p>Log boat weight after a race, auto-DQ if underweight.</p>
+    </a>
+    <a class="role-card" href="/results.html">
+      <div class="emoji">🏆</div>
+      <h3>Results</h3>
+      <p>Standings per event with PSA medal-minimum flags.</p>
+    </a>
+    <a class="role-card" href="/board.html">
+      <div class="emoji">📣</div>
+      <h3>Live Board</h3>
+      <p>For athletes and spectators — heats, lanes, results, live.</p>
+    </a>
+  </div>
+</main>
+<script src="common.js"></script>
+<script>initMeetBar('meetBar');</script>
+</body>
+</html>

@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Draw — Paddle Timer</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  .events-table td, .events-table th{font-size:13px}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <a href="/" class="title">🛶 PADDLE TIMER</a>
+  <nav><a href="/admin.html">Race Office</a><a href="/race-sort.html">Race Sort</a><a href="/draw.html">Draw</a><a href="/program.html">Race Program</a><a href="/tower.html">Tower</a><a href="/weigh.html">Weigh</a><a href="/results.html">Results</a><a href="/board.html">Board</a></nav>
+  <div id="meetBar"></div>
+</header>
+<main>
+  <h1>Draw</h1>
+  <div class="flag" id="meetWarning" style="display:none">No meet selected — pick or create one at the top-right first.</div>
+  <div id="dayBar" style="margin-bottom:12px"></div>
+  <div id="venueInfo" style="margin-bottom:14px"></div>
+
+  <div class="card" style="background:#EAF1FA;border-color:#B8D0EA">
+    <p style="margin:0;color:#1a3a5c">Need to combine age groups first? <a href="/race-sort.html"><b>Go to Race Sort →</b></a> Do that before drawing below, so combined groups show as one row here instead of separate undersized categories.</p>
+  </div>
+
+  <div class="card">
+    <h2 style="margin-top:0">Draw events</h2>
+    <p style="color:var(--gray);font-size:14px">Combined groups (from Race Sort) show as one row here. Below 3 boats with no combine partner? Use "Race anyway" to override ICF's minimum — it's flagged so nobody mistakes it for an oversight. Once a draw looks right, click <b>Confirm</b>; <b>Change</b> undoes the draw and puts it back here to redo.</p>
+    <div id="eventsTable">Loading…</div>
+  </div>
+
+  <div class="card">
+    <p style="margin:0">Done drawing? <a href="/program.html"><b>Continue to Race Program →</b></a> to set start times, sequence the day, and finalise to the Tower.</p>
+  </div>
+</main>
+<script src="common.js"></script>
+<script>
+let allEvents = [];
+let selectedDay = null;
+
+async function loadEvents(){
+  const meetId = getMeetId();
+  const el = document.getElementById('eventsTable');
+  if(!meetId){ el.innerHTML = ''; return; }
+  try {
+    const dayQS = selectedDay ? `&day=${selectedDay}` : '';
+    const res = await fetch(`/api/programme/events?meetId=${encodeURIComponent(meetId)}${dayQS}`);
+    if(!res.ok) throw new Error(`Server returned ${res.status}`);
+    const events = await res.json();
+    allEvents = events;
+    if(events.length===0){ el.innerHTML = '<p style="color:var(--gray)">No events yet — import entries in Race Office.</p>'; return; }
+    const rows = events.map(ev => {
+      let fmtLabel, fmtClass;
+      if(!ev.format.runnable){ fmtLabel = ev.format.reason; fmtClass='bad'; }
+      else { fmtLabel = ev.format.rounds.join(' → '); fmtClass = ev.format.rounds.length>1 ? 'warn':'ok'; }
+
+      let action;
+      if(ev.hasRaces){
+        action = (ev.drawConfirmed
+          ? `<span class="pill ok">Confirmed</span> <button style="font-size:12px;padding:5px 8px" onclick="changeEvent('${ev.id}')">Change</button>`
+          : `<button class="green" style="font-size:12px" onclick="confirmDraw('${ev.id}')">Confirm</button> <button style="font-size:12px;padding:5px 8px" onclick="changeEvent('${ev.id}')">Change</button>`)
+          + ` <button style="font-size:12px;padding:5px 8px" onclick="toggleDrawView('${ev.id}')">View draw ▾</button>`;
+      } else if(ev.isMassStart){
+        action = massStartActionHtml(ev);
+      } else if(ev.format.runnable){
+        action = `<button onclick="generate('${ev.id}')">Generate</button>`;
+      } else {
+        action = `<span class="pill bad">Below min 3</span> <button style="font-size:12px" onclick="forceFinal('${ev.id}')">Race anyway</button> <small style="color:var(--gray)">or go to <a href="/race-sort.html">Race Sort</a> to combine it</small>`;
+      }
+
+      const displayLabel = ev.isCombined ? `<b>${ev.combinedLabel}</b> <small style="color:var(--gray)">(combined)</small>` : ev.label;
+      return `<tr><td>${displayLabel}${ev.isMassStart?' <small style="color:var(--gray)">(mass start)</small>':''}</td><td>${ev.entryCount}</td><td><span class="pill ${fmtClass}">${fmtLabel}</span></td><td>${action}</td></tr>
+        <tr id="drawView-${ev.id}" style="display:none"><td colspan="4"><div id="drawViewInner-${ev.id}" style="padding:8px 0"></div></td></tr>`;
+    }).join('');
+    el.innerHTML = `<table class="events-table"><tr><th>Event</th><th>Entries</th><th>Format</th><th></th></tr>${rows}</table>`;
+  } catch (err) {
+    el.innerHTML = `<div class="flag">Couldn't load events: ${err.message}</div>`;
+  }
+}
+
+function massStartActionHtml(ev){
+  if(ev.hasRaces) return `<span class="pill ok">Drawn</span>`;
+  if(!ev.format.runnable) return `<span class="pill bad">Below min 3</span> <small style="color:var(--gray)">combine it in <a href="/race-sort.html">Race Sort</a></small>`;
+  if(!ev.bibsAssigned){
+    return `<div style="display:flex;gap:6px;align-items:center">
+      <input type="number" id="bibStart-${ev.id}" placeholder="Start slide #" style="width:90px;padding:6px">
+      <button onclick="assignBibs('${ev.id}')">Assign slide #s</button>
+    </div>`;
+  }
+  return `<div style="display:flex;gap:6px;align-items:center">
+    <input type="number" id="laps-${ev.id}" placeholder="Laps" style="width:70px;padding:6px">
+    <button onclick="createMassRace('${ev.id}')">Create race</button>
+  </div>`;
+}
+
+async function assignBibs(eventId){
+  const startBib = document.getElementById(`bibStart-${eventId}`).value;
+  if(!startBib){ alert('Enter a starting slide number.'); return; }
+  const res = await fetch(`/api/programme/events/${eventId}/assign-bibs`, {
+    method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({startBib: Number(startBib)})
+  });
+  const data = await res.json();
+  if(!res.ok){ alert(data.error); return; }
+  alert(`Assigned slides ${data.range[0]}–${data.range[1]}.`);
+  loadEvents();
+}
+
+async function createMassRace(eventId){
+  const laps = document.getElementById(`laps-${eventId}`).value;
+  if(!laps){ alert('Enter the number of laps.'); return; }
+  const res = await fetch(`/api/programme/events/${eventId}/generate-mass-race`, {
+    method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({totalLaps: Number(laps)})
+  });
+  const data = await res.json();
+  if(!res.ok){ alert(data.error); return; }
+  await loadEvents();
+}
+
+async function generate(eventId){
+  const res = await fetch(`/api/programme/events/${eventId}/generate`, { method:'POST' });
+  const data = await res.json();
+  if(!res.ok){ alert(data.error); return; }
+  await loadEvents();
+}
+
+async function forceFinal(eventId){
+  const ok = await customConfirm('This event has fewer than 3 boats. Race it anyway? It\'ll be flagged as manually overridden so it\'s not mistaken for an oversight.');
+  if(!ok) return;
+  const res = await fetch(`/api/programme/events/${eventId}/force-final`, { method:'POST' });
+  const data = await res.json();
+  if(!res.ok){ alert(data.error); return; }
+  await loadEvents();
+}
+
+async function confirmDraw(eventId){
+  const res = await fetch(`/api/programme/events/${eventId}/confirm-draw`, { method:'POST' });
+  const data = await res.json();
+  if(!res.ok){ alert(data.error); return; }
+  await loadEvents();
+}
+
+async function toggleDrawView(eventId){
+  const row = document.getElementById(`drawView-${eventId}`);
+  const inner = document.getElementById(`drawViewInner-${eventId}`);
+  const isOpen = row.style.display !== 'none';
+  if(isOpen){ row.style.display = 'none'; return; }
+  row.style.display = 'table-row';
+  inner.innerHTML = 'Loading…';
+  try {
+    const data = await (await fetch(`/api/programme/events/${eventId}/races`)).json();
+    const races = data.races;
+    if(races.length === 0){ inner.innerHTML = '<span style="color:var(--gray)">No races.</span>'; return; }
+    inner.innerHTML = races.map(r => {
+      const lanes = Object.entries(r.laneEntries).sort((a,b) => Number(a[0])-Number(b[0]));
+      const rows = lanes.map(([lane, info]) => `
+        <div style="display:flex;gap:10px;padding:3px 0;font-size:13px;border-bottom:1px dashed var(--line)">
+          <span style="width:70px;color:var(--gray)">${r.isMassStart?'Slide':'Lane'} ${lane}</span>
+          <span>${info ? info.names.join(' / ') + (info.club ? ` <small style="color:var(--gray)">— ${info.club}</small>` : '') : '<span style="color:var(--gray)">— empty —</span>'}</span>
+        </div>`).join('');
+      const phaseLabel = { heat: `Heat ${r.heatNumber}`, semi: `Semi ${r.heatNumber}`, final: 'Final A', finalB: 'Final B', finalC: 'Final C' }[r.phase] || r.phase;
+      return `<div style="margin-bottom:10px;padding:8px;background:var(--paper);border-radius:6px">
+        <div style="font-weight:700;font-size:13px;margin-bottom:4px">R${r.raceNumber} — ${phaseLabel}${r.placeholder ? ' <span class="pill warn">TBC — pending qualifiers</span>' : ''}${r.scheduledLabel ? ` — ${r.scheduledLabel}` : ''}</div>
+        ${rows}
+      </div>`;
+    }).join('');
+  } catch (err) {
+    inner.innerHTML = `<div class="flag">Couldn't load: ${err.message}</div>`;
+  }
+}
+
+async function changeEvent(eventId){
+  // "Change" = delete whatever race(s) this event is part of, so it goes
+  // back to undrawn (and un-combines, if it was a combined group) ready
+  // to redo above.
+  const races = await (await fetch(`/api/programme/events/${eventId}/races`)).json();
+  const pending = races.races.filter(r => r.status === 'pending');
+  if(pending.length === 0){ alert('This has already started or finished — can\'t change it from here.'); return; }
+  const ok = await customConfirm('Undo this draw? It goes back to undrawn/uncombined so you can redo it.');
+  if(!ok) return;
+  for(const r of pending){
+    await fetch(`/api/races/${r.id}`, { method:'DELETE' });
+  }
+  await loadEvents();
+}
+
+async function loadVenueInfo(){
+  const meetId = getMeetId();
+  const el = document.getElementById('venueInfo');
+  try {
+    const meets = await (await fetch('/api/meets')).json();
+    const meet = meets.find(m => m.id === meetId);
+    if(!meet){ el.innerHTML = ''; return; }
+    const anyRaces = allEvents.some(ev => ev.hasRaces);
+    const std = meet.lanes === 9;
+    el.innerHTML = `<div class="flag" style="background:${std?'#EAF1FA':'#FFF3E0'};border-color:${std?'#B8D0EA':'#F3C98B'};color:${std?'#1a3a5c':'#8A5A12'}">
+      <b>${meet.name}</b> — ${meet.lanes} lanes.
+      ${std
+        ? ' Standard ICF course — automatic heat→semi→final progression applies in full.'
+        : ' Non-standard course — heats draw correctly, but ICF Appendix 1 only publishes exact semi/final quotas for 9 lanes, so advance semis/finals manually on the Race Program page.'}
+      ${anyRaces ? '' : ` <button style="margin-left:8px;font-size:12px;padding:4px 10px" onclick="editLanes('${meet.id}', ${meet.lanes})">Change lane count</button>`}
+    </div>`;
+  } catch (err) {
+    el.innerHTML = '';
+  }
+}
+
+async function editLanes(meetId, currentLanes){
+  const val = await laneCountDialog(currentLanes);
+  if(val === null) return;
+  const res = await fetch(`/api/meets/${meetId}/lanes`, { method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({lanes: val}) });
+  const data = await res.json();
+  if(!res.ok){ alert(data.error); return; }
+  loadVenueInfo();
+}
+
+async function init(){
+  await initMeetBar('meetBar');
+  if(!getMeetId()){ document.getElementById('meetWarning').style.display = 'block'; return; }
+  selectedDay = await initDayBar('dayBar');
+  await loadEvents();
+  await loadVenueInfo();
+}
+init();
+</script>
+</body>
+</html>

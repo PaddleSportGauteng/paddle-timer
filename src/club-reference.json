@@ -1,0 +1,402 @@
+[
+  {
+    "club": "DIHLABENG",
+    "code": "DIH",
+    "union": "CDCU"
+  },
+  {
+    "club": "Upington Canoe Club",
+    "code": "UPI",
+    "union": "CDCU"
+  },
+  {
+    "club": "Blue Water Canoe Club",
+    "code": "BLU",
+    "union": "ECCU"
+  },
+  {
+    "club": "Border Canoe Club",
+    "code": "BOR",
+    "union": "ECCU"
+  },
+  {
+    "club": "Eastern Cape Virtual Club",
+    "code": "ECVIRTUAL",
+    "union": "ECCU"
+  },
+  {
+    "club": "Fish River CC",
+    "code": "FIS",
+    "union": "ECCU"
+  },
+  {
+    "club": "Knysna Canoe Club",
+    "code": "KNY",
+    "union": "ECCU"
+  },
+  {
+    "club": "Kowie Paddling Club",
+    "code": "KOW",
+    "union": "ECCU"
+  },
+  {
+    "club": "Outeniqua Canoe Club",
+    "code": "OUT",
+    "union": "ECCU"
+  },
+  {
+    "club": "Plettenberg Bay CC",
+    "code": "PLE",
+    "union": "ECCU"
+  },
+  {
+    "club": "Rhodes University CC",
+    "code": "RHO",
+    "union": "ECCU"
+  },
+  {
+    "club": "St Francis Paddling Club",
+    "code": "SFPC",
+    "union": "ECCU"
+  },
+  {
+    "club": "Wild Duck Kayak Club",
+    "code": "WDKC",
+    "union": "ECCU"
+  },
+  {
+    "club": "Academy for Canoe Development",
+    "code": "ACA",
+    "union": "GCU"
+  },
+  {
+    "club": "Centurion Canoe Club",
+    "code": "CCC",
+    "union": "GCU"
+  },
+  {
+    "club": "Crocodile Canoe Club",
+    "code": "CROCS",
+    "union": "GCU"
+  },
+  {
+    "club": "Dabulamanzi Canoe Club",
+    "code": "DABS",
+    "union": "GCU"
+  },
+  {
+    "club": "Ekurhuleni Kayak Club",
+    "code": "ERK",
+    "union": "GCU"
+  },
+  {
+    "club": "Florida Lake Canoe Club",
+    "code": "FLCC",
+    "union": "GCU"
+  },
+  {
+    "club": "Johannesburg Canoe Club",
+    "code": "JCC",
+    "union": "GCU"
+  },
+  {
+    "club": "Likkewaan Canoe Club",
+    "code": "LIK",
+    "union": "GCU"
+  },
+  {
+    "club": "Lowveld Canoe Club",
+    "code": "LOW",
+    "union": "GCU"
+  },
+  {
+    "club": "North West University",
+    "code": "NWU",
+    "union": "GCU"
+  },
+  {
+    "club": "Pretoria Canoe Club",
+    "code": "PRE",
+    "union": "GCU"
+  },
+  {
+    "club": "Soweto Canoe Club",
+    "code": "SCARC",
+    "union": "GCU"
+  },
+  {
+    "club": "TUKS (Pretoria University)",
+    "code": "TUKS",
+    "union": "GCU"
+  },
+  {
+    "club": "Victoria Lake Canoe Club",
+    "code": "VLC",
+    "union": "GCU"
+  },
+  {
+    "club": "Amanzimtoti Water Sports Club",
+    "code": "AMA",
+    "union": "KNCU"
+  },
+  {
+    "club": "Bushmans Canoe Club",
+    "code": "BUS",
+    "union": "KNCU"
+  },
+  {
+    "club": "Canyon Kayak Club",
+    "code": "CAN",
+    "union": "KNCU"
+  },
+  {
+    "club": "Crusaders Canoe Club",
+    "code": "CRU",
+    "union": "KNCU"
+  },
+  {
+    "club": "DOLPHIN COAST PADDLERS",
+    "code": "DCP",
+    "union": "KNCU"
+  },
+  {
+    "club": "Dragon Canoe Club",
+    "code": "DRA",
+    "union": "KNCU"
+  },
+  {
+    "club": "DURBAN SURF LSC",
+    "code": "DSLC",
+    "union": "KNCU"
+  },
+  {
+    "club": "DURBAN UNDERSEA CLUB",
+    "code": "DUC",
+    "union": "KNCU"
+  },
+  {
+    "club": "DUSI BRIDGE CANOE CLUB",
+    "code": "DUB",
+    "union": "KNCU"
+  },
+  {
+    "club": "Epworth Canoe Club",
+    "code": "EPW",
+    "union": "KNCU"
+  },
+  {
+    "club": "Eshowe Canoe Club",
+    "code": "ESH",
+    "union": "KNCU"
+  },
+  {
+    "club": "Eston Canoe Club",
+    "code": "EST",
+    "union": "KNCU"
+  },
+  {
+    "club": "Hilton College Kayak Club",
+    "code": "HIL",
+    "union": "KNCU"
+  },
+  {
+    "club": "Kearsney College CC",
+    "code": "KEA",
+    "union": "KNCU"
+  },
+  {
+    "club": "Kingfisher Canoe Club",
+    "code": "KIN",
+    "union": "KNCU"
+  },
+  {
+    "club": "KwaZulu Natal Canoe Union - Social Only",
+    "code": "KNCU",
+    "union": "KNCU"
+  },
+  {
+    "club": "KwaZulu-Natal Canoe Club",
+    "code": "NAT",
+    "union": "KNCU"
+  },
+  {
+    "club": "MARINE SURF LIFESAVING",
+    "code": "MSL",
+    "union": "KNCU"
+  },
+  {
+    "club": "Maritzburg College Canoe Club",
+    "code": "MAR",
+    "union": "KNCU"
+  },
+  {
+    "club": "Michaelhouse Canoe Club",
+    "code": "MIC",
+    "union": "KNCU"
+  },
+  {
+    "club": "Midmar Canoe Club",
+    "code": "MID",
+    "union": "KNCU"
+  },
+  {
+    "club": "Mkhambathi",
+    "code": "MKH",
+    "union": "KNCU"
+  },
+  {
+    "club": "Ngwenya Canoe Club",
+    "code": "NGW",
+    "union": "KNCU"
+  },
+  {
+    "club": "Pirates",
+    "code": "PIR",
+    "union": "KNCU"
+  },
+  {
+    "club": "Robert Lembethe Canoe Club",
+    "code": "LEM",
+    "union": "KNCU"
+  },
+  {
+    "club": "Scottburgh Canoe Club",
+    "code": "SCO",
+    "union": "KNCU"
+  },
+  {
+    "club": "SIYAPHAMBILI SURF SKI CLUB",
+    "code": "SIP",
+    "union": "KNCU"
+  },
+  {
+    "club": "South Coast Striders Canoe Club",
+    "code": "SOU",
+    "union": "KNCU"
+  },
+  {
+    "club": "St Annes Canoe Club",
+    "code": "STAN",
+    "union": "KNCU"
+  },
+  {
+    "club": "St Johns DSG Canoe Club",
+    "code": "STJ",
+    "union": "KNCU"
+  },
+  {
+    "club": "Stella Canoe Club",
+    "code": "STE",
+    "union": "KNCU"
+  },
+  {
+    "club": "The Wykham Collegiate Canoe Club",
+    "code": "TWC",
+    "union": "KNCU"
+  },
+  {
+    "club": "Thousand Hills",
+    "code": "THO",
+    "union": "KNCU"
+  },
+  {
+    "club": "Thumsa",
+    "code": "THU",
+    "union": "KNCU"
+  },
+  {
+    "club": "Umfolozi Canoe Club",
+    "code": "UMF",
+    "union": "KNCU"
+  },
+  {
+    "club": "Umhlanga Life Saving Club",
+    "code": "UMH",
+    "union": "KNCU"
+  },
+  {
+    "club": "Umvoti Canoe Club",
+    "code": "UMV",
+    "union": "KNCU"
+  },
+  {
+    "club": "Umzinyathi Canoe Club",
+    "code": "UMZ",
+    "union": "KNCU"
+  },
+  {
+    "club": "Zululand Kayak Club",
+    "code": "ZUL",
+    "union": "KNCU"
+  },
+  {
+    "club": "Century City Canoe Club",
+    "code": "CTY",
+    "union": "WCCU"
+  },
+  {
+    "club": "Fish Hoek Beach Sports Club",
+    "code": "FHBS",
+    "union": "WCCU"
+  },
+  {
+    "club": "Freedom Paddlers Club",
+    "code": "FRE",
+    "union": "WCCU"
+  },
+  {
+    "club": "Langebaan Canoe Club",
+    "code": "LAN",
+    "union": "WCCU"
+  },
+  {
+    "club": "Milnerton Canoe Club",
+    "code": "MIL",
+    "union": "WCCU"
+  },
+  {
+    "club": "Paarl Canoe Club",
+    "code": "PRL",
+    "union": "WCCU"
+  },
+  {
+    "club": "Peninsula Canoe Club",
+    "code": "PEN",
+    "union": "WCCU"
+  },
+  {
+    "club": "STANFORD",
+    "code": "STA",
+    "union": "WCCU"
+  },
+  {
+    "club": "Stellenbosch University CC",
+    "code": "US",
+    "union": "WCCU"
+  },
+  {
+    "club": "STILL BAY PADDLING CLUB",
+    "code": "STI",
+    "union": "WCCU"
+  },
+  {
+    "club": "Strand Surf Lifesaving Club",
+    "code": "STR",
+    "union": "WCCU"
+  },
+  {
+    "club": "TYGERVALLEY CANOE CLUB",
+    "code": "TYG",
+    "union": "WCCU"
+  },
+  {
+    "club": "WEST COAST CANOE CLUB",
+    "code": "WSC",
+    "union": "WCCU"
+  },
+  {
+    "club": "Western Cape Polo",
+    "code": "WCP",
+    "union": "WCCU"
+  }
+]

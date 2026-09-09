@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>Tower — Paddle Timer</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  #raceList{display:flex;flex-direction:column;gap:14px;}
+  .race-card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px;}
+  .race-card.running{border-left:5px solid var(--orange);}
+  .race-card.finished{border-left:5px solid var(--green);}
+  .race-card .rlabel{font-weight:700;font-size:15px;margin-bottom:8px;text-align:center}
+  .race-card .clock{font-size:38px;}
+  .bib-row{display:flex;gap:8px;margin:10px 0}
+  .bib-row input{flex:1;font-size:20px;padding:12px;text-align:center}
+  .bib-row button{font-size:16px;padding:0 20px}
+  table.lapsheet{width:100%;font-size:13px;}
+  table.lapsheet th,table.lapsheet td{padding:5px 6px;text-align:left;border-bottom:1px solid var(--line)}
+  tr.mass-done{background:#E4F5EC}
+  .phase-btn{padding:8px 16px;border-radius:8px;border:1px solid var(--line);background:#fff;cursor:pointer;font-size:14px;}
+  .phase-btn.active{background:var(--navy);color:#fff;border-color:var(--navy);font-weight:600;}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <a href="/" class="title">🛶 PADDLE TIMER</a>
+  <nav><a href="/admin.html">Race Office</a><a href="/race-sort.html">Race Sort</a><a href="/draw.html">Draw</a><a href="/program.html">Race Program</a><a href="/tower.html">Tower</a><a href="/weigh.html">Weigh</a><a href="/results.html">Results</a><a href="/board.html">Board</a></nav>
+  <div id="meetBar"></div>
+</header>
+<main>
+  <h1>Tower</h1>
+  <div class="flag" id="meetWarning" style="display:none">No meet selected — pick one at the top-right first.</div>
+  <div id="dayBar" style="margin-bottom:12px"></div>
+  <div style="margin-bottom:12px;display:flex;gap:6px" id="phaseFilterBar">
+    <button class="phase-btn" onclick="setPhaseFilter('all')" data-phase="all">All</button>
+    <button class="phase-btn" onclick="setPhaseFilter('semi')" data-phase="semi">Semis</button>
+    <button class="phase-btn" onclick="setPhaseFilter('final')" data-phase="final">Finals</button>
+  </div>
+  <p style="color:var(--gray);font-size:14px">Every finalised race that's still going shows here at once — no switching. <b>All</b> always has everything, heats included — nothing here is ever only reachable from another tab. <b>Semis</b> and <b>Finals</b> are just a focused view for events that actually go through that progression — a straight final (small enough field to skip heats/semis entirely) stays on All only, since there's no round it's "advancing" from. A semi/final only appears here once its predecessor round's weigh-ins (podium + 1 random check) are done — it's still being computed behind the scenes, just held back from view until then.</p>
+
+  <div id="raceList"></div>
+</main>
+<script src="common.js"></script>
+<script>
+let selectedDay = null;
+let phaseFilter = 'all';
+let racesById = {};
+let raceHashes = {};
+let tickHandles = {};
+
+function phaseLabel(r){
+  const map = { heat: `Heat ${r.heatNumber}`, semi: `Semi ${r.heatNumber}`, final: 'Final A', finalB: 'Final B', finalC: 'Final C' };
+  return map[r.phase] || r.phase;
+}
+function raceLabel(r){
+  const parts = [`R${r.raceNumber}`, r.combinedLabel || (r.event ? r.event.label : ''), phaseLabel(r)];
+  if(r.scheduledLabel) parts.push(r.scheduledLabel);
+  return parts.filter(Boolean).join(' · ');
+}
+function fmtTime(ms){
+  if(ms==null) return '00:00.00';
+  const cs = Math.floor(ms/10)%100;
+  const totalSec = Math.floor(ms/1000);
+  const sec = totalSec%60;
+  const min = Math.floor(totalSec/60);
+  const pad=(n,l=2)=>String(n).padStart(l,'0');
+  return `${pad(min)}:${pad(sec)}.${pad(cs)}`;
+}
+
+async function refresh(){
+  const meetId = getMeetId();
+  if(!meetId) return;
+  let races;
+  try {
+    const dayQS = selectedDay ? `&day=${selectedDay}` : '';
+    const res = await fetch(`/api/races/active?meetId=${encodeURIComponent(meetId)}${dayQS}`);
+    if(!res.ok) throw new Error(`Server returned ${res.status}`);
+    races = await res.json();
+  } catch (err) {
+    console.error(err);
+    document.getElementById('raceList').innerHTML = `<div class="flag">Couldn't reach the server: ${err.message}. Check the black server window is still running, then reload this page.</div>`;
+    return;
+  }
+
+  if(phaseFilter === 'semi'){
+    races = races.filter(r => r.phase === 'semi');
+  } else if(phaseFilter === 'final'){
+    // A straight final (field small enough to skip heats/semis) isn't
+    // "advancing" from anything — only include finals that are actually
+    // part of a heat/semi/final progression, per event.plan.rounds.
+    races = races.filter(r => (r.phase==='final'||r.phase==='finalB'||r.phase==='finalC')
+      && r.event && r.event.plan && r.event.plan.rounds && r.event.plan.rounds.length > 1);
+  }
+
+  const container = document.getElementById('raceList');
+  const currentIds = new Set(races.map(r => r.id));
+
+  Object.keys(racesById).forEach(id => {
+    if(!currentIds.has(id)){
+      if(tickHandles[id]) cancelAnimationFrame(tickHandles[id]);
+      delete tickHandles[id]; delete racesById[id]; delete raceHashes[id];
+      const el = document.getElementById('race-'+id);
+      if(el) el.remove();
+    }
+  });
+
+  if(races.length === 0){
+    container.innerHTML = '<p style="color:var(--gray)">No races finalised yet — draw and finalise them in Race Program.</p>';
+    return;
+  }
+
+  races.forEach(race => {
+    racesById[race.id] = race;
+    const hash = JSON.stringify(race);
+    let cardEl = document.getElementById('race-'+race.id);
+
+    const bibInput = cardEl ? cardEl.querySelector('.bib-input') : null;
+    if(bibInput && document.activeElement === bibInput && bibInput.value !== ''){
+      return;
+    }
+    const crossingInput = cardEl && document.activeElement && document.activeElement.classList && document.activeElement.classList.contains('crossing-input') ? document.activeElement : null;
+    if(crossingInput && cardEl.contains(crossingInput) && crossingInput.value !== ''){
+      return;
+    }
+
+    if(raceHashes[race.id] === hash && cardEl){
+      return;
+    }
+    raceHashes[race.id] = hash;
+
+    if(!cardEl){
+      cardEl = document.createElement('div');
+      cardEl.id = 'race-'+race.id;
+      container.appendChild(cardEl);
+    }
+    renderRaceCard(cardEl, race);
+  });
+
+  const activeInCard = document.activeElement && document.activeElement.closest && document.activeElement.closest('.race-card');
+  if(!activeInCard){
+    races.forEach(race => {
+      const el = document.getElementById('race-'+race.id);
+      if(el) container.appendChild(el);
+    });
+  }
+}
+
+function renderRaceCard(cardEl, race){
+  cardEl.className = 'race-card ' + race.status;
+
+  if(race.status === 'pending'){
+    cardEl.innerHTML = `<div class="rlabel">${raceLabel(race)}</div>
+      <p style="text-align:center;color:var(--gray)">Waiting for the starter's "go" call.</p>
+      <button class="primary big" onclick="startRace('${race.id}')">Start Clock</button>`;
+    return;
+  }
+
+  if(race.isMassStart){ renderMassCard(cardEl, race); return; }
+
+  const wasCaptureFocused = document.activeElement === cardEl.querySelector('.capture-btn');
+  const realLanes = Object.entries(race.laneEntries).filter(([,info]) => info);
+
+  const crossingRows = race.blindCrossings.map(c => {
+    if(c.assignedLane != null){
+      const info = race.laneEntries[c.assignedLane];
+      return `<tr>
+        <td class="mono">${c.position}</td>
+        <td class="mono">${fmtTime(c.timeMs)}</td>
+        <td>Lane ${c.assignedLane} — ${info ? info.names.join(' / ') : '?'}</td>
+      </tr>`;
+    }
+    return `<tr>
+      <td class="mono">${c.position}</td>
+      <td class="mono">${fmtTime(c.timeMs)}</td>
+      <td>
+        <input type="number" placeholder="Lane #" class="crossing-input" style="width:70px"
+          onkeydown="if(event.key==='Enter'){ assignCrossing('${race.id}', ${c.position}, this.value); }"
+          onblur="if(this.value){ assignCrossing('${race.id}', ${c.position}, this.value); }">
+        <button style="font-size:12px;padding:6px 10px" onclick="assignCrossing('${race.id}', ${c.position}, this.previousElementSibling.value)">Assign</button>
+      </td>
+    </tr>`;
+  }).join('');
+
+  const laneStatusRows = realLanes.map(([lane, info]) => {
+    const r = race.results[info.entryId];
+    let statusHtml;
+    if(!r) statusHtml = '<span style="color:var(--gray)">no result yet</span>';
+    else if(r.status === 'OK') statusHtml = `<span class="mono">${fmtTime(r.finishTimeMs)}</span>${r.position?` <small style="color:var(--gray)">(pos ${r.position})</small>`:''}`;
+    else statusHtml = `<b style="color:#C93B3B">${r.status}</b>${r.dqReason?` <small style="color:var(--gray)">— ${r.dqReason}</small>`:''}`;
+    return `<tr>
+      <td class="mono">${lane}</td>
+      <td>${info.names.join(' / ')}</td>
+      <td>${statusHtml}</td>
+      <td style="white-space:nowrap">
+        <button style="font-size:11px;padding:4px 7px" onclick="markLane('${race.id}','${info.entryId}','DNS')">DNS</button>
+        <button style="font-size:11px;padding:4px 7px" onclick="markLane('${race.id}','${info.entryId}','DNF')">DNF</button>
+        <button style="font-size:11px;padding:4px 7px" onclick="markDQ('${race.id}','${info.entryId}')">DQ</button>
+        ${r ? `<button style="font-size:11px;padding:4px 7px" onclick="clearResult('${race.id}','${info.entryId}')">Clear</button>` : ''}
+      </td>
+    </tr>`;
+  }).join('');
+
+  cardEl.innerHTML = `<div class="rlabel">${raceLabel(race)}</div>
+    <div class="clock mono" id="clock-${race.id}">00:00.00</div>
+    <button class="capture-btn primary big" style="font-size:22px;padding:22px" onclick="captureCrossing('${race.id}')">TAP or press ENTER/SPACE — a boat just crossed</button>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin:10px 0">
+      <span style="color:var(--gray);font-size:13px">${race.blindCrossings.length} crossing(s) captured</span>
+      <button style="font-size:12px" onclick="undoCrossing('${race.id}')">Undo last crossing</button>
+    </div>
+    <button class="red" style="width:100%;margin-bottom:10px" onclick="finishRace('${race.id}')">Race fully complete — lock results</button>
+    ${race.blindCrossings.length ? `<table><tr><th>#</th><th>Time</th><th>Lane</th></tr>${crossingRows}</table>` : ''}
+    <div style="margin-top:10px;font-size:13px">
+      <div style="color:var(--gray);margin-bottom:4px">Every lane — mark DNS/DNF/DQ here any time before locking, even if it already has a time:</div>
+      <table><tr><th>Lane</th><th>Paddler</th><th>Result</th><th></th></tr>${laneStatusRows}</table>
+    </div>`;
+
+  const btn = cardEl.querySelector('.capture-btn');
+  if(btn && wasCaptureFocused) btn.focus();
+
+  startTick(race);
+}
+
+function renderMassCard(cardEl, race){
+  // The card gets rebuilt (innerHTML replaced) on every refresh — including
+  // the one submitBib triggers right after logging a pass, and the plain
+  // 1500ms poll. Either one throws away the OLD bib-input DOM node and
+  // creates a fresh one, so if we don't explicitly refocus the NEW input
+  // afterward, the timekeeper loses their cursor after every single
+  // number and has to click back into the box before the next one — the
+  // exact friction this is fixing. (The outer guard in refresh() already
+  // protects a box that's mid-typing with something in it; this covers
+  // the moment right after submit, when it's back to empty.)
+  const wasFocused = document.activeElement === cardEl.querySelector('.bib-input');
+  const bibs = Object.entries(race.laneEntries).sort((a,b)=>Number(a[0])-Number(b[0]));
+  const rows = bibs.filter(([,info]) => info).map(([bib, info]) => {
+    const laps = info.laps || [];
+    const done = laps.length >= race.totalLaps;
+    const lastLap = laps.length ? fmtTime(laps[laps.length-1].timeMs) : '—';
+    const r = race.results[info.entryId];
+    const statusHtml = !r ? '' : r.status === 'OK'
+      ? `<span style="color:var(--green)">OK</span>`
+      : `<b style="color:#C93B3B">${r.status}</b>${r.dqReason?` <small style="color:var(--gray)">— ${r.dqReason}</small>`:''}`;
+    return `<tr class="${done?'mass-done':''}">
+      <td class="mono">${bib}</td>
+      <td>${info.names.join(' / ')}</td>
+      <td class="mono">${laps.length}/${race.totalLaps}${done?' ✓':''}</td>
+      <td class="mono">${lastLap}</td>
+      <td>${statusHtml}</td>
+      <td style="white-space:nowrap">
+        ${laps.length ? `<button class="red" style="font-size:11px;padding:4px 7px" onclick="undoLap('${race.id}','${bib}')">Undo lap</button>` : ''}
+        <button style="font-size:11px;padding:4px 7px" onclick="markLane('${race.id}','${info.entryId}','DNS')">DNS</button>
+        <button style="font-size:11px;padding:4px 7px" onclick="markLane('${race.id}','${info.entryId}','DNF')">DNF</button>
+        <button style="font-size:11px;padding:4px 7px" onclick="markDQ('${race.id}','${info.entryId}')">DQ</button>
+        ${r ? `<button style="font-size:11px;padding:4px 7px" onclick="clearResult('${race.id}','${info.entryId}')">Clear</button>` : ''}
+      </td>
+    </tr>`;
+  }).join('');
+
+  cardEl.innerHTML = `<div class="rlabel">${raceLabel(race)} — ${race.totalLaps} laps</div>
+    <div class="clock mono" id="clock-${race.id}">00:00.00</div>
+    <form class="bib-row" onsubmit="return submitBib(event,'${race.id}')">
+      <input type="number" class="bib-input" placeholder="Slide number" autocomplete="off">
+      <button class="primary" type="submit">Log pass</button>
+    </form>
+    <button class="red" style="width:100%;margin-bottom:10px" onclick="finishRace('${race.id}')">Race fully complete — lock results</button>
+    <table class="lapsheet">
+      <tr><th>Slide #</th><th>Paddler</th><th>Laps</th><th>Last pass</th><th>Result</th><th></th></tr>
+      ${rows || '<tr><td colspan="6" style="color:var(--gray)">No bibs in this race.</td></tr>'}
+    </table>`;
+
+  if(wasFocused){
+    const newInput = cardEl.querySelector('.bib-input');
+    if(newInput) newInput.focus();
+  }
+
+  startTick(race);
+}
+
+function startTick(race){
+  if(tickHandles[race.id]) cancelAnimationFrame(tickHandles[race.id]);
+  const tick = () => {
+    const el = document.getElementById('clock-'+race.id);
+    if(!el){ delete tickHandles[race.id]; return; }
+    el.textContent = fmtTime(Date.now() - race.startTimeMs);
+    tickHandles[race.id] = requestAnimationFrame(tick);
+  };
+  tick();
+}
+
+async function startRace(id){
+  try {
+    const res = await fetch(`/api/races/${id}/start`, { method:'POST' });
+    if(!res.ok){ const d = await res.json(); alert(d.error); return; }
+    await refresh();
+  } catch (err) { console.error(err); alert(`Couldn't start the race: ${err.message}`); }
+}
+
+async function captureCrossing(raceId){
+  try {
+    const res = await fetch(`/api/races/${raceId}/capture-crossing`, { method:'POST' });
+    const data = await res.json();
+    if(!res.ok){ alert(data.error); return; }
+    await refresh();
+    const cardEl = document.getElementById('race-'+raceId);
+    const btn = cardEl && cardEl.querySelector('.capture-btn');
+    if(btn) btn.focus();
+  } catch (err) { console.error(err); alert(`Couldn't capture that: ${err.message}`); }
+}
+
+async function undoCrossing(raceId){
+  try {
+    const res = await fetch(`/api/races/${raceId}/undo-crossing`, { method:'POST' });
+    if(!res.ok){ const d = await res.json(); alert(d.error); return; }
+    await refresh();
+  } catch (err) { console.error(err); alert(`Couldn't undo: ${err.message}`); }
+}
+
+async function assignCrossing(raceId, position, laneValue){
+  const lane = Number(laneValue);
+  if(!lane){ return; }
+  try {
+    const res = await fetch(`/api/races/${raceId}/assign-crossing`, {
+      method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({position, lane})
+    });
+    const data = await res.json();
+    if(!res.ok){ alert(data.error); return; }
+    await refresh();
+    // Jump focus to the next still-unassigned crossing, if any — keeps
+    // "type, Enter, type, Enter" flowing without reaching for the mouse.
+    const cardEl = document.getElementById('race-'+raceId);
+    const nextInput = cardEl && cardEl.querySelector('.crossing-input');
+    if(nextInput) nextInput.focus();
+  } catch (err) { console.error(err); alert(`Couldn't assign that: ${err.message}`); }
+}
+
+async function markLane(raceId, entryId, status, dqReason){
+  try {
+    const res = await fetch(`/api/races/${raceId}/mark/${entryId}`, {
+      method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({status, dqReason})
+    });
+    if(!res.ok){ const d = await res.json(); alert(d.error); return; }
+    await refresh();
+  } catch (err) { console.error(err); alert(`Couldn't mark that: ${err.message}`); }
+}
+async function markDQ(raceId, entryId){
+  const reason = prompt('Reason for disqualification (optional):') || null;
+  await markLane(raceId, entryId, 'DQ', reason);
+}
+async function clearResult(raceId, entryId){
+  try {
+    const res = await fetch(`/api/races/${raceId}/undo/${entryId}`, { method:'POST' });
+    if(!res.ok){ const d = await res.json(); alert(d.error); return; }
+    await refresh();
+  } catch (err) { console.error(err); alert(`Couldn't clear that: ${err.message}`); }
+}
+
+async function finishRace(raceId){
+  const race = racesById[raceId];
+  if(race){
+    const realLanes = Object.entries(race.laneEntries || {}).filter(([,info]) => info);
+    const unresolved = realLanes.filter(([,info]) => !race.results[info.entryId]);
+    if(unresolved.length > 0){
+      const noun = race.isMassStart ? 'Slide' : 'Lane';
+      const list = unresolved.map(([lane,info]) => `${noun} ${lane} (${info.names.join(' / ')})`).join(', ');
+      alert(`Can't close this race yet — ${unresolved.length} ${noun.toLowerCase()}(s) still have no result: ${list}.\n\n${race.isMassStart ? 'Mark them DNS/DNF below' : 'Assign their crossing above, or mark them DNS/DNF'}, then try again.`);
+      return;
+    }
+  }
+  const ok = await customConfirm('Lock this race\'s results? It\'ll move to weighing next.');
+  if(!ok) return;
+  try {
+    const res = await fetch(`/api/races/${raceId}/finish-race`, { method:'POST' });
+    if(!res.ok){ const d = await res.json(); alert(d.error); return; }
+    await refresh();
+  } catch (err) { console.error(err); alert(`Couldn't end the race: ${err.message}. Try again — the clock is still running.`); }
+}
+
+async function submitBib(evt, raceId){
+  evt.preventDefault();
+  const form = evt.target;
+  const input = form.querySelector('.bib-input');
+  const bib = input.value;
+  if(!bib) return false;
+  input.value = '';
+  try {
+    const res = await fetch(`/api/races/${raceId}/lap-pass`, {
+      method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({bib})
+    });
+    const data = await res.json();
+    if(!res.ok){ alert(data.error); }
+    // refresh() rebuilds this card (replacing `input` with a fresh DOM
+    // node), so focusing the OLD `input` reference after this point would
+    // silently do nothing — renderMassCard's own wasFocused check handles
+    // refocusing the new one instead, as long as this box still has focus
+    // going into that rebuild.
+    await refresh();
+  } catch (err) { console.error(err); alert(`Couldn't log that pass: ${err.message}`); }
+  return false;
+}
+
+async function undoLap(raceId, bib){
+  try {
+    const res = await fetch(`/api/races/${raceId}/undo-lap/${bib}`, { method:'POST' });
+    if(!res.ok){ const d = await res.json(); alert(d.error); return; }
+    await refresh();
+  } catch (err) { console.error(err); alert(`Couldn't undo: ${err.message}`); }
+}
+
+function setPhaseFilter(phase){
+  phaseFilter = phase;
+  document.querySelectorAll('.phase-btn').forEach(b => b.classList.toggle('active', b.dataset.phase === phase));
+  raceHashes = {}; // force a clean re-render under the new filter
+  refresh();
+}
+
+async function init(){
+  await initMeetBar('meetBar');
+  if(!getMeetId()){ document.getElementById('meetWarning').style.display = 'block'; return; }
+  selectedDay = await initDayBar('dayBar');
+  document.querySelector('.phase-btn[data-phase="all"]').classList.add('active');
+  await refresh();
+  setInterval(refresh, 1500);
+}
+init();
+</script>
+</body>
+</html>

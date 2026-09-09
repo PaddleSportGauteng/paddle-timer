@@ -1,0 +1,107 @@
+:root{
+  --navy:#0B2540;
+  --navy-light:#123A61;
+  --ink:#0B2540;
+  --paper:#F7F7F5;
+  --line:#D8DCE0;
+  --orange:#E2662D;
+  --green:#1E8E5A;
+  --red:#C93B3B;
+  --gray:#6B7480;
+}
+*{box-sizing:border-box;}
+body{
+  margin:0;
+  font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background:var(--paper);
+  color:var(--ink);
+}
+header.topbar{
+  background:var(--navy);
+  color:#fff;
+  padding:14px 18px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:10px;
+}
+header.topbar a{color:#fff;text-decoration:none;}
+header.topbar .title{font-weight:700;font-size:18px;letter-spacing:0.02em;}
+header.topbar nav{display:flex;gap:14px;font-size:14px;}
+header.topbar nav a{opacity:0.85;}
+header.topbar nav a:hover{opacity:1;text-decoration:underline;}
+#meetBar{display:flex;gap:6px;align-items:center;}
+#meetBar select, #meetBar button{font-size:13px;padding:7px 9px;border-radius:6px;border:1px solid var(--line);}
+#meetBar button{background:var(--orange);color:#fff;border-color:var(--orange);font-weight:600;cursor:pointer;white-space:nowrap;}
+main{max-width:960px;margin:0 auto;padding:18px;}
+h1{font-size:22px;margin:0 0 14px;}
+h2{font-size:17px;margin:24px 0 10px;color:var(--navy);}
+.card{
+  background:#fff;
+  border:1px solid var(--line);
+  border-radius:10px;
+  padding:16px;
+  margin-bottom:16px;
+}
+button{
+  font-family:inherit;
+  font-size:15px;
+  font-weight:600;
+  padding:10px 16px;
+  border-radius:8px;
+  border:1px solid var(--line);
+  background:#fff;
+  cursor:pointer;
+}
+button.primary{background:var(--navy);color:#fff;border-color:var(--navy);}
+button.orange{background:var(--orange);color:#fff;border-color:var(--orange);}
+button.green{background:var(--green);color:#fff;border-color:var(--green);}
+button.red{background:var(--red);color:#fff;border-color:var(--red);}
+button:disabled{opacity:0.4;cursor:not-allowed;}
+button.big{font-size:20px;padding:18px;width:100%;}
+table{width:100%;border-collapse:collapse;font-size:14px;}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);}
+th{color:var(--gray);font-size:11px;text-transform:uppercase;letter-spacing:0.05em;}
+.flag{background:#FFF3E0;border:1px solid #F3C98B;color:#8A5A12;padding:8px 10px;border-radius:6px;font-size:13px;margin:4px 0;}
+.pill{display:inline-block;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:700;text-transform:uppercase;}
+.pill.ok{background:#E4F5EC;color:var(--green);}
+.pill.warn{background:#FFF3E0;color:#8A5A12;}
+.pill.bad{background:#FBE7E7;color:var(--red);}
+.mono{font-family:'SF Mono','Roboto Mono',monospace;font-variant-numeric:tabular-nums;}
+.roles-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-top:20px;}
+.role-card{
+  display:block;
+  background:#fff;
+  border:1px solid var(--line);
+  border-radius:12px;
+  padding:22px;
+  text-decoration:none;
+  color:var(--ink);
+}
+.role-card:hover{border-color:var(--navy);}
+.role-card .emoji{font-size:28px;}
+.role-card h3{margin:10px 0 4px;}
+.role-card p{margin:0;color:var(--gray);font-size:13px;}
+.lane-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px;}
+.lane-btn{
+  padding:20px 8px;
+  border-radius:10px;
+  border:2px solid var(--navy);
+  background:#fff;
+  font-size:16px;
+  font-weight:700;
+  text-align:center;
+  cursor:pointer;
+}
+.lane-btn small{display:block;font-weight:400;font-size:11px;color:var(--gray);margin-top:4px;}
+.lane-btn.done{background:var(--navy);color:#fff;border-color:var(--navy);}
+.lane-btn.done small{color:#c9d6e5;}
+.clock{font-size:56px;font-weight:700;text-align:center;font-family:'SF Mono','Roboto Mono',monospace;margin:10px 0;}
+.race-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
+.race-tab{padding:8px 14px;border-radius:8px;border:1px solid var(--line);background:#fff;cursor:pointer;font-size:13px;}
+.race-tab.active{background:var(--navy);color:#fff;border-color:var(--navy);}
+tr.mass-done{background:#E4F5EC;}
+input[type=file], input[type=number], input[type=text]{
+  font-family:inherit;font-size:15px;padding:9px;border:1px solid var(--line);border-radius:6px;width:100%;
+}

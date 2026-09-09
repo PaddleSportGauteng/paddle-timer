@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Race Program — Paddle Timer</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  .race-block{border:1px solid var(--line);border-radius:8px;padding:12px;margin-bottom:10px;background:#fff;}
+  .race-block.published{border-left:4px solid var(--green);}
+  .race-block.unpublished{border-left:4px solid var(--gray);}
+  .race-block h4{margin:0 0 8px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;font-size:15px}
+  .lane-row{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px dashed var(--line);font-size:13px;}
+  .lane-row:last-child{border-bottom:none}
+  .lane-row .lanenum{width:60px;font-weight:700;color:var(--gray)}
+  .lane-row select{flex:1;font-size:13px;padding:5px;border-radius:5px;border:1px solid var(--line)}
+  .lane-row button{font-size:12px;padding:5px 8px}
+  .time-input{width:110px !important;display:inline-block}
+  .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:10px}
+  .toolbar label{font-size:12px;color:var(--gray);display:block;margin-bottom:4px}
+  .toolbar input{padding:8px;border-radius:6px;border:1px solid var(--line)}
+  .events-table td, .events-table th{font-size:13px}
+  .merge-bar{position:sticky;top:0;background:#EAF1FA;border:1px solid #B8D0EA;border-radius:8px;padding:10px;margin-bottom:14px;font-size:13px;z-index:5}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <a href="/" class="title">🛶 PADDLE TIMER</a>
+  <nav><a href="/admin.html">Race Office</a><a href="/race-sort.html">Race Sort</a><a href="/draw.html">Draw</a><a href="/program.html">Race Program</a><a href="/tower.html">Tower</a><a href="/weigh.html">Weigh</a><a href="/results.html">Results</a><a href="/board.html">Board</a></nav>
+  <div id="meetBar"></div>
+</header>
+<main>
+  <h1>Race Program</h1>
+  <div class="flag" id="meetWarning" style="display:none">No meet selected — pick or create one at the top-right first.</div>
+  <div id="dayBar" style="margin-bottom:12px"></div>
+
+  <div class="card" style="background:#EAF1FA;border-color:#B8D0EA">
+    <p style="margin:0;color:#1a3a5c">Need to draw or combine events first? <a href="/race-sort.html">Race Sort</a> → <a href="/draw.html"><b>Draw →</b></a> Do that before setting times/finalising below.</p>
+  </div>
+
+  <div class="card">
+    <h2 style="margin-top:0">1. Start times</h2>
+    <p style="color:var(--gray);font-size:14px">Sets the anchor for race 1 — the rest space out by the interval below. Doesn't matter whether you do this before or after arranging the running order in section 2: reordering there always keeps race 1 pinned to whatever time you set here and re-flows everyone else to match, so nothing ever needs re-anchoring either way. New races created afterward (from combining, or heats auto-advancing to semis/finals) won't have a time until you run this again. Longer distances (2000m/5000m) needing more room than the standard gap? Set that race's own "min before next" in section 2 below — everything after it shifts to match automatically, wherever that race ends up if you reorder later.</p>
+    <div class="toolbar">
+      <div><label>First start time</label><input type="text" id="firstTime" placeholder="08:00" value="08:00"></div>
+      <div><label>Minutes between races</label><input type="number" id="intervalMin" value="4" style="width:80px"></div>
+      <div><label><input type="checkbox" id="overwriteTimes"> overwrite existing times</label></div>
+      <button class="primary" onclick="generateStartTimes()">Generate start times</button>
+    </div>
+    <div id="startTimesResult"></div>
+  </div>
+
+  <div class="card">
+    <div class="toolbar" style="justify-content:space-between">
+      <h2 style="margin:0">2. Race Program</h2>
+      <div style="display:flex;gap:8px">
+        <button class="orange" onclick="downloadPdf()">Download Programme (PDF)</button>
+        <button class="orange" onclick="downloadDraws()">Download Draws (Excel)</button>
+        <button class="green" onclick="finalise()">Finalise → send to Tower</button>
+      </div>
+    </div>
+    <p style="color:var(--gray);font-size:14px">Every race for this meet, in order, <b>once it's been drawn or combined above</b>. This is where you fine-tune what's already been created — swap a lane, scratch someone, delete a race, set its time. Edit freely until you hit Finalise — only finalised races show up on the Tower. <b>The PDF is generated fresh every time you click download</b> — it always matches exactly what's below, never cached; if it ever looks different, it's because it was downloaded before a later change, not because it's out of sync.</p>
+    <div class="flag" style="background:#EAF1FA;border-color:#B8D0EA;color:#1a3a5c">
+      <b>Ordering:</b> <button onclick="autoSequence()">Auto-sequence (heats first, finals interspersed)</button>
+      — a starting-point heuristic, not a full optimiser: it front-loads heats from multi-round events (so their semis/finals can start sooner) and mixes in straight finals so results keep coming. Use the ▲▼ buttons to nudge a race one place, or type a race number into the box and click → (or hit Enter) to jump straight there — whichever's moved always anchors back to race 1's original time, with everything else automatically shifting to match and renumbering correctly; no separate step needed. Semis/finals get their own time automatically once created (based on real rest gaps), so you won't see them here to reorder until their heats finish. Reordering here always keeps race 1 pinned to whatever start time is set in section 1 above, re-flowing everyone else to match — so it doesn't matter whether you sort before or after setting that.
+    </div>
+    <div class="flag" style="background:#FFFBF2;border-color:#F3C98B;color:#8A5A12">
+      <b>Space keeper:</b> for anything that needs a gap but isn't a race — moving a jetty between courses, lunch, tea. Give it a label and how many minutes it needs, pick where it goes, then use its own ▲▼/# controls afterward to fine-tune. Everything after it shifts automatically to match, wherever it ends up.
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px">
+        <input type="text" id="newBreakLabel" placeholder="e.g. Jetty move to 200m course" style="flex:1;min-width:220px;padding:7px">
+        <input type="number" id="newBreakDuration" placeholder="Minutes" min="1" style="width:90px;padding:7px">
+        <select id="newBreakAfter" style="min-width:200px;padding:7px"><option value="0">— start of the day —</option></select>
+        <button onclick="addBreak()">Add space keeper</button>
+      </div>
+    </div>
+    <div id="mergeBar"></div>
+    <div id="raceList">Loading…</div>
+  </div>
+
+  <div class="card">
+    <h2 style="margin-top:0">3. Round advancement</h2>
+    <p style="color:var(--gray);font-size:14px">Semis and finals are created automatically the instant every heat (or semi) for an event finishes, per ICF Appendix 1. Nothing to do here normally — this just shows what's still waiting, plus a manual fallback for fields bigger than ICF's published tables (72+ boats).</p>
+    <div id="advanceTable">Loading…</div>
+  </div>
+</main>
+<script src="common.js"></script>
+<script>
+let allEntries = [];
+
+let allEvents = [];
+
+let selectedDay = null;
+
+// Lightweight — just populates allEvents for the round-advancement table
+// below. Full drawing (Generate/Confirm/Change/slide assignment) lives
+// on its own page now: /draw.html.
+async function loadEvents(){
+  const meetId = getMeetId();
+  if(!meetId) return;
+  try {
+    const dayQS = selectedDay ? `&day=${selectedDay}` : '';
+    const res = await fetch(`/api/programme/events?meetId=${encodeURIComponent(meetId)}${dayQS}`);
+    if(!res.ok) throw new Error(`Server returned ${res.status}`);
+    allEvents = await res.json();
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+async function loadAdvanceTable(){
+  const el = document.getElementById('advanceTable');
+  const drawnMultiRound = allEvents.filter(e => e.hasRaces && e.format.runnable && e.format.rounds.length > 1);
+  if(drawnMultiRound.length === 0){ el.innerHTML = '<p style="color:var(--gray)">No multi-round events drawn yet.</p>'; return; }
+
+  const panels = await Promise.all(drawnMultiRound.map(async (ev) => {
+    try {
+      const data = await (await fetch(`/api/programme/events/${ev.id}/next-round`)).json();
+
+      // Automatic case (the normal path — ICF Plan A-G): semis/finals are
+      // created the instant a round finishes, no action needed here. Just
+      // show where things stand.
+      if(!ev.format.unsupported){
+        if(!data.available) return null; // e.g. "already fully advanced" or "waiting" — nothing to show
+        return `<div class="race-block"><h4><span>${ev.label} — waiting</span></h4>
+          <p style="color:var(--gray);font-size:13px">${data.reason}</p></div>`;
+      }
+
+      // Fallback case: field bigger than ICF's published tables (>72
+      // boats / >8 heats) — no automatic rule to apply, so review/select
+      // qualifiers by hand.
+      if(!data.available) return null;
+      const rows = data.candidates.map(c => `
+        <label class="lane-row" style="cursor:pointer">
+          <input type="checkbox" class="advance-check" value="${c.entryId}" ${c.suggested?'checked':''}>
+          <span style="flex:1">${c.names.join(' / ')} <small style="color:var(--gray)">Heat ${c.heatNumber} · #${c.position} · ${fmtMs(c.finishTimeMs)}</small></span>
+        </label>`).join('');
+      return `<div class="race-block">
+        <h4><span>${ev.label} — ${data.currentPhase.toUpperCase()} finished, ready for ${data.nextPhase.toUpperCase()} (manual — field exceeds ICF's published tables)</span></h4>
+        ${rows || '<p style="color:var(--gray);font-size:13px">No eligible finishers found.</p>'}
+        <div style="margin-top:8px"><button class="primary" onclick="createNextRound('${ev.id}', '${data.nextPhase}', this)">Create ${data.nextPhase}</button></div>
+      </div>`;
+    } catch (err) { return null; }
+  }));
+
+  const html = panels.filter(Boolean).join('');
+  el.innerHTML = html || '<p style="color:var(--gray)">All drawn events are either done or auto-advanced already — nothing waiting.</p>';
+}
+
+function fmtMs(ms){
+  const cs = Math.floor(ms/10)%100;
+  const totalSec = Math.floor(ms/1000);
+  const sec = totalSec%60;
+  const min = Math.floor(totalSec/60);
+  const pad=(n,l=2)=>String(n).padStart(l,'0');
+  return `${pad(min)}:${pad(sec)}.${pad(cs)}`;
+}
+
+async function createNextRound(eventId, phase, btn){
+  const block = btn.closest('.race-block');
+  const ids = [...block.querySelectorAll('.advance-check:checked')].map(c => c.value);
+  if(ids.length === 0){ alert('Tick at least one qualifier.'); return; }
+  if(ids.length > 9){ alert('That\'s more than 9 boats — untick some, or create this round in two batches.'); return; }
+  const res = await fetch(`/api/programme/events/${eventId}/create-next-round`, {
+    method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({phase, entryIds: ids})
+  });
+  const data = await res.json();
+  if(!res.ok){ alert(data.error); return; }
+  await loadAdvanceTable();
+  await loadRaceList();
+}
+
+function downloadPdf(){
+  const meetId = getMeetId();
+  const dayQS = selectedDay ? `&day=${selectedDay}` : '';
+  // Cache-bust with a timestamp so a re-download after changing times/draws
+  // always fetches fresh, never a stale cached copy.
+  window.open(`/api/export/programme.pdf?meetId=${encodeURIComponent(meetId)}${dayQS}&_=${Date.now()}`, '_blank');
+}
+
+function downloadDraws(){
+  const meetId = getMeetId();
+  const dayQS = selectedDay ? `&day=${selectedDay}` : '';
+  window.open(`/api/export/draws.xlsx?meetId=${encodeURIComponent(meetId)}${dayQS}&_=${Date.now()}`, '_blank');
+}
+
+async function autoSequence(){
+  const meetId = getMeetId();
+  if(!meetId){ alert('Pick a meet first.'); return; }
+  const ok = await customConfirm('Re-sequence every not-yet-started race? Heats from multi-round events go first, straight finals get mixed in. You can still fine-tune with the position buttons after.');
+  if(!ok) return;
+  const res = await fetch('/api/programme/auto-sequence', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({meetId}) });
+  const data = await res.json();
+  if(!res.ok){ alert(data.error); return; }
+  alert(`${data.reordered} race(s) re-sequenced and times updated to match.`);
+  await loadRaceList();
+}
+
+async function moveRaceTo(raceId, target){
+  const meetId = getMeetId();
+  const dayQS = selectedDay ? `&day=${selectedDay}` : '';
+  const races = await (await fetch(`/api/programme/races?meetId=${encodeURIComponent(meetId)}${dayQS}`)).json();
+  const pending = races.filter(r => r.status === 'pending');
+  const idx = pending.findIndex(r => r.id === raceId);
+  if(idx === -1) return;
+  const [item] = pending.splice(idx, 1);
+
+  let insertAt;
+  if(target === 'top') insertAt = 0;
+  else if(target === 'bottom') insertAt = pending.length;
+  else if(target === 'up') insertAt = Math.max(0, idx - 1);
+  else if(target === 'down') insertAt = Math.min(pending.length, idx + 1);
+  else {
+    insertAt = Math.max(0, Math.min(pending.length, Number(target) - 1));
+    if(isNaN(insertAt)){ alert('Enter a position number.'); return; }
+  }
+  pending.splice(insertAt, 0, item);
+
+  const orderedRaceIds = pending.map(r => r.id);
+  const res = await fetch('/api/programme/reorder-races', {
+    method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({meetId, orderedRaceIds})
+  });
+  const data = await res.json();
+  if(!res.ok){ alert(data.error); return; }
+  await loadRaceList();
+}
+
+async function generateStartTimes(){
+  const meetId = getMeetId();
+  if(!meetId){ alert('Pick a meet first.'); return; }
+  const firstTime = document.getElementById('firstTime').value;
+  const intervalMinutes = document.getElementById('intervalMin').value;
+  const overwrite = document.getElementById('overwriteTimes').checked;
+  const res = await fetch('/api/programme/generate-start-times', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({meetId, firstTime, intervalMinutes, overwrite})
+  });
+  const data = await res.json();
+  const el = document.getElementById('startTimesResult');
+  if(!res.ok){ el.innerHTML = `<div class="flag">${data.error}</div>`; return; }
+  el.innerHTML = `<div class="flag" style="background:#E4F5EC;border-color:#9ED8B8;color:#1E8E5A">Set start times on ${data.updated} race(s).</div>`;
+  loadRaceList();
+}
+
+async function finalise(){
+  const meetId = getMeetId();
+  if(!meetId){ alert('Pick a meet first.'); return; }
+  if(!(await customConfirm('Send every drawn race to the Tower? You can still edit anything not yet started.'))) return;
+  const res = await fetch('/api/programme/finalise', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({meetId}) });
+  const data = await res.json();
+  if(!res.ok){ alert(data.error); return; }
+  if(data.totalDrawn === 0){
+    alert('Nothing to publish — no races have been drawn yet. Go to Race Sort / Race Program section 2 first.');
+  } else if(data.published === 0){
+    alert(`No NEW races to publish — all ${data.alreadyPublished} already-drawn race(s) are already on the Tower. If you've drawn more since, they've now been included too (still 0 means they were already there, or you haven't drawn any new ones since last time).`);
+  } else {
+    alert(`${data.published} new race(s) published to the Tower (${data.alreadyPublished} were already there from before).`);
+  }
+  loadRaceList();
+}
+
+async function loadRaceList(){
+  const meetId = getMeetId();
+  const el = document.getElementById('raceList');
+  const mergeBarEl = document.getElementById('mergeBar');
+  if(!meetId){ el.innerHTML=''; return; }
+  try {
+    const dayQS = selectedDay ? `&day=${selectedDay}` : '';
+  const races = await (await fetch(`/api/programme/schedule?meetId=${encodeURIComponent(meetId)}${dayQS}`)).json();
+    allEntries = await (await fetch(`/api/entries?meetId=${encodeURIComponent(meetId)}`)).json();
+
+    const mergeableByEvent = {};
+    races.filter(r => r.phase==='heat' && r.status==='pending').forEach(r => {
+      const key = r.eventId;
+      (mergeableByEvent[key] = mergeableByEvent[key] || { label: r.combinedLabel || r.event.label, races: [] }).races.push(r);
+    });
+    const eventsWithMultipleHeats = Object.values(mergeableByEvent).filter(g => g.races.length > 1);
+    if(eventsWithMultipleHeats.length === 0){
+      mergeBarEl.innerHTML = '';
+    } else {
+      mergeBarEl.innerHTML = `
+      <div class="merge-bar">
+        <div style="cursor:pointer" onclick="document.getElementById('mergeBarBody').style.display = document.getElementById('mergeBarBody').style.display==='none' ? 'block' : 'none'">
+          <b>Optional: merge under-full heats ▸</b> <span style="color:var(--gray);font-weight:400">(only useful if scratches left some heats sparse — click to open)</span>
+        </div>
+        <div id="mergeBarBody" style="display:none;margin-top:10px">
+          <p style="color:var(--gray);margin:0 0 8px">Tick 2+ heats <b>within the same event</b> below, then merge — refuses if the combined boats wouldn't fit in the lanes. Most days you won't need this at all.</p>
+          ${Object.values(mergeableByEvent).filter(g => g.races.length > 1).map(g => `
+            <div style="margin-bottom:8px">
+              <div style="font-weight:700;font-size:13px;margin-bottom:4px">${g.label}</div>
+              ${g.races.map(r => `<label style="margin-right:14px;display:inline-block;margin-bottom:4px"><input type="checkbox" class="merge-check" value="${r.id}"> R${r.raceNumber} Heat ${r.heatNumber}</label>`).join('')}
+            </div>`).join('')}
+          <button onclick="mergeSelected()">Merge selected</button>
+        </div>
+      </div>`;
+    }
+
+    if(races.length===0){ el.innerHTML = '<p style="color:var(--gray)">No races generated yet.</p>'; } else {
+      el.innerHTML = races.map(r => raceBlockHtml(r)).join('');
+    }
+    const afterSel = document.getElementById('newBreakAfter');
+    afterSel.innerHTML = '<option value="0">— start of the day —</option>' + races.map((r,i) => {
+      const label = r.type === 'break' ? `After break: ${r.label}` : `After R${r.raceNumber}: ${r.combinedLabel || (r.event ? r.event.label : '')}`;
+      return `<option value="${i+1}">${label}</option>`;
+    }).join('');
+  } catch (err) {
+    console.error(err);
+    el.innerHTML = `<div class="flag">Couldn't load race list: ${err.message}</div>`;
+  }
+}
+
+function phaseLabel(race){
+  const map = { heat: `HEAT ${race.heatNumber}`, semi: `SEMI ${race.heatNumber}`, final: 'FINAL A', finalB: 'FINAL B', finalC: 'FINAL C' };
+  return map[race.phase] || race.phase.toUpperCase();
+}
+
+// Once a race finishes it's "provisional" until the office marks it
+// official (weigh-ins done, no more changes expected). A late DQ
+// automatically reverts an already-official race back to provisional —
+// see races.js.
+function resultsConfirmHtml(race){
+  if(race.status !== 'finished') return '';
+  const confirmPill = race.resultsConfirmed
+    ? `<span class="pill ok">Official</span> <button style="font-size:11px;padding:4px 8px" onclick="toggleConfirm('${race.id}', false)">Revert to provisional</button>`
+    : `<span class="pill warn">Provisional</span> <button class="green" style="font-size:11px;padding:4px 8px" onclick="toggleConfirm('${race.id}', true)">Mark official</button>`;
+  return `${confirmPill} <button class="red" style="font-size:11px;padding:4px 8px" onclick="reopenRace('${race.id}')" title="Went to 'finished' too early? Put it back to running.">Reopen race</button>`;
+}
+async function toggleConfirm(raceId, confirm){
+  const res = await fetch(`/api/races/${raceId}/${confirm?'confirm-results':'unconfirm-results'}`, {method:'POST'});
+  const data = await res.json();
+  if(!res.ok){ alert(data.error); return; }
+  loadRaceList();
+}
+async function reopenRace(raceId){
+  const ok = await customConfirm('Reopen this race? Puts it back to "running" on the Tower so you can finish assigning lanes/crossings — nothing already recorded is lost.');
+  if(!ok) return;
+  const res = await fetch(`/api/races/${raceId}/reopen`, { method:'POST' });
+  const data = await res.json();
+  if(!res.ok){ alert(data.error); return; }
+  alert('Reopened — it\'s back on the Tower now.');
+  loadRaceList();
+}
+
+function massRaceBlockHtml(race){
+  const bibs = Object.entries(race.laneEntries).sort((a,b)=>Number(a[0])-Number(b[0]));
+  const locked = race.status !== 'pending';
+  const statusPill = race.status==='finished' ? 'ok' : race.status==='running' ? 'warn' : 'ok';
+  const publishedPill = race.published ? `<span class="pill ok">Published</span>` : `<span class="pill warn">Draft</span>`;
+
+  const rows = bibs.map(([bib, info]) => {
+    if(!info) return '';
+    const laps = info.laps || [];
+    const done = laps.length >= race.totalLaps;
+    const lapStr = laps.length ? laps.map(l => fmtMs(l.timeMs)).join(', ') : '—';
+    return `<div class="lane-row">
+      <div class="lanenum">Slide ${bib}</div>
+      <div style="flex:1">${info.names.join(' / ')} <small style="color:var(--gray)">${laps.length}/${race.totalLaps} laps ${done?'✓ finished':''} — ${lapStr}</small></div>
+      ${!locked ? `
+        <input type="number" placeholder="new #" style="width:70px;padding:5px;font-size:12px" id="renumber-${race.id}-${bib}">
+        <button style="font-size:11px;padding:5px 8px" onclick="renumberSlide('${race.id}', ${bib})">Renumber</button>
+        <button class="red" onclick="scratchLane('${race.id}', ${bib})">Scratch</button>
+      ` : ''}
+    </div>`;
+  }).join('');
+
+  return `<div class="race-block ${race.published?'published':'unpublished'}">
+    <h4>
+      <span>Race ${race.raceNumber}: ${race.combinedEventIds && race.combinedEventIds.length>1 ? `<input type="text" value="${race.combinedLabel}" style="font-weight:700;padding:3px;font-size:14px;width:220px" onchange="renameLabel('${race.id}', this.value)">` : race.event.label} — ${phaseLabel(race)}
+        ${locked ? `(mass start, ${race.totalLaps} laps)` : `(mass start, <input type="number" value="${race.totalLaps}" style="width:50px;padding:3px;font-size:13px" onchange="editLaps('${race.id}', this.value)"> laps)`}
+        ${race.overridden ? ' <span class="pill bad">OVERRIDDEN</span>' : ''}
+        <span class="pill ${statusPill}">${race.status}</span> ${publishedPill} ${resultsConfirmHtml(race)}
+      </span>
+      <span>
+        ${locked ? '' : `
+          <button style="font-size:12px;padding:5px 8px" onclick="moveRaceTo('${race.id}','up')" title="Move up one">▲</button>
+          <button style="font-size:12px;padding:5px 8px" onclick="moveRaceTo('${race.id}','down')" title="Move down one">▼</button>
+          <span style="display:inline-flex;align-items:center;gap:3px">
+            <input type="number" id="movePos-${race.id}" placeholder="Race #" title="Type the race number this should become, then press Enter or click →" style="width:64px;padding:5px;font-size:12px" onkeydown="if(event.key==='Enter'){moveRaceTo('${race.id}', this.value);}">
+            <button style="font-size:12px;padding:5px 8px" onclick="moveRaceTo('${race.id}', document.getElementById('movePos-${race.id}').value)" title="Move to this race number — the rest shift and renumber to match">→</button>
+          </span>
+          <input type="text" class="time-input" placeholder="Start time e.g. 08:00" value="${race.scheduledLabel||''}" onchange="setSchedule('${race.id}', this.value)">
+          <span style="display:inline-flex;align-items:center;gap:3px">
+            <input type="number" min="1" value="${race.gapAfterMinutes||''}" placeholder="std gap" title="Minutes to leave before the NEXT race — e.g. 45-60 for a long mass start. Blank = standard gap. Applies to this race wherever it ends up, even after reordering." style="width:64px;padding:5px;font-size:12px" onchange="setGap('${race.id}', this.value)">
+            <small style="color:var(--gray);white-space:nowrap">min before next</small>
+          </span>
+          <button class="red" onclick="deleteRace('${race.id}')">Change grouping (undo draw)</button>
+        `}
+      </span>
+    </h4>
+    ${rows}
+  </div>`;
+}
+
+async function renumberSlide(raceId, oldSlide){
+  const input = document.getElementById(`renumber-${raceId}-${oldSlide}`);
+  const newSlide = input.value;
+  if(!newSlide){ alert('Enter the new slide number.'); return; }
+  const res = await fetch(`/api/races/${raceId}/rename-slide`, {
+    method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({oldSlide, newSlide: Number(newSlide)})
+  });
+  const data = await res.json();
+  if(!res.ok){ alert(data.error); return; }
+  loadRaceList();
+}
+
+async function editLaps(raceId, totalLaps){
+  const res = await fetch(`/api/races/${raceId}/laps`, {
+    method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({totalLaps: Number(totalLaps)})
+  });
+  const data = await res.json();
+  if(!res.ok){ alert(data.error); loadRaceList(); return; }
+  loadRaceList();
+}
+
+async function renameLabel(raceId, label){
+  const res = await fetch(`/api/races/${raceId}/label`, {
+    method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({label})
+  });
+  const data = await res.json();
+  if(!res.ok){ alert(data.error); loadRaceList(); return; }
+  loadRaceList();
+}
+
+
+// A "space keeper" — jetty move, lunch, tea, anything that needs its own
+// block of time but isn't a race. Same move/delete controls as a race
+// block, styled distinctly (dashed border, amber) so it's never mistaken
+// for an actual race at a glance.
+function breakBlockHtml(brk){
+  return `<div class="race-block" style="border-style:dashed;border-color:#F3C98B;background:#FFFBF2">
+    <h4>
+      <span style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span style="color:#8A5A12">⏸</span>
+        <input type="text" value="${brk.label.replace(/"/g,'&quot;')}" style="font-weight:700;padding:4px 6px;font-size:14px;border:1px solid var(--line);border-radius:5px;width:220px" onchange="editBreakLabel('${brk.id}', this.value)">
+        <span class="pill warn">BREAK</span>
+      </span>
+      <span>
+        <button style="font-size:12px;padding:5px 8px" onclick="moveBreakTo('${brk.id}','up')" title="Move up one">▲</button>
+        <button style="font-size:12px;padding:5px 8px" onclick="moveBreakTo('${brk.id}','down')" title="Move down one">▼</button>
+        <span style="display:inline-flex;align-items:center;gap:3px">
+          <input type="number" id="breakPos-${brk.id}" placeholder="Race #" title="Type the position this should become, then press Enter or click →" style="width:64px;padding:5px;font-size:12px" onkeydown="if(event.key==='Enter'){moveBreakTo('${brk.id}', this.value);}">
+          <button style="font-size:12px;padding:5px 8px" onclick="moveBreakTo('${brk.id}', document.getElementById('breakPos-${brk.id}').value)" title="Move to this position — the rest shift and renumber to match">→</button>
+        </span>
+        <span style="display:inline-flex;align-items:center;gap:4px;padding:5px 8px;border:1px solid var(--line);border-radius:5px;background:#fff;font-size:13px;color:var(--gray)">${brk.scheduledLabel || 'TBC'}</span>
+        <span style="display:inline-flex;align-items:center;gap:3px">
+          <input type="number" min="1" value="${brk.durationMinutes||''}" title="How long this break takes — everything after it shifts to match" style="width:64px;padding:5px;font-size:12px" onchange="editBreakDuration('${brk.id}', this.value)">
+          <small style="color:var(--gray);white-space:nowrap">min</small>
+        </span>
+        <button class="red" onclick="deleteBreak('${brk.id}')">Delete</button>
+      </span>
+    </h4>
+  </div>`;
+}
+
+function raceBlockHtml(race){
+  if(race.type === 'break') return breakBlockHtml(race);
+  if(race.isMassStart) return massRaceBlockHtml(race);
+  const lanes = Object.entries(race.laneEntries).sort((a,b)=>Number(a[0])-Number(b[0]));
+  const locked = race.status !== 'pending';
+  // For a COMBINED race, race.eventId is only the PRIMARY event — the
+  // other member categories live in race.combinedEventIds. Loading
+  // options from the primary alone meant athletes from the other
+  // categories had no matching <option>, so the <select> silently fell
+  // back to "— empty —" even though they WERE correctly assigned to that
+  // lane. That's why this screen disagreed with the Excel draw sheet
+  // (which prints names directly, no dropdown). Load every member
+  // event's entries so each occupant always has an option to select.
+  const eventIdsForOptions = (race.combinedEventIds && race.combinedEventIds.length > 1)
+    ? race.combinedEventIds
+    : [race.eventId];
+  const entriesForEvent = allEntries.filter(e => eventIdsForOptions.includes(e.eventId) && e.status === 'active');
+  const placedIds = new Set(Object.values(race.laneEntries).filter(Boolean).map(i=>i.entryId));
+  const options = (currentId) => entriesForEvent
+    .filter(e => e.id===currentId || !placedIds.has(e.id))
+    .map(e => `<option value="${e.id}" ${e.id===currentId?'selected':''}>${e.names.join(' / ')}</option>`).join('');
+
+  const laneRows = lanes.map(([lane, info]) => {
+    if(locked){
+      return `<div class="lane-row"><div class="lanenum">Lane ${lane}</div><div style="flex:1">${info ? info.names.join(' / ') : '(empty)'}</div></div>`;
+    }
+    return `<div class="lane-row">
+      <div class="lanenum">Lane ${lane}</div>
+      <select onchange="setLane('${race.id}', ${lane}, this.value)">
+        <option value="">— empty —</option>
+        ${options(info ? info.entryId : null)}
+      </select>
+      ${info ? `<button class="red" onclick="scratchLane('${race.id}', ${lane})">Scratch</button>` : ''}
+    </div>`;
+  }).join('');
+
+  const statusPill = race.status==='finished' ? 'ok' : race.status==='running' ? 'warn' : 'ok';
+  const publishedPill = race.published ? `<span class="pill ok">Published</span>` : `<span class="pill warn">Draft</span>`;
+
+  return `<div class="race-block ${race.published?'published':'unpublished'}">
+    <h4>
+      <span>Race ${race.raceNumber}: ${race.combinedEventIds && race.combinedEventIds.length>1 ? `<input type="text" value="${race.combinedLabel}" style="font-weight:700;padding:3px;font-size:14px;width:220px" onchange="renameLabel('${race.id}', this.value)">` : race.event.label} — ${phaseLabel(race)}${race.overridden ? ' <span class="pill bad">OVERRIDDEN</span>' : ''}
+        <span class="pill ${statusPill}">${race.status}</span> ${publishedPill} ${resultsConfirmHtml(race)}
+      </span>
+      <span>
+        ${locked ? '' : `
+          <button style="font-size:12px;padding:5px 8px" onclick="moveRaceTo('${race.id}','up')" title="Move up one">▲</button>
+          <button style="font-size:12px;padding:5px 8px" onclick="moveRaceTo('${race.id}','down')" title="Move down one">▼</button>
+          <span style="display:inline-flex;align-items:center;gap:3px">
+            <input type="number" id="movePos-${race.id}" placeholder="Race #" title="Type the race number this should become, then press Enter or click →" style="width:64px;padding:5px;font-size:12px" onkeydown="if(event.key==='Enter'){moveRaceTo('${race.id}', this.value);}">
+            <button style="font-size:12px;padding:5px 8px" onclick="moveRaceTo('${race.id}', document.getElementById('movePos-${race.id}').value)" title="Move to this race number — the rest shift and renumber to match">→</button>
+          </span>
+          <input type="text" class="time-input" placeholder="Start time e.g. 08:00" value="${race.scheduledLabel||''}" onchange="setSchedule('${race.id}', this.value)">
+          <span style="display:inline-flex;align-items:center;gap:3px">
+            <input type="number" min="1" value="${race.gapAfterMinutes||''}" placeholder="std gap" title="Minutes to leave before the NEXT race — e.g. 45-60 for a long mass start. Blank = standard gap. Applies to this race wherever it ends up, even after reordering." style="width:64px;padding:5px;font-size:12px" onchange="setGap('${race.id}', this.value)">
+            <small style="color:var(--gray);white-space:nowrap">min before next</small>
+          </span>
+          <button class="red" onclick="deleteRace('${race.id}')">Delete race</button>
+        `}
+        ${!locked && race.scheduledLabel ? '' : ''}
+      </span>
+    </h4>
+    ${laneRows}
+  </div>`;
+}
+
+async function setLane(raceId, lane, entryId){
+  await fetch(`/api/races/${raceId}/set-lane`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({lane, entryId: entryId||null}) });
+  loadRaceList();
+}
+async function scratchLane(raceId, lane){
+  await fetch(`/api/races/${raceId}/scratch-lane/${lane}`, { method:'POST' });
+  loadRaceList();
+}
+async function setSchedule(raceId, scheduledLabel){
+  await fetch(`/api/races/${raceId}/schedule`, { method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({scheduledLabel}) });
+}
+async function setGap(raceId, gapAfterMinutes){
+  const res = await fetch(`/api/programme/races/${raceId}/gap`, {
+    method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({gapAfterMinutes: gapAfterMinutes === '' ? null : Number(gapAfterMinutes)})
+  });
+  const data = await res.json();
+  if(!res.ok){ alert(data.error); return; }
+  await loadRaceList();
+}
+async function addBreak(){
+  const meetId = getMeetId();
+  const label = document.getElementById('newBreakLabel').value;
+  const durationMinutes = document.getElementById('newBreakDuration').value;
+  const afterIndex = document.getElementById('newBreakAfter').value;
+  if(!durationMinutes){ alert('How many minutes does this need?'); return; }
+  const res = await fetch('/api/programme/breaks', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({meetId, day: selectedDay || 1, label, durationMinutes: Number(durationMinutes), afterIndex: Number(afterIndex)})
+  });
+  const data = await res.json();
+  if(!res.ok){ alert(data.error); return; }
+  document.getElementById('newBreakLabel').value = '';
+  document.getElementById('newBreakDuration').value = '';
+  await loadRaceList();
+}
+async function editBreakLabel(breakId, label){
+  const res = await fetch(`/api/programme/breaks/${breakId}`, { method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({label}) });
+  const data = await res.json();
+  if(!res.ok){ alert(data.error); return; }
+}
+async function editBreakDuration(breakId, durationMinutes){
+  const res = await fetch(`/api/programme/breaks/${breakId}`, { method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({durationMinutes: Number(durationMinutes)}) });
+  const data = await res.json();
+  if(!res.ok){ alert(data.error); return; }
+  await loadRaceList();
+}
+async function moveBreakTo(breakId, target){
+  const res = await fetch(`/api/programme/breaks/${breakId}/move`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({target}) });
+  const data = await res.json();
+  if(!res.ok){ alert(data.error); return; }
+  await loadRaceList();
+}
+async function deleteBreak(breakId){
+  if(!(await customConfirm('Delete this space keeper? This cannot be undone.'))) return;
+  const res = await fetch(`/api/programme/breaks/${breakId}`, { method:'DELETE' });
+  const data = await res.json();
+  if(!res.ok){ alert(data.error); return; }
+  await loadRaceList();
+}
+async function deleteRace(raceId){
+  if(!(await customConfirm('Delete this race? This cannot be undone.'))) return;
+  const res = await fetch(`/api/races/${raceId}`, { method:'DELETE' });
+  const data = await res.json();
+  if(!res.ok){ alert(data.error); return; }
+  loadEvents();
+  loadRaceList();
+}
+async function mergeSelected(){
+  const ids = [...document.querySelectorAll('.merge-check:checked')].map(c => c.value);
+  if(ids.length < 2){ alert('Select at least 2 heats to merge.'); return; }
+  const res = await fetch('/api/programme/merge-races', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({raceIds: ids}) });
+  const data = await res.json();
+  if(!res.ok){ alert(data.error); return; }
+  loadRaceList();
+}
+
+async function init(){
+  await initMeetBar('meetBar');
+  const meetId = getMeetId();
+  if(!meetId){ document.getElementById('meetWarning').style.display = 'block'; return; }
+  selectedDay = await initDayBar('dayBar');
+  await loadEvents();
+  await loadAdvanceTable();
+  await loadRaceList();
+  setInterval(loadAdvanceTable, 5000); // heats often finish on a different device (Tower)
+}
+init();
+</script>
+</body>
+</html>

@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Race Sort — Paddle Timer</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  .race-block{border:1px solid var(--line);border-radius:8px;padding:12px;margin-bottom:10px;background:#fff;}
+  .race-block h4{margin:0;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;font-size:15px}
+  .lane-row{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px dashed var(--line);font-size:13px;}
+  .lane-row:last-child{border-bottom:none}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <a href="/" class="title">🛶 PADDLE TIMER</a>
+  <nav><a href="/admin.html">Race Office</a><a href="/race-sort.html">Race Sort</a><a href="/draw.html">Draw</a><a href="/program.html">Race Program</a><a href="/tower.html">Tower</a><a href="/weigh.html">Weigh</a><a href="/results.html">Results</a><a href="/board.html">Board</a></nav>
+  <div id="meetBar"></div>
+</header>
+<main>
+  <h1>Race Sort</h1>
+  <div class="flag" id="meetWarning" style="display:none">No meet selected — pick or create one at the top-right first.</div>
+  <div id="dayBar" style="margin-bottom:12px"></div>
+  <p style="color:var(--gray);font-size:14px">Do this <b>before</b> Race Program — check which age groups need combining before drawing anything. For groups that start together but get separate results (PSA 1.2.1/1.2.2) — e.g. "MIXED U10-U12", or a small category with too few boats to run alone.</p>
+
+  <div class="card">
+    <h2 style="margin-top:0">Combine events for a shared start</h2>
+    <p style="color:var(--gray);font-size:14px">Build <b>one group at a time</b>: click "+ Add" on an event to start a group, then only matching events stay clickable so you can't mix distances by accident. Give it a label if you want (e.g. "2000m U8-U12" instead of listing every age category). For mass-start groups, set the lap count and a starting slide number here too — slides get assigned across the whole combined group at once, not per age category. Then "Save this group" and start the next one.</p>
+    <div id="currentGroupBox" class="flag" style="background:#EAF1FA;border-color:#B8D0EA;color:#1a3a5c">
+      <b>Current group:</b> <span id="currentGroupChips" style="color:var(--gray)">empty — click "+ Add" below on the first event</span>
+      <div id="currentGroupActions" style="margin-top:8px;display:none">
+        <input type="text" id="combineLabel" placeholder="Custom label (optional)" style="width:220px;padding:6px">
+        <input type="number" id="combineLaps" placeholder="Laps (mass-start only)" style="width:160px;padding:6px;display:none">
+        <input type="number" id="combineStartSlide" placeholder="Starting slide #" style="width:150px;padding:6px;display:none">
+        <button class="green" onclick="saveCurrentGroup()">Save this group ▸</button>
+        <button class="red" onclick="clearCurrentGroup()">Clear</button>
+      </div>
+    </div>
+    <div id="combineList" style="margin-top:12px">Loading…</div>
+    <div id="stagedGroups" style="margin-top:16px"></div>
+    <div id="stagedActions" style="margin-top:10px;display:none">
+      <button class="green" onclick="createAllStagedGroups()">Create all staged combined races</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2 style="margin-top:0">Fix a wrong entry</h2>
+    <p style="color:var(--gray);font-size:14px">Athlete entered the wrong event (e.g. 2000m instead of 5000m)? Search, then move them — pulls them out of any un-started race and reassigns which event they belong to.</p>
+    <input type="text" id="moveSearch" placeholder="Search by paddler name or event…" oninput="fixEntryEventId=null; doMoveSearch()">
+    <div id="moveResults" style="margin-top:10px"></div>
+  </div>
+
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <h2 style="margin:0">Review: what's combined so far</h2>
+      <button onclick="loadSummary()">Refresh</button>
+    </div>
+    <p style="color:var(--gray);font-size:14px">Every event, combined or not, with boat counts — check nothing exceeds this venue's lanes before you head to Race Program.</p>
+    <div id="sortSummary">Loading…</div>
+  </div>
+
+  <div class="card">
+    <p style="margin:0">Done sorting? <a href="/program.html"><b>Continue to Race Program →</b></a> to draw everything else, set start times, and finalise to the Tower.</p>
+  </div>
+</main>
+<script src="common.js"></script>
+<script>
+let allEvents = [];
+let stagedGroups = [];
+let stagedEventIds = new Set();
+let currentGroup = { eventIds: [], distance: null, isMassStart: null };
+let meetLanes = 9;
+
+let selectedDay = null;
+
+async function loadMeetLanes(){
+  const meetId = getMeetId();
+  try {
+    const meets = await (await fetch('/api/meets')).json();
+    const meet = meets.find(m => m.id === meetId);
+    meetLanes = (meet && meet.lanes) || 9;
+  } catch (err) { meetLanes = 9; }
+}
+
+async function loadEvents(){
+  const meetId = getMeetId();
+  if(!meetId) return;
+  try {
+    const dayQS = selectedDay ? `&day=${selectedDay}` : '';
+    const res = await fetch(`/api/programme/events?meetId=${encodeURIComponent(meetId)}${dayQS}`);
+    if(!res.ok) throw new Error(`Server returned ${res.status}`);
+    allEvents = await res.json();
+  } catch (err) {
+    console.error(err);
+    document.getElementById('combineList').innerHTML = `<div class="flag">Couldn't load events: ${err.message}</div>`;
+  }
+}
+
+
+
+async function loadCombineList(){
+  renderCurrentGroupBox();
+  const el = document.getElementById('combineList');
+  const allUndrawn = allEvents.filter(e => !e.hasRaces && !stagedEventIds.has(e.id) && !currentGroup.eventIds.includes(e.id));
+  const emptyOnes = allUndrawn.filter(e => e.entryCount === 0);
+  const undrawn = allUndrawn.filter(e => e.entryCount > 0);
+  const emptyNote = emptyOnes.length ? `<p style="color:var(--gray);font-size:13px;margin:6px 0">${emptyOnes.length} categor${emptyOnes.length===1?'y has':'ies have'} 0 entries (nothing to combine — probably fixed already via "Fix entries here" elsewhere): ${emptyOnes.map(e=>e.label).join(', ')}</p>` : '';
+  if(undrawn.length === 0 && currentGroup.eventIds.length === 0){
+    el.innerHTML = (stagedGroups.length ? '<p style="color:var(--gray)">No more undrawn events left to combine.</p>' : '<p style="color:var(--gray)">Need at least 2 undrawn events to combine.</p>') + emptyNote;
+    return;
+  }
+  const currentGroupBoats = currentGroup.eventIds.reduce((sum, id) => sum + ((allEvents.find(e => e.id === id) || {}).entryCount || 0), 0);
+  const byDistance = {};
+  undrawn.forEach(ev => { (byDistance[ev.distance] = byDistance[ev.distance] || []).push(ev); });
+  el.innerHTML = Object.entries(byDistance).sort((a,b) => a[0].localeCompare(b[0])).map(([dist, evs]) => `
+    <div style="margin-bottom:10px">
+      <div style="font-weight:700;font-size:13px;color:var(--navy);margin-bottom:4px">${dist}</div>
+      ${evs.map(ev => {
+        const matches = !currentGroup.distance || (currentGroup.distance === ev.distance && currentGroup.isMassStart === ev.isMassStart);
+        const wouldNeedHeats = matches && !ev.isMassStart && (currentGroupBoats + ev.entryCount) > meetLanes;
+        return `
+        <div class="lane-row">
+          <span style="flex:1;${matches?'':'opacity:.4'}">${ev.label} <small style="color:var(--gray)">${ev.entryCount} entries${ev.isMassStart?' (mass start)':''}${ev.entryCount<3?' — below min 3 alone':''}</small></span>
+          ${matches
+            ? `<button onclick="addToCurrentGroup('${ev.id}')">+ Add</button>${wouldNeedHeats ? ` <small style="color:var(--gray)">(would be ${currentGroupBoats + ev.entryCount} boats — over ${meetLanes} lanes, will split into heats)</small>` : ''} <button style="font-size:11px;padding:4px 8px" onclick="jumpToFixEntry('${ev.id}','${ev.label.replace(/'/g,"\\'")}')">Fix entries here</button>`
+            : `<small style="color:var(--gray)">different ${currentGroup.isMassStart!==ev.isMassStart?'type':'distance'}</small>`}
+        </div>`;
+      }).join('')}
+    </div>`).join('') + emptyNote;
+}
+
+function renderCurrentGroupBox(){
+  const chipsEl = document.getElementById('currentGroupChips');
+  const actionsEl = document.getElementById('currentGroupActions');
+  const lapsEl = document.getElementById('combineLaps');
+  if(currentGroup.eventIds.length === 0){
+    chipsEl.innerHTML = '<span style="color:var(--gray)">empty — click "+ Add" below on the first event</span>';
+    actionsEl.style.display = 'none';
+    return;
+  }
+  const labels = currentGroup.eventIds.map(id => (allEvents.find(e => e.id === id) || {}).label || id);
+  const totalBoats = currentGroup.eventIds.reduce((sum, id) => sum + ((allEvents.find(e => e.id === id) || {}).entryCount || 0), 0);
+  const overCapacity = totalBoats > meetLanes;
+  chipsEl.innerHTML = labels.map((l,i) => `<span class="pill ok" style="margin-right:6px">${l} <a href="#" onclick="removeFromCurrentGroup('${currentGroup.eventIds[i]}');return false" style="color:inherit;text-decoration:none;font-weight:900">&nbsp;✕</a></span>`).join('')
+    + (currentGroup.isMassStart ? '' : ` <span style="font-size:12px;color:var(--gray)">— ${totalBoats} boat(s) of ${meetLanes} lanes${overCapacity ? ' (will draw as heats → semis → finals, same as any big event)' : ''}</span>`);
+  actionsEl.style.display = 'block';
+  lapsEl.style.display = currentGroup.isMassStart ? 'inline-block' : 'none';
+  document.getElementById('combineStartSlide').style.display = currentGroup.isMassStart ? 'inline-block' : 'none';
+  document.querySelector('#currentGroupActions .green').disabled = currentGroup.eventIds.length < 2;
+}
+
+function addToCurrentGroup(eventId){
+  const ev = allEvents.find(e => e.id === eventId);
+  if(!ev) return;
+  if(currentGroup.eventIds.length === 0){
+    currentGroup.distance = ev.distance;
+    currentGroup.isMassStart = ev.isMassStart;
+  }
+  currentGroup.eventIds.push(eventId);
+  loadCombineList();
+}
+
+function removeFromCurrentGroup(eventId){
+  currentGroup.eventIds = currentGroup.eventIds.filter(id => id !== eventId);
+  if(currentGroup.eventIds.length === 0){ currentGroup.distance = null; currentGroup.isMassStart = null; }
+  loadCombineList();
+}
+
+function clearCurrentGroup(){
+  currentGroup = { eventIds: [], distance: null, isMassStart: null };
+  document.getElementById('combineLaps').value = '';
+  document.getElementById('combineLabel').value = '';
+  document.getElementById('combineStartSlide').value = '';
+  loadCombineList();
+}
+
+function saveCurrentGroup(){
+  if(currentGroup.eventIds.length < 2){ alert('Add at least 2 events to this group first.'); return; }
+  let laps = null, startSlide = null;
+  if(currentGroup.isMassStart){
+    laps = document.getElementById('combineLaps').value;
+    if(!laps){ alert('Enter the lap count for this mass-start group.'); return; }
+    startSlide = document.getElementById('combineStartSlide').value;
+    if(!startSlide){ alert('Enter a starting slide number for this group.'); return; }
+  }
+  const label = document.getElementById('combineLabel').value.trim() || null;
+  const labels = currentGroup.eventIds.map(id => (allEvents.find(e => e.id === id) || {}).label || id);
+  stagedGroups.push({ tempId: 'g'+Date.now()+Math.random(), eventIds: [...currentGroup.eventIds], isMassStart: currentGroup.isMassStart, laps: laps?Number(laps):null, startSlide: startSlide?Number(startSlide):null, labels, customLabel: label });
+  currentGroup.eventIds.forEach(id => stagedEventIds.add(id));
+  clearCurrentGroup();
+  renderStagedGroups();
+}
+
+function removeStagedGroup(tempId){
+  const g = stagedGroups.find(g => g.tempId === tempId);
+  if(g) g.eventIds.forEach(id => stagedEventIds.delete(id));
+  stagedGroups = stagedGroups.filter(g => g.tempId !== tempId);
+  loadCombineList();
+  renderStagedGroups();
+}
+
+function renderStagedGroups(){
+  const el = document.getElementById('stagedGroups');
+  const actions = document.getElementById('stagedActions');
+  if(stagedGroups.length === 0){ el.innerHTML = ''; actions.style.display = 'none'; return; }
+  actions.style.display = 'block';
+  el.innerHTML = `<h3 style="font-size:14px;margin:0 0 8px">Staged groups (not created yet)</h3>` + stagedGroups.map(g => `
+    <div class="race-block">
+      <h4>
+        <span>${g.isMassStart ? 'Mass start' : 'Combined final'}${g.laps ? ', '+g.laps+' laps' : ''}${g.startSlide ? ', slides from '+g.startSlide : ''} — ${g.customLabel ? '<b>'+g.customLabel+'</b> (' : ''}${g.labels.join(' + ')}${g.customLabel ? ')' : ''}</span>
+        <button class="red" onclick="removeStagedGroup('${g.tempId}')">Remove</button>
+      </h4>
+    </div>`).join('');
+}
+
+async function createAllStagedGroups(){
+  if(stagedGroups.length === 0) return;
+  const results = [];
+  for(const g of stagedGroups){
+    const url = g.isMassStart ? '/api/programme/combine/generate-mass-race' : '/api/programme/combine/generate-final';
+    const body = g.isMassStart ? {eventIds: g.eventIds, totalLaps: g.laps, label: g.customLabel, startSlide: g.startSlide} : {eventIds: g.eventIds, label: g.customLabel};
+    const res = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+    const data = await res.json();
+    results.push({ group: g, ok: res.ok, error: data.error });
+  }
+  const failed = results.filter(r => !r.ok);
+  if(failed.length){
+    alert(`${results.length - failed.length} of ${results.length} groups created.\n\nFailed:\n` + failed.map(f => `- ${f.group.labels.join(' + ')}: ${f.error}`).join('\n'));
+    const failedIds = new Set(failed.map(f => f.group.tempId));
+    stagedGroups.filter(g => !failedIds.has(g.tempId)).forEach(g => g.eventIds.forEach(id => stagedEventIds.delete(id)));
+    stagedGroups = stagedGroups.filter(g => failedIds.has(g.tempId));
+  } else {
+    alert(`All ${results.length} combined race(s) created. Head to Race Program to draw the rest.`);
+    stagedGroups = [];
+    stagedEventIds = new Set();
+  }
+  await loadEvents();
+  await loadCombineList();
+  renderStagedGroups();
+  await loadSummary();
+}
+
+let fixEntryEventId = null; // set only by jumpToFixEntry, so that click filters exactly — manual typing clears it (see moveSearch's oninput)
+
+function jumpToFixEntry(eventId, eventLabel){
+  fixEntryEventId = eventId;
+  const box = document.getElementById('moveSearch');
+  box.value = eventLabel;
+  box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  box.focus();
+  doMoveSearch();
+}
+
+async function doMoveSearch(){
+  const meetId = getMeetId();
+  const q = document.getElementById('moveSearch').value;
+  const el = document.getElementById('moveResults');
+  if(q.trim().length < 2){ el.innerHTML=''; return; }
+  try {
+    const entries = await (await fetch(`/api/entries?meetId=${encodeURIComponent(meetId)}&q=${encodeURIComponent(q)}`)).json();
+    // "Fix entries here" jumps to one specific event by id — filter down to
+    // exactly that event rather than trusting the label text match, since
+    // two events can render with an identical-looking label (see
+    // normalizeCategoryValue in routes/entries.js for why that used to be
+    // possible) and a text match alone would show entries from both.
+    const filtered = fixEntryEventId ? entries.filter(e => e.eventId === fixEntryEventId) : entries;
+    if(filtered.length===0){ el.innerHTML = '<p style="color:var(--gray)">No matches.</p>'; return; }
+    const allEventsList = allEvents.length ? allEvents : await (await fetch(`/api/programme/events?meetId=${encodeURIComponent(meetId)}`)).json();
+
+    // Standard sprint distances, plus whatever else actually shows up in
+    // this meet (e.g. a one-off distance), sorted shortest to longest —
+    // for the common "wrong distance, same category" fix. Picking one
+    // here doesn't require that exact event to already exist: the server
+    // creates it on the fly, keeping this athlete's current boat class,
+    // age category and gender unchanged.
+    const knownDistances = [...new Set(['200m','500m','1000m','2000m','5000m', ...allEventsList.map(ev => ev.distance)])]
+      .sort((a,b) => parseInt(a) - parseInt(b));
+
+    el.innerHTML = filtered.slice(0,10).map(e => {
+      const currentEv = allEventsList.find(ev => ev.id === e.eventId);
+      const distanceOptions = knownDistances.filter(d => !currentEv || d !== currentEv.distance)
+        .map(d => `<option value="${d}">${d}</option>`).join('');
+      return `
+      <div class="lane-row" style="flex-direction:column;align-items:stretch;gap:6px;padding:10px 0">
+        <div>${e.names.join(' / ')} <small style="color:var(--gray)">— currently: ${e.eventLabel}</small></div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <small style="color:var(--gray)">Same category, different distance:</small>
+          <select id="moveDistance-${e.id}" style="max-width:110px">${distanceOptions}</select>
+          <button onclick="doMoveDistance('${e.id}')">Move</button>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <small style="color:var(--gray)">Or a different event entirely:</small>
+          <select id="moveTarget-${e.id}" style="max-width:220px">
+            ${allEventsList.filter(ev => ev.id !== e.eventId).map(ev => `<option value="${ev.id}">${ev.label}</option>`).join('')}
+          </select>
+          <button onclick="doMove('${e.id}')">Move</button>
+          <button class="red" onclick="doDelete('${e.id}')">Delete</button>
+        </div>
+      </div>`;
+    }).join('');
+  } catch (err) {
+    el.innerHTML = `<div class="flag">Search failed: ${err.message}</div>`;
+  }
+}
+
+async function doMoveDistance(entryId){
+  const newDistance = document.getElementById(`moveDistance-${entryId}`).value;
+  const res = await fetch(`/api/programme/entries/${entryId}/move-distance`, {
+    method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({newDistance})
+  });
+  const data = await res.json();
+  if(!res.ok){ alert(data.error); return; }
+  let msg = `Moved to "${data.movedTo}"${data.createdEvent ? ' (new event, first athlete in it)' : ''}.`;
+  if(data.undoneDraws && data.undoneDraws.length){
+    msg += `\n\nThey were already drawn into: ${data.undoneDraws.join(', ')} — that draw has been undone (since it's now wrong) and is back to "undrawn" on the Draw page. Redraw it there once you're done fixing entries.`;
+  }
+  alert(msg);
+  await loadEvents();
+  await loadCombineList();
+  await loadSummary();
+  doMoveSearch();
+}
+
+async function doMove(entryId){
+  const newEventId = document.getElementById(`moveTarget-${entryId}`).value;
+  const res = await fetch(`/api/programme/entries/${entryId}/move-event`, {
+    method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({newEventId})
+  });
+  const data = await res.json();
+  if(!res.ok){ alert(data.error); return; }
+  const updatedEvents = await (await fetch(`/api/programme/events?meetId=${encodeURIComponent(getMeetId())}`)).json();
+  const target = updatedEvents.find(e => e.id === newEventId);
+  let msg = `Moved to "${data.movedTo}" — that event now has ${target ? target.entryCount : '?'} entries.`;
+  if(data.undoneDraws && data.undoneDraws.length){
+    msg += `\n\nThey were already drawn into: ${data.undoneDraws.join(', ')} — that draw has been undone (since it's now wrong) and is back to "undrawn" on the Draw page. Redraw it there once you're done fixing entries.`;
+  }
+  alert(msg);
+  await loadEvents();
+  await loadCombineList();
+  await loadSummary();
+  doMoveSearch();
+}
+
+async function doDelete(entryId){
+  const ok = await customConfirm('Permanently delete this entry? This cannot be undone — use this only for a genuine mistake (e.g. entered twice), not a withdrawal (scratch handles that and is reversible).');
+  if(!ok) return;
+  const res = await fetch(`/api/races/entries/${entryId}`, { method:'DELETE' });
+  const data = await res.json();
+  if(!res.ok){ alert(data.error); return; }
+  let msg = 'Entry deleted.';
+  if(data.undoneDraws && data.undoneDraws.length){
+    msg += `\n\nThey were already drawn into: ${data.undoneDraws.join(', ')} — that draw has been undone (since it's now wrong) and is back to "undrawn" on the Draw page. Redraw it there once you're done fixing entries.`;
+  }
+  alert(msg);
+  await loadEvents();
+  await loadCombineList();
+  await loadSummary();
+  doMoveSearch();
+}
+
+async function loadSummary(){
+  const meetId = getMeetId();
+  const el = document.getElementById('sortSummary');
+  try {
+    const [events, meets] = await Promise.all([
+      fetch(`/api/programme/events?meetId=${encodeURIComponent(meetId)}`).then(r=>r.json()),
+      fetch('/api/meets').then(r=>r.json()),
+    ]);
+    const meet = meets.find(m => m.id === meetId);
+    const lanes = (meet && meet.lanes) || 9;
+    const sorted = [...events].sort((a,b) => a.label.localeCompare(b.label));
+    const rows = sorted.map(ev => {
+      const overCapacity = ev.isCombined && !ev.isMassStart && ev.entryCount > lanes;
+      const rowStyle = overCapacity ? 'background:#FBE7E7' : '';
+      const displayLabel = ev.isCombined ? `<b>${ev.combinedLabel}</b> <small style="color:var(--gray)">(combined)</small>` : ev.label;
+      return `<tr style="${rowStyle}">
+        <td>${displayLabel}</td>
+        <td class="mono">${ev.entryCount}</td>
+        <td>${ev.isMassStart ? 'mass start — no lane limit' : (overCapacity ? `<b style="color:var(--red)">⚠ over ${lanes} lanes!</b>` : (ev.entryCount > lanes ? 'needs heats' : 'fits in a final'))}</td>
+        <td>${ev.hasRaces ? '<span class="pill ok">Drawn</span>' : '<span class="pill warn">Not drawn yet</span>'}</td>
+      </tr>`;
+    }).join('');
+    el.innerHTML = `<table><tr><th>Event</th><th>Boats</th><th>Fits venue (${lanes} lanes)?</th><th>Status</th></tr>${rows}</table>`;
+  } catch (err) {
+    console.error(err);
+    el.innerHTML = `<div class="flag">Couldn't load summary: ${err.message}</div>`;
+  }
+}
+
+async function init(){
+  await initMeetBar('meetBar');
+  if(!getMeetId()){ document.getElementById('meetWarning').style.display = 'block'; return; }
+  selectedDay = await initDayBar('dayBar');
+  await loadMeetLanes();
+  await loadEvents();
+  await loadCombineList();
+  await loadSummary();
+}
+init();
+</script>
+</body>
+</html>

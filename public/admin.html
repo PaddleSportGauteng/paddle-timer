@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Race Office — Paddle Timer</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="topbar">
+  <a href="/" class="title">🛶 PADDLE TIMER</a>
+  <nav><a href="/admin.html">Race Office</a><a href="/race-sort.html">Race Sort</a><a href="/draw.html">Draw</a><a href="/program.html">Race Program</a><a href="/tower.html">Tower</a><a href="/weigh.html">Weigh</a><a href="/results.html">Results</a><a href="/board.html">Board</a></nav>
+  <div id="meetBar"></div>
+</header>
+<main>
+  <h1>Race Office</h1>
+  <div class="flag" id="meetWarning" style="display:none">No meet selected — pick or create one at the top-right first.</div>
+
+  <div class="card">
+    <h2 style="margin-top:0">1. Import entries</h2>
+    <p style="color:var(--gray);font-size:14px">Upload the closed-entries spreadsheet export (the "System Race data" sheet). Goes into the currently selected meet.</p>
+    <input type="file" id="fileInput" accept=".xlsx,.xlsm,.xls">
+    <div style="margin-top:10px"><button class="primary" onclick="doImport(this)">Import</button></div>
+    <div id="importResult"></div>
+  </div>
+
+  <div class="card" id="raceDaysCard" style="display:none">
+    <h2 style="margin-top:0">2. Race days</h2>
+    <p style="color:var(--gray);font-size:14px">This meet is set up for <b id="numDaysLabel"></b>. Assign which distance/boat class runs on which day — e.g. K1 1000m/500m/200m on day 1, K2 500m/200m on day 2. Everything defaults to day 1 until you set it here. Race Sort and Race Program can then be filtered to just one day at a time.</p>
+    <div id="dayGroupsTable">Loading…</div>
+  </div>
+
+  <div class="card" id="clubCodesCard" style="display:none">
+    <h2 style="margin-top:0">3. Club codes</h2>
+    <p style="color:var(--gray);font-size:14px">Code and union are set automatically for every club against the official PSA reference on import — nothing to upload. A club not on that list still gets a guessed code so it's not blank; edit it below if needed, or merge it if it's really just a duplicate spelling of a club already in the list.</p>
+    <div id="clubCodesTable">Loading…</div>
+  </div>
+
+  <div class="card">
+    <h2 style="margin-top:0">Next step</h2>
+    <p style="color:var(--gray);font-size:14px">Once entries (and days, if multi-day) look right, head to <a href="/race-sort.html"><b>Race Sort</b></a> to combine small age groups, then <a href="/program.html"><b>Race Program</b></a> to draw heats/finals and finalise to the Tower.</p>
+  </div>
+</main>
+<script src="common.js"></script>
+<script>
+async function doImport(btn){
+  const meetId = getMeetId();
+  if(!meetId){ alert('Pick a meet first (top-right).'); return; }
+  const f = document.getElementById('fileInput').files[0];
+  if(!f){ alert('Choose a file first'); return; }
+  const el = document.getElementById('importResult');
+  btn.disabled = true;
+  btn.textContent = 'Importing…';
+  el.innerHTML = '<p style="color:var(--gray)">Reading spreadsheet…</p>';
+  try {
+    const fd = new FormData();
+    fd.append('file', f);
+    fd.append('meetId', meetId);
+    const res = await fetch('/api/entries/import', { method:'POST', body: fd });
+    const data = await res.json();
+    if(!res.ok){ el.innerHTML = `<div class="flag">${data.error}</div>`; return; }
+    let html = `<div class="flag" style="background:#E4F5EC;border-color:#9ED8B8;color:#1E8E5A">
+      Imported: ${data.entriesCreated} entries, ${data.athletesCreated} new athletes, ${data.eventsCreated} new events (of ${data.rowsRead} rows read).
+      ${data.duplicatesSkipped ? `${data.duplicatesSkipped} row(s) matched an athlete already entered in that event and were skipped, not duplicated.` : ''}
+    </div>`;
+    if(data.flags.length){
+      html += `<h3>Needs a look (${data.flags.length})</h3>`;
+      data.flags.forEach(f => html += `<div class="flag">${f}</div>`);
+    }
+    el.innerHTML = html;
+    loadDayGroups();
+    loadClubCodes();
+  } catch (err) {
+    console.error(err);
+    el.innerHTML = `<div class="flag">Import failed: ${err.message}. Check the black server window for details, or try again.</div>`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Import';
+  }
+}
+
+let currentMeetNumDays = 1;
+
+async function loadDayGroups(){
+  const meetId = getMeetId();
+  if(!meetId) return;
+  const meets = await (await fetch('/api/meets')).json();
+  const meet = meets.find(m => m.id === meetId);
+  currentMeetNumDays = (meet && meet.numDays) || 1;
+
+  const card = document.getElementById('raceDaysCard');
+  if(currentMeetNumDays <= 1){ card.style.display = 'none'; return; }
+  card.style.display = 'block';
+  document.getElementById('numDaysLabel').textContent = `${currentMeetNumDays} days`;
+
+  const el = document.getElementById('dayGroupsTable');
+  try {
+    const groups = await (await fetch(`/api/programme/day-groups?meetId=${encodeURIComponent(meetId)}`)).json();
+    if(groups.length === 0){ el.innerHTML = '<p style="color:var(--gray)">Import entries first.</p>'; return; }
+    const dayOptions = Array.from({length: currentMeetNumDays}, (_, i) => i+1);
+    const rows = groups.map(g => `
+      <tr>
+        <td>${g.distance} ${g.boatClass}${g.isMassStart?' (mass start)':''}</td>
+        <td class="mono">${g.entryCount}</td>
+        <td>
+          <select onchange="assignDay('${g.distance}','${g.boatClass}', this.value)">
+            ${dayOptions.map(d => `<option value="${d}" ${g.days.includes(d) && g.days.length===1 ? 'selected':''}>Day ${d}</option>`).join('')}
+          </select>
+          ${g.days.length>1 ? '<small style="color:var(--gray)">mixed — pick to unify</small>' : ''}
+        </td>
+      </tr>`).join('');
+    el.innerHTML = `<table><tr><th>Distance / class</th><th>Entries</th><th>Day</th></tr>${rows}</table>`;
+  } catch (err) {
+    console.error(err);
+    el.innerHTML = `<div class="flag">Couldn't load day groups: ${err.message}</div>`;
+  }
+}
+
+async function assignDay(distance, boatClass, day){
+  const meetId = getMeetId();
+  const res = await fetch('/api/programme/assign-day', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({meetId, distance, boatClass, day: Number(day)})
+  });
+  const data = await res.json();
+  if(!res.ok){ alert(data.error); return; }
+  loadDayGroups();
+}
+
+async function loadClubCodes(){
+  const card = document.getElementById('clubCodesCard');
+  const el = document.getElementById('clubCodesTable');
+  try {
+    const data = await (await fetch('/api/entries/club-codes')).json();
+    const clubs = Object.keys(data).sort();
+    if(clubs.length === 0){ card.style.display = 'none'; return; }
+    card.style.display = 'block';
+    const rows = clubs.map(name => `
+      <tr>
+        <td>${name}</td>
+        <td><input type="text" value="${data[name].code}" maxlength="6" style="width:80px;text-transform:uppercase" onchange="editClubCode('${name.replace(/'/g,"\\'")}', this.value)"></td>
+        <td style="color:var(--gray);font-size:13px">${data[name].union || '—'}</td>
+        <td>
+          <select id="mergeTarget-${clubs.indexOf(name)}" style="max-width:200px">
+            <option value="">— pick a club —</option>
+            ${clubs.filter(n => n !== name).map(n => `<option value="${n}">${n}</option>`).join('')}
+          </select>
+          <button style="font-size:12px" onclick="mergeClub('${name.replace(/'/g,"\\'")}', ${clubs.indexOf(name)})">Merge into this →</button>
+        </td>
+      </tr>`).join('');
+    el.innerHTML = `<table><tr><th>Club</th><th>Code</th><th>Union</th><th>Duplicate spelling? Merge it</th></tr>${rows}</table>`;
+  } catch (err) {
+    console.error(err);
+    card.style.display = 'none';
+  }
+}
+
+async function editClubCode(clubName, code){
+  const res = await fetch('/api/entries/club-codes', {
+    method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({clubName, code})
+  });
+  const data = await res.json();
+  if(!res.ok){ alert(data.error); return; }
+  loadClubCodes();
+}
+
+async function mergeClub(fromName, idx){
+  const toName = document.getElementById(`mergeTarget-${idx}`).value;
+  if(!toName){ alert('Pick which club this is actually the same as.'); return; }
+  const ok = await customConfirm(`Merge "${fromName}" into "${toName}"? Every athlete currently listed under "${fromName}" will move to "${toName}", and "${fromName}" will disappear from this list. This can't be undone.`);
+  if(!ok) return;
+  const res = await fetch('/api/entries/merge-clubs', {
+    method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({fromName, toName})
+  });
+  const data = await res.json();
+  if(!res.ok){ alert(data.error); return; }
+  alert(`Merged ${data.merged} athlete(s) into "${toName}" (code: ${data.code}).`);
+  loadClubCodes();
+}
+
+async function init(){
+  await initMeetBar('meetBar');
+  if(!getMeetId()){ document.getElementById('meetWarning').style.display = 'block'; return; }
+  await loadDayGroups();
+  await loadClubCodes();
+}
+init();
+</script>
+</body>
+</html>

@@ -1,0 +1,50 @@
+PADDLE TIMER - QUICK REFERENCE
+==============================
+
+
+TO START IT
+-----------
+Double-click  START.bat
+
+That's it. It opens in your browser automatically.
+Leave the black window open while you're using it (minimise it,
+don't close it). Closing that window stops Paddle Timer.
+
+
+TO UPDATE IT (when you get a new version)
+-----------------------------------------
+1. Download the new zip (just download it - don't extract it)
+2. Close the black Paddle Timer window if it's open
+3. Double-click  UPDATE.bat
+4. Double-click  START.bat
+
+Your meets, draws and results are NOT touched by updating.
+UPDATE.bat only replaces the program files, never your data.
+It also makes a backup copy at data\db.backup.json first.
+
+
+IF SOMETHING GOES WRONG
+-----------------------
+"No paddle-timer zip found in Downloads"
+   The download didn't finish, or it saved somewhere else.
+   Download it again and check it's in your Downloads folder.
+
+"This file is in the wrong folder"
+   START.bat and UPDATE.bat need to sit in the same folder as
+   package.json, src and public. Move them there.
+
+"Install failed. Is Node.js installed?"
+   Get Node.js from nodejs.org (the big green LTS button),
+   install it, then try START.bat again.
+
+Browser says it can't reach the page
+   The black window isn't running. Double-click START.bat.
+
+
+WHERE'S MY DATA?
+----------------
+data\db.json  - everything: meets, entries, draws, results
+data\db.backup.json - copy made at the last update
+
+To keep a spare copy before a big meet, just copy db.json
+somewhere safe.

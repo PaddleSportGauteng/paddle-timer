@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Weigh Station — Paddle Timer</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  #raceList{display:flex;flex-direction:column;gap:12px;}
+  .wcard{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px;}
+  .wcard.finished{border-left:5px solid var(--green);}
+  .wcard.running{border-left:5px solid var(--orange);}
+  .wcard.pending{border-left:5px solid var(--gray);}
+  .wlabel{font-weight:700;font-size:15px;margin-bottom:8px;}
+  .wboat{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px dashed var(--line);}
+  .wboat:last-child{border-bottom:none}
+  .wboat .num{width:56px;font-weight:700;color:var(--gray);font-family:monospace}
+  .wboat .name{flex:1;}
+  .wboat .weighed{font-size:12px;font-weight:700;}
+  .wboat .weighed.pass{color:var(--green)}
+  .wboat .weighed.fail{color:var(--red)}
+  .winput{width:72px;padding:6px 8px;font-size:15px;text-align:right}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <a href="/" class="title">🛶 PADDLE TIMER</a>
+  <nav><a href="/admin.html">Race Office</a><a href="/race-sort.html">Race Sort</a><a href="/draw.html">Draw</a><a href="/program.html">Race Program</a><a href="/tower.html">Tower</a><a href="/weigh.html">Weigh</a><a href="/results.html">Results</a><a href="/board.html">Board</a></nav>
+  <div id="meetBar"></div>
+</header>
+<main>
+  <h1>Weigh Station</h1>
+  <div class="flag" id="meetWarning" style="display:none">No meet selected — pick one at the top-right first.</div>
+  <div id="dayBar" style="margin-bottom:12px"></div>
+  <p style="color:var(--gray);font-size:14px">Just-finished races are at the top. Tap a boat, enter its weight — no typing needed to find them.</p>
+  <input type="text" id="filterBox" placeholder="Filter by event name (optional)…" style="margin-bottom:12px" oninput="render()">
+  <div id="raceList">Loading…</div>
+</main>
+<script src="common.js"></script>
+<script>
+let allRaces = [];
+let openBoat = null; // {raceId, entryId} of the currently-open weigh form
+let selectedDay = null;
+
+function fmtMs(ms){
+  const cs = Math.floor(ms/10)%100;
+  const totalSec = Math.floor(ms/1000);
+  const sec = totalSec%60;
+  const min = Math.floor(totalSec/60);
+  const pad=(n,l=2)=>String(n).padStart(l,'0');
+  return `${pad(min)}:${pad(sec)}.${pad(cs)}`;
+}
+function phaseLabel(r){
+  const map = { heat: `Heat ${r.heatNumber}`, semi: `Semi ${r.heatNumber}`, final: 'Final A', finalB: 'Final B', finalC: 'Final C' };
+  return map[r.phase] || r.phase;
+}
+
+async function loadRaces(){
+  const meetId = getMeetId();
+  const el = document.getElementById('raceList');
+  if(!meetId) return;
+  try {
+    const dayQS = selectedDay ? `&day=${selectedDay}` : '';
+    const races = await (await fetch(`/api/programme/races?meetId=${encodeURIComponent(meetId)}${dayQS}`)).json();
+    allRaces = races.sort((a,b) => {
+      // Finished-most-recently first, then running, then pending, by race number within each group.
+      const rank = r => r.status==='finished' ? 0 : r.status==='running' ? 1 : 2;
+      if(rank(a) !== rank(b)) return rank(a)-rank(b);
+      if(a.status==='finished') return (b.finishedAt||0) - (a.finishedAt||0);
+      return a.raceNumber - b.raceNumber;
+    });
+    render();
+  } catch (err) {
+    console.error(err);
+    el.innerHTML = `<div class="flag">Couldn't load races: ${err.message}</div>`;
+  }
+}
+
+function render(){
+  const el = document.getElementById('raceList');
+  const q = document.getElementById('filterBox').value.trim().toLowerCase();
+  let races = allRaces.filter(r => Object.values(r.laneEntries).some(Boolean));
+  if(q) races = races.filter(r => (r.event && r.event.label || '').toLowerCase().includes(q));
+  if(races.length === 0){ el.innerHTML = '<p style="color:var(--gray)">No races yet.</p>'; return; }
+
+  // The page rebuilds this whole list every 5s (see loadRaces' setInterval)
+  // and every time a weight gets logged — remember which kg box had focus
+  // so we can hand it straight back afterward, the same fix Tower needed
+  // for its slide-number box. Without this, typing a weight mid-refresh
+  // silently loses your place.
+  const focused = document.activeElement;
+  const focusedId = focused && focused.classList && focused.classList.contains('winput') ? focused.id : null;
+
+  el.innerHTML = races.map(race => {
+    const rows = Object.entries(race.laneEntries).sort((a,b)=>Number(a[0])-Number(b[0])).map(([num, info]) => {
+      if(!info) return '';
+      const weighIn = info.weighIn;
+      const isOpen = (openBoat && openBoat.raceId === race.id && openBoat.entryId === info.entryId) || !weighIn;
+      const badge = weighIn ? (
+        !weighIn.checked ? `<span class="weighed" style="color:var(--gray)">${weighIn.weightKg}kg (no minimum on file)</span>`
+        : weighIn.passed ? `<span class="weighed pass">✓ ${weighIn.weightKg}kg</span>`
+        : `<span class="weighed fail">✗ DQ</span>`
+      ) : '';
+      const rightSide = isOpen
+        ? `<input type="number" step="0.1" class="winput" placeholder="kg" id="winput-${race.id}-${info.entryId}"
+             onkeydown="if(event.key==='Enter'){submitWeight('${race.id}','${info.entryId}');}">
+           <button class="primary" style="font-size:13px;padding:6px 10px" onclick="submitWeight('${race.id}','${info.entryId}')">Log</button>
+           ${weighIn ? `<button style="font-size:13px;padding:6px 10px" onclick="toggleBoat('${race.id}','${info.entryId}')">Cancel</button>` : ''}`
+        : `${badge} <button style="font-size:13px;padding:6px 10px" onclick="toggleBoat('${race.id}','${info.entryId}')">Re-weigh</button>`;
+      return `<div class="wboat">
+          <div class="num">${race.isMassStart?'Slide ':'Lane '}${num}</div>
+          <div class="name">${info.names.join(' / ')}${info.club?` <small style="color:var(--gray)">— ${info.club}</small>`:''}</div>
+          ${rightSide}
+        </div>
+        <div id="wresult-${race.id}-${info.entryId}"></div>`;
+    }).join('');
+
+    return `<div class="wcard ${race.status}">
+      <div class="wlabel">R${race.raceNumber} — ${race.event ? race.event.label : ''} — ${phaseLabel(race)}${race.isMassStart?` (mass start)`:''}</div>
+      ${rows}
+    </div>`;
+  }).join('');
+
+  if(focusedId){
+    const el2 = document.getElementById(focusedId);
+    if(el2) el2.focus();
+  }
+}
+
+function toggleBoat(raceId, entryId){
+  if(openBoat && openBoat.raceId === raceId && openBoat.entryId === entryId){
+    openBoat = null;
+  } else {
+    openBoat = { raceId, entryId };
+  }
+  render();
+  const input = document.getElementById(`winput-${raceId}-${entryId}`);
+  if(input) input.focus();
+}
+
+async function submitWeight(raceId, entryId){
+  const input = document.getElementById(`winput-${raceId}-${entryId}`);
+  const weightKg = parseFloat(input.value);
+  if(isNaN(weightKg)){ alert('Enter a weight'); return; }
+  try {
+    const res = await fetch(`/api/races/entries/${entryId}/weigh`, {
+      method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({weightKg})
+    });
+    const data = await res.json();
+    const resultEl = document.getElementById(`wresult-${raceId}-${entryId}`);
+    if(!res.ok){ resultEl.innerHTML = `<div class="flag">${data.error}</div>`; return; }
+    const w = data.weighIn;
+    if(!w.checked){
+      resultEl.innerHTML = `<div class="flag">${w.note}</div>`;
+    } else if(w.passed){
+      resultEl.innerHTML = `<div class="flag" style="background:#E4F5EC;border-color:#9ED8B8;color:#1E8E5A">Passed — ${weightKg}kg ≥ ${w.minRequiredKg}kg minimum.</div>`;
+    } else {
+      resultEl.innerHTML = `<div class="flag" style="background:#FBE7E7;border-color:#EBAFAF;color:#C93B3B"><b>DQ — ${w.dqReason}</b></div>`;
+    }
+    openBoat = null;
+    await loadRaces();
+  } catch (err) {
+    console.error(err);
+    alert(`Couldn't log weight: ${err.message}`);
+  }
+}
+
+async function init(){
+  await initMeetBar('meetBar');
+  if(!getMeetId()){ document.getElementById('meetWarning').style.display = 'block'; return; }
+  selectedDay = await initDayBar('dayBar');
+  await loadRaces();
+  setInterval(loadRaces, 5000);
+}
+init();
+</script>
+</body>
+</html>

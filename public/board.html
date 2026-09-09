@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>Live Board — Paddle Timer</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  body{background:var(--paper);}
+  .board-race{border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:12px;background:#fff;}
+  .board-race.running{border-left:5px solid var(--orange);}
+  .board-race.finished{border-left:5px solid var(--green);}
+  .board-race.provisional{border-left:5px solid var(--orange);}
+  .board-race.pending{border-left:5px solid var(--gray);}
+  .board-head{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+  .board-head .rn{font-family:'JetBrains Mono','SF Mono',monospace;font-weight:700;color:var(--navy);}
+  .board-head .ev{font-weight:600;font-size:15px;}
+  .board-head .time{color:var(--gray);font-size:13px}
+  .board-row{display:flex;align-items:center;gap:10px;padding:4px 0;font-size:14px;border-bottom:1px dashed var(--line)}
+  .board-row:last-child{border-bottom:none}
+  .board-row .num{width:56px;font-weight:700;color:var(--gray);font-family:'JetBrains Mono','SF Mono',monospace;}
+  .board-row .name{flex:1}
+  .board-row .result{font-family:'JetBrains Mono','SF Mono',monospace;color:var(--navy);font-weight:600;font-size:13px}
+  #searchBox{width:100%;padding:12px;font-size:16px;border-radius:8px;border:1px solid var(--line);margin-bottom:14px}
+  .empty-msg{color:var(--gray);text-align:center;padding:30px;}
+  .medal{font-size:16px;margin-right:2px}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="title">🛶 LIVE BOARD</div>
+  <div id="meetBar"></div>
+</header>
+<main>
+  <div class="flag" id="meetWarning" style="display:none">No meet selected — pick one at the top-right.</div>
+  <div id="dayBar" style="margin-bottom:12px"></div>
+  <input type="text" id="searchBox" placeholder="Search your name, club, or event…" oninput="renderBoard()">
+  <div id="boardList">Loading…</div>
+</main>
+<script src="common.js"></script>
+<script>
+let allRaces = [];
+let allResultBlocks = [];
+let selectedDay = null;
+
+function phaseLabel(r){
+  const map = { heat: `Heat ${r.heatNumber}`, semi: `Semi ${r.heatNumber}`, final: 'Final A', finalB: 'Final B', finalC: 'Final C' };
+  return map[r.phase] || r.phase;
+}
+
+function fmtTime(ms){
+  if(ms==null) return '';
+  const cs = Math.floor(ms/10)%100;
+  const totalSec = Math.floor(ms/1000);
+  const sec = totalSec%60;
+  const min = Math.floor(totalSec/60);
+  const pad=(n,l=2)=>String(n).padStart(l,'0');
+  return `${pad(min)}:${pad(sec)}.${pad(cs)}`;
+}
+
+function weightNote(weighIn){
+  return weighIn ? ` <small style="color:var(--gray)">· ${weighIn.weightKg}kg</small>` : '';
+}
+
+async function loadBoard(){
+  const meetId = getMeetId();
+  const el = document.getElementById('boardList');
+  if(!meetId) return;
+  try {
+    const dayQS = selectedDay ? `&day=${selectedDay}` : '';
+    const [races, blocks] = await Promise.all([
+      fetch(`/api/programme/races?meetId=${encodeURIComponent(meetId)}${dayQS}`).then(r => r.json()),
+      fetch(`/api/results/all?meetId=${encodeURIComponent(meetId)}${dayQS}`).then(r => r.json()),
+    ]);
+    // Finished races are rendered from the results blocks instead (below)
+    // — that's what actually knows how to re-split a combined start back
+    // into its own medal category, so a race only needs handling in ONE
+    // place here, not two slightly-different copies of the same logic.
+    allRaces = races.filter(r => r.published && r.status !== 'finished');
+    allResultBlocks = blocks;
+    renderBoard();
+  } catch (err) {
+    console.error(err);
+    el.innerHTML = `<div class="flag">Couldn't load the board: ${err.message}. Check you're on the venue wifi.</div>`;
+  }
+}
+
+function liveRaceHtml(r){
+  const rows = Object.entries(r.laneEntries).sort((a,b)=>Number(a[0])-Number(b[0])).map(([num, info]) => {
+    if(!info) return '';
+    const result = r.results ? r.results[info.entryId] : null;
+    let resultText = '';
+    if(result && result.status === 'OK') resultText = `#${result.position} · ${fmtTime(result.finishTimeMs)}`;
+    else if(result && result.status !== 'OK') resultText = result.status;
+    else if(r.isMassStart && info.laps) resultText = `${info.laps.length}/${r.totalLaps} laps`;
+    return `<div class="board-row">
+      <div class="num">${r.isMassStart ? 'Slide '+num : 'Lane '+num}</div>
+      <div class="name">${info.names.join(' / ')}${info.club?` <small style="color:var(--gray)">— ${info.club}</small>`:''}</div>
+      <div class="result">${resultText}</div>
+    </div>`;
+  }).join('');
+
+  return { raceNumber: r.raceNumber, html: `<div class="board-race ${r.status}">
+    <div class="board-head">
+      <span><span class="rn">R${r.raceNumber}</span> &nbsp; <span class="ev">${r.combinedLabel || (r.event ? r.event.label : '')} — ${phaseLabel(r)}</span></span>
+      <span class="time">${r.scheduledLabel ? 'Start: '+r.scheduledLabel+' · ' : ''}${r.status==='running' ? '🟢 Racing now' : '⏸ Not started'}</span>
+    </div>
+    ${rows}
+  </div>` };
+}
+
+function resultBlockHtml(b){
+  const medalFor = (place) => {
+    if(!b.medalEligibility) return '';
+    if(place===1 && b.medalEligibility.gold) return '<span class="medal">🥇</span>';
+    if(place===2 && b.medalEligibility.silver) return '<span class="medal">🥈</span>';
+    if(place===3 && b.medalEligibility.bronze) return '<span class="medal">🥉</span>';
+    return '';
+  };
+  const rankedRows = b.ranked.map(r => `
+    <div class="board-row">
+      <div class="num">#${r.place}</div>
+      <div class="name">${medalFor(r.place)}${r.names.join(' / ')}${r.club?` <small style="color:var(--gray)">— ${r.club}</small>`:''}</div>
+      <div class="result">${fmtTime(r.timeMs)}${weightNote(r.weighIn)}</div>
+    </div>`).join('');
+  const otherRows = b.others.map(o => `
+    <div class="board-row">
+      <div class="num">—</div>
+      <div class="name">${o.names.join(' / ')} <span class="pill bad">${o.status}</span></div>
+      <div class="result">${weightNote(o.weighIn)}</div>
+    </div>`).join('');
+
+  // Weigh-ins pending only ever means the podium specifically — extra
+  // boats beyond that are the office's own choice, never a requirement,
+  // so this never says "pending" once positions 1-3 are actually done.
+  const statusText = b.resultsConfirmed ? '✅ Official result'
+    : (b.weighInStatus && b.weighInStatus.complete) ? '✅ Weigh-ins complete — awaiting office confirmation'
+    : (b.weighInStatus && b.weighInStatus.flag) ? `⏳ ${b.weighInStatus.flag}`
+    : '⏳ Provisional';
+  const medalFlag = b.medalEligibility && b.medalEligibility.flag ? `<div class="flag" style="margin:8px 0 0">${b.medalEligibility.flag}</div>` : '';
+  const cssStatus = b.resultsConfirmed ? 'finished' : 'provisional';
+
+  return { raceNumber: b.raceNumber, html: `<div class="board-race ${cssStatus}">
+    <div class="board-head">
+      <span><span class="rn">R${b.raceNumber}</span> &nbsp; <span class="ev">${b.label} — ${b.phaseLabel}</span>${b.combinedWith ? ` <small style="color:var(--gray)">(combined start)</small>` : ''}</span>
+      <span class="time">${statusText}</span>
+    </div>
+    ${rankedRows}
+    ${otherRows}
+    ${medalFlag}
+  </div>` };
+}
+
+function renderBoard(){
+  const el = document.getElementById('boardList');
+  const q = document.getElementById('searchBox').value.trim().toLowerCase();
+
+  const matchesLive = r => {
+    const evLabel = (r.combinedLabel || (r.event && r.event.label) || '').toLowerCase();
+    const inLanes = Object.values(r.laneEntries).some(info => info && (
+      info.names.join(' ').toLowerCase().includes(q) || (info.club||'').toLowerCase().includes(q)
+    ));
+    return evLabel.includes(q) || inLanes;
+  };
+  const matchesBlock = b => {
+    if(b.label.toLowerCase().includes(q)) return true;
+    const inList = list => list.some(x => x.names.join(' ').toLowerCase().includes(q) || (x.club||'').toLowerCase().includes(q));
+    return inList(b.ranked) || inList(b.others);
+  };
+
+  const items = [
+    ...allRaces.filter(r => !q || matchesLive(r)).map(liveRaceHtml),
+    ...allResultBlocks.filter(b => !q || matchesBlock(b)).map(resultBlockHtml),
+  ].sort((a,b) => a.raceNumber - b.raceNumber);
+
+  if(items.length === 0){
+    const nothingAtAll = allRaces.length === 0 && allResultBlocks.length === 0;
+    el.innerHTML = `<p class="empty-msg">${nothingAtAll ? 'Nothing published yet — check back once race office finalises the programme.' : 'No matches.'}</p>`;
+    return;
+  }
+
+  el.innerHTML = items.map(i => i.html).join('');
+}
+
+async function init(){
+  await initMeetBar('meetBar', { allowCreate: false });
+  if(!getMeetId()){ document.getElementById('meetWarning').style.display = 'block'; return; }
+  selectedDay = await initDayBar('dayBar');
+  await loadBoard();
+  setInterval(loadBoard, 4000);
+}
+init();
+</script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+{
+  "name": "paddle-timer",
+  "version": "0.1.0",
+  "description": "Local-network race day app for canoe sprint regattas: entries, heats/semis/finals, live timing, weigh station, PSA/ICF rules.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "exceljs": "^4.4.0",
+    "express": "^4.19.2",
+    "multer": "^2.0.0",
+    "pdfkit": "^0.15.0",
+    "xlsx": "^0.18.5"
+  }
+}
