@@ -726,48 +726,53 @@ router.post('/auto-sequence', (req, res) => {
   const locked = Object.values(database.races).filter((r) => eventIds.has(r.eventId) && r.status !== 'pending');
   const maxLockedNumber = locked.reduce((m, r) => Math.max(m, r.raceNumber), 0);
 
-  const distanceOf = (r) => { const ev = database.events[r.eventId]; return ev ? ev.distance : ''; };
-  const isMultiRound = (r) => { const ev = database.events[r.eventId]; return ev && ev.plan && ev.plan.rounds && ev.plan.rounds.length > 1; };
+  // Age order: youngest to oldest covering all PSA/ICF categories
+  const AGE_ORDER = [
+    'GUPPY','U8','U9','U10','U11','U12','U13','U14','U15','U16','U17','U18',
+    'U19','U20','U21','U23','U26','JUN','JUNIOR',
+    'SNR','SENIOR','OPEN','ELITE',
+    '35-45','35-55','35-65','35+','35',
+    '45-55','45-60','45-65','45+','45',
+    '55-65','55+','55',
+    '60+','60','65+','65','70+','70','75+','80+',
+  ];
 
-  const byDistance = {};
-  pending.forEach((r) => { (byDistance[distanceOf(r)] = byDistance[distanceOf(r)] || []).push(r); });
-  const distancesSorted = Object.keys(byDistance).sort((a, b) => (parseInt(a, 10) || 0) - (parseInt(b, 10) || 0));
+  function ageRank(ageCategory) {
+    if (!ageCategory) return 999;
+    const upper = ageCategory.toUpperCase().trim();
+    const idx = AGE_ORDER.findIndex((a) => upper.includes(a) || a === upper);
+    return idx === -1 ? 500 : idx;
+  }
 
-  const merged = [];
-  distancesSorted.forEach((dist) => {
-    const races = byDistance[dist];
-    const heats = races.filter((r) => r.phase === 'heat' && isMultiRound(r));
-    const straightFinals = races.filter((r) => r.phase === 'final' && !isMultiRound(r));
-    const everythingElse = races.filter((r) => !heats.includes(r) && !straightFinals.includes(r));
+  // Phase order: heats first, then semis, then finals
+  const PHASE_ORDER = { heat: 0, semi: 1, final: 2, finalB: 3, finalC: 4 };
+  function phaseRank(phase) { return PHASE_ORDER[phase] !== undefined ? PHASE_ORDER[phase] : 2; }
 
-    // Group heats by event so one event's heats stay together (helps its
-    // semi become ready sooner), then round-robin across events within
-    // this distance so no single event hogs the whole front of it.
-    const heatsByEvent = {};
-    heats.forEach((r) => { (heatsByEvent[r.eventId] = heatsByEvent[r.eventId] || []).push(r); });
-    Object.values(heatsByEvent).forEach((list) => list.sort((a, b) => a.heatNumber - b.heatNumber));
-    const eventQueues = Object.values(heatsByEvent);
-    const orderedHeats = [];
-    let any = true;
-    while (any) {
-      any = false;
-      eventQueues.forEach((q) => { if (q.length) { orderedHeats.push(q.shift()); any = true; } });
-    }
+  function distRank(eventId) {
+    const ev = database.events[eventId];
+    return ev ? (parseInt(ev.distance, 10) || 0) : 0;
+  }
 
-    const ratio = straightFinals.length > 0 ? Math.max(1, Math.round(orderedHeats.length / straightFinals.length)) : Infinity;
-    const finalsQueue = [...straightFinals];
-    orderedHeats.forEach((r, i) => {
-      merged.push(r);
-      if ((i + 1) % ratio === 0 && finalsQueue.length) merged.push(finalsQueue.shift());
-    });
-    merged.push(...finalsQueue);
-    merged.push(...everythingElse);
+  function eventAge(eventId) {
+    const ev = database.events[eventId];
+    return ev ? ageRank(ev.ageCategory) : 999;
+  }
+
+  // Sort: phase → age → distance → heat number
+  const sorted = [...pending].sort((a, b) => {
+    const pDiff = phaseRank(a.phase) - phaseRank(b.phase);
+    if (pDiff !== 0) return pDiff;
+    const ageDiff = eventAge(a.eventId) - eventAge(b.eventId);
+    if (ageDiff !== 0) return ageDiff;
+    const dDiff = distRank(a.eventId) - distRank(b.eventId);
+    if (dDiff !== 0) return dDiff;
+    return (a.heatNumber || 0) - (b.heatNumber || 0);
   });
 
-  merged.forEach((r, i) => { r.raceNumber = maxLockedNumber + i + 1; });
+  sorted.forEach((r, i) => { r.raceNumber = maxLockedNumber + i + 1; });
   reflowTimes(database, meetId);
   db.save();
-  res.json({ reordered: merged.length });
+  res.json({ reordered: sorted.length });
 });
 
 // Manual reorder: office repositions races (up/down in the UI) and this
