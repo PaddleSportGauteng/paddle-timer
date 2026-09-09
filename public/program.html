@@ -42,10 +42,6 @@
 <main>
   <h1>Race Program</h1>
   <div class="flag" id="meetWarning" style="display:none">No meet selected — pick or create one at the top-right first.</div>
-  <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:12px">
-    <div id="dayBar"></div>
-  </div>
-
   <div class="card" style="background:#EAF1FA;border-color:#B8D0EA">
     <p style="margin:0;color:#1a3a5c">Need to draw or combine events first? <a href="/race-sort.html">Race Sort</a> → <a href="/draw.html"><b>Draw →</b></a> Do that before setting times/finalising below.</p>
   </div>
@@ -105,7 +101,6 @@ let meetNumDays = 1;
 
 let allEvents = [];
 
-let selectedDay = null;
 
 // Lightweight — just populates allEvents for the round-advancement table
 // below. Full drawing (Generate/Confirm/Change/slide assignment) lives
@@ -114,8 +109,7 @@ async function loadEvents(){
   const meetId = getMeetId();
   if(!meetId) return;
   try {
-    const dayQS = selectedDay ? `&day=${selectedDay}` : '';
-    const res = await fetch(`/api/programme/events?meetId=${encodeURIComponent(meetId)}${dayQS}`);
+      const res = await fetch(`/api/programme/events?meetId=${encodeURIComponent(meetId)}`);
     if(!res.ok) throw new Error(`Server returned ${res.status}`);
     allEvents = await res.json();
   } catch (err) {
@@ -187,16 +181,14 @@ async function createNextRound(eventId, phase, btn){
 
 function downloadPdf(){
   const meetId = getMeetId();
-  const dayQS = selectedDay ? `&day=${selectedDay}` : '';
   // Cache-bust with a timestamp so a re-download after changing times/draws
   // always fetches fresh, never a stale cached copy.
-  window.open(`/api/export/programme.pdf?meetId=${encodeURIComponent(meetId)}${dayQS}&_=${Date.now()}`, '_blank');
+  window.open(`/api/export/programme.pdf?meetId=${encodeURIComponent(meetId)}&_=${Date.now()}`, '_blank');
 }
 
 function downloadDraws(){
   const meetId = getMeetId();
-  const dayQS = selectedDay ? `&day=${selectedDay}` : '';
-  window.open(`/api/export/draws.xlsx?meetId=${encodeURIComponent(meetId)}${dayQS}&_=${Date.now()}`, '_blank');
+  window.open(`/api/export/draws.xlsx?meetId=${encodeURIComponent(meetId)}&_=${Date.now()}`, '_blank');
 }
 
 async function autoSequence(){
@@ -213,8 +205,7 @@ async function autoSequence(){
 
 async function moveRaceTo(raceId, target){
   const meetId = getMeetId();
-  const dayQS = selectedDay ? `&day=${selectedDay}` : '';
-  const races = await (await fetch(`/api/programme/races?meetId=${encodeURIComponent(meetId)}${dayQS}`)).json();
+  const races = await (await fetch(`/api/programme/races?meetId=${encodeURIComponent(meetId)}`)).json();
   const pending = races.filter(r => r.status === 'pending');
   const idx = pending.findIndex(r => r.id === raceId);
   if(idx === -1) return;
@@ -293,8 +284,7 @@ async function loadRaceList(keepOpen){
   const mergeBarEl = document.getElementById('mergeBar');
   if(!meetId){ el.innerHTML=''; return; }
   try {
-    const dayQS = selectedDay ? `&day=${selectedDay}` : '';
-  const races = await (await fetch(`/api/programme/schedule?meetId=${encodeURIComponent(meetId)}${dayQS}`)).json();
+    const races = await (await fetch(`/api/programme/schedule?meetId=${encodeURIComponent(meetId)}`)).json();
     allEntries = await (await fetch(`/api/entries?meetId=${encodeURIComponent(meetId)}`)).json();
     allRaces = races.filter(r => r.type !== 'break');
     // load meetNumDays for the day selector on each race
@@ -698,7 +688,7 @@ async function addBreak(){
   if(!durationMinutes){ alert('How many minutes does this need?'); return; }
   const res = await fetch('/api/programme/breaks', {
     method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({meetId, day: selectedDay || 1, label, durationMinutes: Number(durationMinutes), afterIndex: Number(afterIndex)})
+    body: JSON.stringify({meetId, day: 1, label, durationMinutes: Number(durationMinutes), afterIndex: Number(afterIndex)})
   });
   const data = await res.json();
   if(!res.ok){ alert(data.error); return; }
@@ -781,7 +771,6 @@ async function updateNumDays(){
   });
   await loadDayAllocator();
   // Reload day bar so filter tabs update
-  selectedDay = await initDayBar('dayBar');
   loadRaceList();
 }
 
@@ -798,7 +787,6 @@ async function init(){
   await initMeetBar('meetBar', {allowCreate:false});
   const meetId = getMeetId();
   if(!meetId){ document.getElementById('meetWarning').style.display = 'block'; return; }
-  selectedDay = await initDayBar('dayBar');
   await loadEvents();
   await loadAdvanceTable();
   await loadRaceList();
