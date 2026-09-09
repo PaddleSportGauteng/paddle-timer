@@ -758,14 +758,15 @@ router.post('/auto-sequence', (req, res) => {
     return ev ? ageRank(ev.ageCategory) : 999;
   }
 
-  // Sort: phase → age → distance → heat number
+  // Sort: phase → distance → age → heat number
+  // Distance grouped so cam docks/jetties don't have to move mid-phase
   const sorted = [...pending].sort((a, b) => {
     const pDiff = phaseRank(a.phase) - phaseRank(b.phase);
     if (pDiff !== 0) return pDiff;
-    const ageDiff = eventAge(a.eventId) - eventAge(b.eventId);
-    if (ageDiff !== 0) return ageDiff;
     const dDiff = distRank(a.eventId) - distRank(b.eventId);
     if (dDiff !== 0) return dDiff;
+    const ageDiff = eventAge(a.eventId) - eventAge(b.eventId);
+    if (ageDiff !== 0) return ageDiff;
     return (a.heatNumber || 0) - (b.heatNumber || 0);
   });
 
