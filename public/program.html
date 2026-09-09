@@ -59,17 +59,17 @@
   </div>
 
   <div class="card">
-    <div class="toolbar" style="justify-content:space-between">
-      <h2 style="margin:0">2. Race Program</h2>
-      <div style="display:flex;gap:6px;align-items:flex-start;flex-wrap:nowrap">
-        <div style="display:flex;flex-direction:column;gap:4px">
-          <button style="font-size:11px;padding:4px 10px;white-space:nowrap" onclick="expandAll()">Expand all</button>
-          <button style="font-size:11px;padding:4px 10px;white-space:nowrap" onclick="collapseAll()">Collapse all</button>
+    <div class="toolbar" style="justify-content:space-between;align-items:center;flex-wrap:nowrap">
+      <h2 style="margin:0;white-space:nowrap">2. Race Program</h2>
+      <div style="display:flex;gap:6px;align-items:center;flex-shrink:0">
+        <div style="display:flex;flex-direction:column;gap:3px">
+          <button style="font-size:11px;padding:3px 10px;white-space:nowrap" onclick="expandAll()">Expand all</button>
+          <button style="font-size:11px;padding:3px 10px;white-space:nowrap" onclick="collapseAll()">Collapse all</button>
         </div>
-        <button class="primary" style="font-size:11px;padding:6px 10px;white-space:nowrap;background:#2980b9;border-color:#2980b9" onclick="downloadSchedule()">Planning Sheet (PDF)</button>
-        <button class="orange" style="font-size:11px;padding:6px 10px;white-space:nowrap" onclick="downloadDraws()">Draws (Excel)</button>
-        <button class="orange" style="font-size:11px;padding:6px 10px;white-space:nowrap" onclick="downloadPdf()">Programme (PDF)</button>
-        <button class="green" style="font-size:11px;padding:6px 10px;white-space:nowrap" onclick="finalise()">Finalise → Tower</button>
+        <button style="font-size:12px;padding:7px 12px;white-space:nowrap;background:#2980b9;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600" onclick="downloadSchedule()">Planning Sheet (PDF)</button>
+        <button class="orange" style="font-size:12px;padding:7px 12px;white-space:nowrap" onclick="downloadDraws()">Draws (Excel)</button>
+        <button class="orange" style="font-size:12px;padding:7px 12px;white-space:nowrap" onclick="downloadPdf()">Programme (PDF)</button>
+        <button class="green" style="font-size:12px;padding:7px 12px;white-space:nowrap;font-weight:700" onclick="finalise()">Finalise → Tower</button>
       </div>
     </div>
     <p style="color:var(--gray);font-size:14px">Every race for this meet, in order, <b>once it's been drawn or combined above</b>. This is where you fine-tune what's already been created — swap a lane, scratch someone, delete a race, set its time. Edit freely until you hit Finalise — only finalised races show up on the Tower. <b>The PDF is generated fresh every time you click download</b> — it always matches exactly what's below, never cached; if it ever looks different, it's because it was downloaded before a later change, not because it's out of sync.</p>
