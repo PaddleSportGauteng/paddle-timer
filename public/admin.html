@@ -111,6 +111,8 @@
     <div class="lane-label">Number of lanes at this venue</div>
     <div class="lane-btns" id="laneBtns"></div>
 
+    <div class="lane-label">Number of days this event runs</div>
+    <div class="lane-btns" id="dayBtns"></div>
 
     <div class="lane-label">Entries spreadsheet (the "System Race data" tab)</div>
     <div class="file-row">
@@ -144,6 +146,7 @@
 // ── Lane picker ───────────────────────────────────────────────────
 let selectedLanes = 9;
 let selectedDisc = 'sprint';
+let selectedDays = 1;
 
 (function buildLaneBtns(){
   const el = document.getElementById('laneBtns');
@@ -154,6 +157,21 @@ let selectedDisc = 'sprint';
     b.onclick = () => {
       selectedLanes = n;
       document.querySelectorAll('.lane-btn-num').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+    };
+    el.appendChild(b);
+  });
+})();
+
+(function buildDayBtns(){
+  const el = document.getElementById('dayBtns');
+  [1,2,3,4,5].forEach(n => {
+    const b = document.createElement('button');
+    b.className = 'lane-btn-num' + (n === 1 ? ' active' : '');
+    b.textContent = n;
+    b.onclick = () => {
+      selectedDays = n;
+      document.querySelectorAll('#dayBtns .lane-btn-num').forEach(x => x.classList.remove('active'));
       b.classList.add('active');
     };
     el.appendChild(b);
@@ -189,7 +207,7 @@ async function createAndImport(btn) {
     const mRes = await fetch('/api/meets', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, raceType: selectedDisc, lanes: selectedLanes, numDays: 1 })
+      body: JSON.stringify({ name, raceType: selectedDisc, lanes: selectedLanes, numDays: selectedDays })
     });
     const meet = await mRes.json();
     if (!mRes.ok) { el.innerHTML = `<div class="flag">${meet.error}</div>`; return; }
