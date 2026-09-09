@@ -10,11 +10,16 @@
   .race-block.published{border-left:4px solid var(--green);}
   .race-block.unpublished{border-left:4px solid var(--gray);}
   .race-block h4{margin:0 0 8px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;font-size:15px}
-  .lane-row{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px dashed var(--line);font-size:13px;}
+  .lane-row{display:flex;align-items:flex-start;gap:8px;padding:8px 0;border-bottom:1px dashed var(--line);font-size:13px;}
   .lane-row:last-child{border-bottom:none}
-  .lane-row .lanenum{width:60px;font-weight:700;color:var(--gray)}
-  .lane-row select{flex:1;font-size:13px;padding:5px;border-radius:5px;border:1px solid var(--line)}
-  .lane-row button{font-size:12px;padding:5px 8px}
+  .lane-row .lanenum{width:60px;font-weight:700;color:var(--gray);padding-top:2px;flex-shrink:0}
+  .lane-row select{font-size:12px;padding:4px;border-radius:5px;border:1px solid var(--line)}
+  .lane-row button{font-size:12px;padding:5px 8px;flex-shrink:0}
+  .paddler-block{display:flex;flex-wrap:wrap;gap:16px;flex:1;min-width:0}
+  .paddler-col{min-width:160px;}
+  .paddler-col .pname{font-weight:600;font-size:13px}
+  .paddler-col .pmeta{font-size:12px;color:var(--gray);margin-top:2px}
+  .lane-actions{display:flex;flex-wrap:wrap;gap:4px;align-items:flex-start;flex-shrink:0}
   .time-input{width:110px !important;display:inline-block}
   .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:10px}
   .toolbar label{font-size:12px;color:var(--gray);display:block;margin-bottom:4px}
@@ -527,35 +532,57 @@ function raceBlockHtml(race){
     .map(e => `<option value="${e.id}" ${e.id===currentId?'selected':''}>${e.names.join(' / ')}</option>`).join('');
 
   const laneRows = lanes.map(([lane, info]) => {
-    const details = info ? `<small style="color:var(--gray);margin-left:8px">${[info.clubCode, info.union, info.ageCategory].filter(Boolean).join(' · ')}</small>` : '';
-    if(locked){
-      return `<div class="lane-row"><div class="lanenum">Lane ${lane}</div><div style="flex:1">${info ? info.names.join(' / ') : '(empty)'}${details}</div></div>`;
+    // Build paddler column(s) — one for K1, two side-by-side for K2
+    function paddlerCol(name, club, union, age) {
+      return `<div class="paddler-col">
+        <div class="pname">${name}</div>
+        <div class="pmeta">${[club, union, age].filter(Boolean).join(' · ')}</div>
+      </div>`;
     }
 
-    // Swap with another lane in this race
+    const isK2 = info && info.names && info.names.length > 1;
+
+    if(locked){
+      const paddlers = info
+        ? (isK2
+            ? paddlerCol(info.names[0]||'', info.clubCode||'', info.union||'', info.ageCategory||'')
+              + paddlerCol(info.names[1]||'', '', '', '')
+            : paddlerCol(info.names[0]||'', info.clubCode||'', info.union||'', info.ageCategory||''))
+        : `<div style="color:var(--gray)">(empty)</div>`;
+      return `<div class="lane-row">
+        <div class="lanenum">Lane ${lane}</div>
+        <div class="paddler-block">${paddlers}</div>
+      </div>`;
+    }
+
     const otherLanes = lanes.filter(([l]) => l !== lane);
     const swapOptions = otherLanes.map(([l, i]) => `<option value="${l}">Lane ${l}${i ? ' — '+i.names[0] : ' (empty)'}</option>`).join('');
-
-    // Move to a different race entirely
     const otherRaces = allRaces.filter(r => r.id !== race.id && r.status === 'pending');
     const moveOptions = otherRaces.map(r => `<option value="${r.id}">Race ${r.raceNumber}: ${r.event ? r.event.label : ''} — ${phaseLabel(r)}</option>`).join('');
 
+    const paddlers = info
+      ? (isK2
+          ? paddlerCol(info.names[0]||'', info.clubCode||'', info.union||'', info.ageCategory||'')
+            + paddlerCol(info.names[1]||'', '', '', '')
+          : paddlerCol(info.names[0]||'', info.clubCode||'', info.union||'', info.ageCategory||''))
+      : `<div style="color:var(--gray)">(empty)</div>`;
+
     return `<div class="lane-row">
       <div class="lanenum">Lane ${lane}</div>
-      <div style="flex:1;font-weight:500">${info ? info.names.join(' / ') : '<span style="color:var(--gray)">(empty)</span>'}${details}</div>
-      ${info ? `
-        <select id="swapSel-${race.id}-${lane}" style="font-size:12px;padding:4px;max-width:140px" title="Swap with another lane">
+      <div class="paddler-block">${paddlers}</div>
+      <div class="lane-actions">
+        <select id="swapSel-${race.id}-${lane}" title="Swap with another lane">
           <option value="">Swap lane…</option>
           ${swapOptions}
         </select>
-        <button style="font-size:12px;padding:5px 8px" onclick="swapLanes('${race.id}', ${lane})">Swap</button>
-        <select id="moveRaceSel-${race.id}-${lane}" style="font-size:12px;padding:4px;max-width:150px" title="Move to a different race">
+        <button onclick="swapLanes('${race.id}', ${lane})">Swap</button>
+        <select id="moveRaceSel-${race.id}-${lane}" title="Move to a different race">
           <option value="">Move to race…</option>
           ${moveOptions}
         </select>
-        <button style="font-size:12px;padding:5px 8px;white-space:nowrap" onclick="moveToRace('${race.id}', ${lane}, '${info.entryId}')">Move →</button>
-        <button class="red" onclick="scratchLane('${race.id}', ${lane})">Scratch</button>
-      ` : ''}
+        <button onclick="moveToRace('${race.id}', ${lane}, '${info ? info.entryId : ''}')">Move →</button>
+        ${info ? `<button class="red" onclick="scratchLane('${race.id}', ${lane})">Scratch</button>` : ''}
+      </div>
     </div>`;
   }).join('');
 
