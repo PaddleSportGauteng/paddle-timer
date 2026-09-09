@@ -30,9 +30,9 @@
     <div id="currentGroupBox" class="flag" style="background:#EAF1FA;border-color:#B8D0EA;color:#1a3a5c">
       <b>Current group:</b> <span id="currentGroupChips" style="color:var(--gray)">empty — click "+ Add" below on the first event</span>
       <div id="currentGroupActions" style="margin-top:8px;display:none">
-        <input type="text" id="combineLabel" placeholder="Custom label (optional)" style="width:220px;padding:6px">
-        <input type="number" id="combineLaps" placeholder="Laps (mass-start only)" style="width:160px;padding:6px;display:none">
-        <input type="number" id="combineStartSlide" placeholder="Starting slide #" style="width:150px;padding:6px;display:none">
+        <input type="text" id="combineLabel" placeholder="Custom label (optional)" style="width:220px;padding:6px" onkeydown="if(event.key==='Enter')saveCurrentGroup()">
+        <input type="number" id="combineLaps" placeholder="Laps (mass-start only)" style="width:160px;padding:6px;display:none" onkeydown="if(event.key==='Enter')saveCurrentGroup()">
+        <input type="number" id="combineStartSlide" placeholder="Starting slide #" style="width:150px;padding:6px;display:none" onkeydown="if(event.key==='Enter')saveCurrentGroup()">
         <button class="green" onclick="saveCurrentGroup()">Save this group ▸</button>
         <button class="red" onclick="clearCurrentGroup()">Clear</button>
       </div>
@@ -47,7 +47,7 @@
   <div class="card">
     <h2 style="margin-top:0">Fix a wrong entry</h2>
     <p style="color:var(--gray);font-size:14px">Athlete entered the wrong event (e.g. 2000m instead of 5000m)? Search, then move them — pulls them out of any un-started race and reassigns which event they belong to.</p>
-    <input type="text" id="moveSearch" placeholder="Search by paddler name or event…" oninput="fixEntryEventId=null; doMoveSearch()">
+    <input type="text" id="moveSearch" placeholder="Search by paddler name or event…" oninput="fixEntryEventId=null; doMoveSearch()" onkeydown="if(event.key==='Enter')doMoveSearch()">
     <div id="moveResults" style="margin-top:10px"></div>
   </div>
 
