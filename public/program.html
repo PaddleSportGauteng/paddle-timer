@@ -474,8 +474,9 @@ function raceBlockHtml(race){
     .map(e => `<option value="${e.id}" ${e.id===currentId?'selected':''}>${e.names.join(' / ')}</option>`).join('');
 
   const laneRows = lanes.map(([lane, info]) => {
+    const details = info ? `<small style="color:var(--gray);margin-left:8px">${[info.club, info.union, info.ageCategory].filter(Boolean).join(' · ')}</small>` : '';
     if(locked){
-      return `<div class="lane-row"><div class="lanenum">Lane ${lane}</div><div style="flex:1">${info ? info.names.join(' / ') : '(empty)'}</div></div>`;
+      return `<div class="lane-row"><div class="lanenum">Lane ${lane}</div><div style="flex:1">${info ? info.names.join(' / ') : '(empty)'}${details}</div></div>`;
     }
     return `<div class="lane-row">
       <div class="lanenum">Lane ${lane}</div>
@@ -483,6 +484,7 @@ function raceBlockHtml(race){
         <option value="">— empty —</option>
         ${options(info ? info.entryId : null)}
       </select>
+      <div style="min-width:200px;font-size:12px;color:var(--gray)">${info ? [info.club, info.union, info.ageCategory].filter(Boolean).join(' · ') : ''}</div>
       ${info ? `<button class="red" onclick="scratchLane('${race.id}', ${lane})">Scratch</button>` : ''}
     </div>`;
   }).join('');
