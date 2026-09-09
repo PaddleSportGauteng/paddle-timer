@@ -823,9 +823,16 @@ function parseHHMM(label) {
 // since those only ever ask for races directly (see routes/races.js and
 // the plain /races endpoint below, both untouched by breaks).
 function combinedSchedule(database, meetId, dayFilter) {
-  const eventIds = new Set(Object.values(database.events).filter((e) => e.meetId === meetId && (!dayFilter || (e.day || 1) === dayFilter)).map((e) => e.id));
+  const eventIds = new Set(Object.values(database.events).filter((e) => e.meetId === meetId).map((e) => e.id));
   const races = Object.values(database.races)
-    .filter((r) => eventIds.has(r.eventId) && r.status === 'pending')
+    .filter((r) => {
+      if (!eventIds.has(r.eventId)) return false;
+      if (r.status !== 'pending') return false;
+      if (!dayFilter) return true;
+      // race.day takes priority; fall back to event.day, then default day 1
+      const raceDay = r.day || (database.events[r.eventId] && database.events[r.eventId].day) || 1;
+      return raceDay === dayFilter;
+    })
     .map((r) => ({ type: 'race', sortKey: r.raceNumber, ref: r }));
   const breaks = Object.values(database.breaks)
     .filter((b) => b.meetId === meetId && (!dayFilter || (b.day || 1) === dayFilter))

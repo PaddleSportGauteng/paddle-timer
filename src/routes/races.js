@@ -619,6 +619,18 @@ router.post('/entries/:entryId/weigh', (req, res) => {
   res.json({ entry, weighIn: database.weighIns[entry.id] });
 });
 
+// Set which day a race runs on (for multi-day meets).
+router.patch('/:id/day', (req, res) => {
+  const database = db.load();
+  const race = database.races[req.params.id];
+  if (!race) return res.status(404).json({ error: 'Race not found.' });
+  const day = Number(req.body.day);
+  if (!Number.isInteger(day) || day < 1) return res.status(400).json({ error: 'day must be a positive number.' });
+  race.day = day;
+  db.save();
+  res.json({ ok: true });
+});
+
 // Swap two lanes within the same race.
 router.post('/:id/swap-lanes', (req, res) => {
   const database = db.load();

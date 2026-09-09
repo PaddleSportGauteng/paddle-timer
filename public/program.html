@@ -102,6 +102,7 @@
 <script>
 let allEntries = [];
 let allRaces = [];
+let meetNumDays = 1;
 
 let allEvents = [];
 
@@ -284,6 +285,12 @@ async function loadRaceList(){
   const races = await (await fetch(`/api/programme/schedule?meetId=${encodeURIComponent(meetId)}${dayQS}`)).json();
     allEntries = await (await fetch(`/api/entries?meetId=${encodeURIComponent(meetId)}`)).json();
     allRaces = races.filter(r => r.type !== 'break');
+    // load meetNumDays for the day selector on each race
+    try {
+      const meets = await (await fetch('/api/meets')).json();
+      const meet = meets.find(m => m.id === meetId);
+      meetNumDays = (meet && meet.numDays) || 1;
+    } catch(e){ meetNumDays = 1; }
 
     const mergeableByEvent = {};
     races.filter(r => r.phase==='heat' && r.status==='pending').forEach(r => {
@@ -535,6 +542,9 @@ function raceBlockHtml(race){
         <small style="color:var(--gray);margin-left:8px">${race.scheduledLabel||''}</small>
       </span>
       <span onclick="event.stopPropagation()">
+        ${meetNumDays > 1 ? `<select style="font-size:12px;padding:4px;border-radius:6px;border:1px solid var(--line)" onchange="setRaceDay('${race.id}',this.value)" title="Which day does this race run on">
+          ${Array.from({length:meetNumDays},(_,i)=>i+1).map(d=>`<option value="${d}" ${(race.day||1)===d?'selected':''}>Day ${d}</option>`).join('')}
+        </select>` : ''}
         ${locked ? '' : `
           <button style="font-size:12px;padding:5px 8px" onclick="moveRaceTo('${race.id}','up')" title="Move up one">▲</button>
           <button style="font-size:12px;padding:5px 8px" onclick="moveRaceTo('${race.id}','down')" title="Move down one">▼</button>
@@ -574,6 +584,14 @@ function expandAll(){
 function collapseAll(){
   document.querySelectorAll('.race-lanes').forEach(el => el.style.display = 'none');
   document.querySelectorAll('[id^="toggle-"]').forEach(el => el.textContent = '▶');
+}
+
+async function setRaceDay(raceId, day){
+  await fetch(`/api/races/${raceId}/day`, {
+    method:'PATCH', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({day: Number(day)})
+  });
+  // No full reload needed - just a silent save
 }
 
 async function swapLanes(raceId, lane){
