@@ -266,19 +266,20 @@ router.get('/schedule.pdf', (req, res) => {
 
     const desc = raceDescription(race);
     const timeLabel = race.scheduledLabel || '';
+    const textY = y + (rowH - 9) / 2 - 1; // vertically centre 9pt text in rowH
 
     doc.fontSize(9).font('Helvetica-Bold').fillColor('#1a3a5c');
-    doc.text(String(race.raceNumber), cNum, y, { width: wNum });
+    doc.text(String(race.raceNumber), cNum, textY, { width: wNum });
     doc.font('Helvetica').fillColor('#666');
-    doc.text(`D${race.day}`, cDay, y, { width: wDay });
+    doc.text(`D${race.day}`, cDay, textY, { width: wDay });
     doc.fillColor('#000');
-    doc.text(desc, cEvent, y, { width: wEvent, lineBreak: false });
+    doc.text(desc, cEvent, textY, { width: wEvent, lineBreak: false });
 
     if (timeLabel) {
       doc.font('Helvetica-Bold').fillColor('#1a3a5c');
-      doc.text(timeLabel, cTime, y, { width: wTime, align: 'center' });
+      doc.text(timeLabel, cTime, textY, { width: wTime, align: 'center' });
     } else {
-      doc.rect(cTime, y, wTime, rowH - 3).strokeColor('#bbb').lineWidth(0.5).stroke();
+      doc.rect(cTime, y + 2, wTime, rowH - 5).strokeColor('#bbb').lineWidth(0.5).stroke();
     }
 
     doc.fillColor('#000');
