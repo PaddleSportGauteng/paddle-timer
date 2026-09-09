@@ -21,7 +21,6 @@
 <main>
   <h1>Race Sort</h1>
   <div class="flag" id="meetWarning" style="display:none">No meet selected — pick or create one at the top-right first.</div>
-  <div id="dayBar" style="margin-bottom:12px"></div>
   <p style="color:var(--gray);font-size:14px">Do this <b>before</b> Race Program — check which age groups need combining before drawing anything. For groups that start together but get separate results (PSA 1.2.1/1.2.2) — e.g. "MIXED U10-U12", or a small category with too few boats to run alone.</p>
 
   <div class="card">
@@ -391,7 +390,6 @@ async function loadSummary(){
 async function init(){
   await initMeetBar('meetBar', {allowCreate:false});
   if(!getMeetId()){ document.getElementById('meetWarning').style.display = 'block'; return; }
-  selectedDay = await initDayBar('dayBar');
   await loadMeetLanes();
   await loadEvents();
   await loadCombineList();
