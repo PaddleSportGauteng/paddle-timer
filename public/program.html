@@ -409,6 +409,7 @@ function massRaceBlockHtml(race){
         <td class="pmeta">${info.clubCode||''}</td>
         <td class="pmeta">${gLetter}</td>
         <td class="pmeta">${info.union||''}</td>
+        <td class="pmeta">${(info.psaIds||[])[0]||''}</td>
         <td class="pmeta" style="color:var(--gray);font-size:11px">${laps.length}/${race.totalLaps} laps ${done?'✓':''} ${lapStr}</td>
       </tr></table>
       ${!locked ? `<div class="lane-actions">
@@ -541,22 +542,23 @@ function raceBlockHtml(race){
   const laneRows = lanes.map(([lane, info]) => {
     function genderLetter(g){ return g ? (g.toLowerCase().startsWith('f') ? 'F' : g.toLowerCase().startsWith('m') ? 'M' : g) : ''; }
 
-    function paddlerRow(name, age, club, sex, union) {
+    function paddlerRow(name, age, club, sex, union, psaId) {
       return `<tr>
         <td class="pname">${name}</td>
         <td class="pmeta">${age}</td>
         <td class="pmeta">${club}</td>
         <td class="pmeta">${genderLetter(sex)}</td>
         <td class="pmeta">${union}</td>
+        <td class="pmeta">${psaId||''}</td>
       </tr>`;
     }
 
     const paddlerRows = info
       ? (info.names.length > 1
-          ? paddlerRow(info.names[0]||'', info.ageCategory||'', info.clubCode||'', info.gender||'', info.union||'')
-            + paddlerRow(info.names[1]||'', info.ageCategory||'', info.clubCode||'', info.gender||'', info.union||'')
-          : paddlerRow(info.names[0]||'', info.ageCategory||'', info.clubCode||'', info.gender||'', info.union||''))
-      : `<tr><td colspan="5" style="color:var(--gray)">(empty)</td></tr>`;
+          ? paddlerRow(info.names[0]||'', info.ageCategory||'', info.clubCode||'', info.gender||'', info.union||'', (info.psaIds||[])[0]||'')
+            + paddlerRow(info.names[1]||'', info.ageCategory||'', info.clubCode||'', info.gender||'', info.union||'', (info.psaIds||[])[1]||'')
+          : paddlerRow(info.names[0]||'', info.ageCategory||'', info.clubCode||'', info.gender||'', info.union||'', (info.psaIds||[])[0]||''))
+      : `<tr><td colspan="6" style="color:var(--gray)">(empty)</td></tr>`;
 
     const paddlerTable = `<table class="paddler-table">${paddlerRows}</table>`;
 
