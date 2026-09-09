@@ -619,4 +619,39 @@ router.post('/entries/:entryId/weigh', (req, res) => {
   res.json({ entry, weighIn: database.weighIns[entry.id] });
 });
 
+// Move a boat from one race to another — takes them out of their current
+// lane and places them in the first empty lane of the target race.
+router.post('/:id/move-to-race', (req, res) => {
+  const database = db.load();
+  const fromRace = database.races[req.params.id];
+  if (!fromRace) return res.status(404).json({ error: 'Source race not found.' });
+  if (fromRace.status !== 'pending') return res.status(400).json({ error: 'Can only move lanes before the race starts.' });
+
+  const { entryId, targetRaceId } = req.body;
+  const toRace = database.races[targetRaceId];
+  if (!toRace) return res.status(404).json({ error: 'Target race not found.' });
+  if (toRace.status !== 'pending') return res.status(400).json({ error: 'Target race has already started.' });
+
+  // Remove from source race
+  Object.keys(fromRace.lanes).forEach((l) => {
+    if (fromRace.lanes[l] === entryId) fromRace.lanes[l] = null;
+  });
+
+  // Find first empty lane in target race
+  const meet = database.meets[database.events[toRace.eventId] && database.events[toRace.eventId].meetId];
+  const numLanes = meet ? (meet.lanes || 9) : 9;
+  let placed = false;
+  for (let l = 1; l <= numLanes; l++) {
+    if (!toRace.lanes[String(l)]) {
+      toRace.lanes[String(l)] = entryId;
+      placed = true;
+      break;
+    }
+  }
+  if (!placed) return res.status(400).json({ error: 'No empty lanes in the target race.' });
+
+  db.save();
+  res.json({ ok: true });
+});
+
 module.exports = router;

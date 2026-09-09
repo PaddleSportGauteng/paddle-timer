@@ -86,6 +86,7 @@
 <script src="common.js"></script>
 <script>
 let allEntries = [];
+let allRaces = [];
 
 let allEvents = [];
 
@@ -267,6 +268,7 @@ async function loadRaceList(){
     const dayQS = selectedDay ? `&day=${selectedDay}` : '';
   const races = await (await fetch(`/api/programme/schedule?meetId=${encodeURIComponent(meetId)}${dayQS}`)).json();
     allEntries = await (await fetch(`/api/entries?meetId=${encodeURIComponent(meetId)}`)).json();
+    allRaces = races.filter(r => r.type !== 'break');
 
     const mergeableByEvent = {};
     races.filter(r => r.phase==='heat' && r.status==='pending').forEach(r => {
@@ -478,14 +480,26 @@ function raceBlockHtml(race){
     if(locked){
       return `<div class="lane-row"><div class="lanenum">Lane ${lane}</div><div style="flex:1">${info ? info.names.join(' / ') : '(empty)'}${details}</div></div>`;
     }
+
+    // Other races this paddler could move to (all pending races except this one)
+    const otherRaces = allRaces.filter(r => r.id !== race.id && r.status === 'pending');
+    const moveOptions = otherRaces.map(r => `<option value="${r.id}">Race ${r.raceNumber}: ${r.event ? r.event.label : ''} — ${phaseLabel(r)}</option>`).join('');
+
     return `<div class="lane-row">
       <div class="lanenum">Lane ${lane}</div>
-      <select onchange="setLane('${race.id}', ${lane}, this.value)">
+      <select onchange="setLane('${race.id}', ${lane}, this.value)" title="Swap with another paddler in this race">
         <option value="">— empty —</option>
         ${options(info ? info.entryId : null)}
       </select>
-      <div style="min-width:200px;font-size:12px;color:var(--gray)">${info ? [info.club, info.union, info.ageCategory].filter(Boolean).join(' · ') : ''}</div>
-      ${info ? `<button class="red" onclick="scratchLane('${race.id}', ${lane})">Scratch</button>` : ''}
+      <div style="min-width:180px;font-size:12px;color:var(--gray)">${info ? [info.club, info.union, info.ageCategory].filter(Boolean).join(' · ') : ''}</div>
+      ${info ? `
+        <select id="moveRaceSel-${race.id}-${lane}" style="font-size:12px;padding:4px;max-width:160px" title="Move to a different race">
+          <option value="">Move to race…</option>
+          ${moveOptions}
+        </select>
+        <button style="font-size:12px;padding:5px 8px;white-space:nowrap" onclick="moveToRace('${race.id}', ${lane}, '${info.entryId}')">Move →</button>
+        <button class="red" onclick="scratchLane('${race.id}', ${lane})">Scratch</button>
+      ` : ''}
     </div>`;
   }).join('');
 
@@ -517,6 +531,19 @@ function raceBlockHtml(race){
     </h4>
     ${laneRows}
   </div>`;
+}
+
+async function moveToRace(fromRaceId, lane, entryId){
+  const sel = document.getElementById(`moveRaceSel-${fromRaceId}-${lane}`);
+  const targetRaceId = sel ? sel.value : '';
+  if(!targetRaceId){ alert('Pick a target race from the dropdown first.'); return; }
+  const res = await fetch(`/api/races/${fromRaceId}/move-to-race`, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({entryId, targetRaceId})
+  });
+  const data = await res.json();
+  if(!res.ok){ alert(data.error); return; }
+  loadRaceList();
 }
 
 async function setLane(raceId, lane, entryId){
