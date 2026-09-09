@@ -15,10 +15,15 @@
   .lane-row .lanenum{width:52px;font-weight:700;color:var(--gray);flex-shrink:0}
   .lane-row select{font-size:12px;padding:4px;border-radius:5px;border:1px solid var(--line)}
   .lane-row button{font-size:12px;padding:5px 8px;flex-shrink:0}
-  .paddler-table{flex:1;min-width:0;border-collapse:collapse;}
-  .paddler-table td{padding:1px 8px 1px 0;font-size:13px;}
-  .paddler-table td.pname{font-weight:600;word-break:break-word;white-space:normal;max-width:200px;}
+  .paddler-table{flex:1;min-width:0;border-collapse:collapse;table-layout:fixed;width:420px;}
+  .paddler-table td{padding:1px 8px 1px 0;font-size:13px;overflow:hidden;}
+  .paddler-table td.pname{font-weight:600;word-break:break-word;white-space:normal;width:170px;}
   .paddler-table td.pmeta{color:var(--gray);font-size:12px;white-space:nowrap;}
+  .paddler-table td.cage{width:55px;}
+  .paddler-table td.cclub{width:50px;}
+  .paddler-table td.csex{width:22px;}
+  .paddler-table td.cunion{width:42px;}
+  .paddler-table td.cpsa{width:50px;}
   .lane-actions{display:flex;gap:4px;align-items:center;flex-shrink:0}
   .time-input{width:110px !important;display:inline-block}
   .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:10px}
@@ -405,11 +410,11 @@ function massRaceBlockHtml(race){
       <div class="lanenum">Slide ${bib}</div>
       <table class="paddler-table"><tr>
         <td class="pname">${info.names[0]||''}</td>
-        <td class="pmeta">${info.ageCategory||''}</td>
-        <td class="pmeta">${info.clubCode||''}</td>
-        <td class="pmeta">${gLetter}</td>
-        <td class="pmeta">${info.union||''}</td>
-        <td class="pmeta">${(info.psaIds||[])[0]||''}</td>
+        <td class="pmeta cage">${info.ageCategory||''}</td>
+        <td class="pmeta cclub">${info.clubCode||''}</td>
+        <td class="pmeta csex">${gLetter}</td>
+        <td class="pmeta cunion">${info.union||''}</td>
+        <td class="pmeta cpsa">${(info.psaIds||[])[0]||''}</td>
         <td class="pmeta" style="color:var(--gray);font-size:11px">${laps.length}/${race.totalLaps} laps ${done?'✓':''} ${lapStr}</td>
       </tr></table>
       ${!locked ? `<div class="lane-actions">
@@ -545,11 +550,11 @@ function raceBlockHtml(race){
     function paddlerRow(name, age, club, sex, union, psaId) {
       return `<tr>
         <td class="pname">${name}</td>
-        <td class="pmeta">${age}</td>
-        <td class="pmeta">${club}</td>
-        <td class="pmeta">${genderLetter(sex)}</td>
-        <td class="pmeta">${union}</td>
-        <td class="pmeta">${psaId||''}</td>
+        <td class="pmeta cage">${age}</td>
+        <td class="pmeta cclub">${club}</td>
+        <td class="pmeta csex">${genderLetter(sex)}</td>
+        <td class="pmeta cunion">${union}</td>
+        <td class="pmeta cpsa">${psaId||''}</td>
       </tr>`;
     }
 
