@@ -310,11 +310,9 @@ async function doMoveDistance(entryId){
   });
   const data = await res.json();
   if(!res.ok){ alert(data.error); return; }
-  let msg = `Moved to "${data.movedTo}"${data.createdEvent ? ' (new event, first athlete in it)' : ''}.`;
   if(data.undoneDraws && data.undoneDraws.length){
-    msg += `\n\nThey were already drawn into: ${data.undoneDraws.join(', ')} — that draw has been undone (since it's now wrong) and is back to "undrawn" on the Draw page. Redraw it there once you're done fixing entries.`;
+    alert(`Draw undone: ${data.undoneDraws.join(', ')} — go to Draw page to redraw.`);
   }
-  alert(msg);
   await loadEvents();
   await loadCombineList();
   await loadSummary();
@@ -329,12 +327,9 @@ async function doMove(entryId){
   const data = await res.json();
   if(!res.ok){ alert(data.error); return; }
   const updatedEvents = await (await fetch(`/api/programme/events?meetId=${encodeURIComponent(getMeetId())}`)).json();
-  const target = updatedEvents.find(e => e.id === newEventId);
-  let msg = `Moved to "${data.movedTo}" — that event now has ${target ? target.entryCount : '?'} entries.`;
   if(data.undoneDraws && data.undoneDraws.length){
-    msg += `\n\nThey were already drawn into: ${data.undoneDraws.join(', ')} — that draw has been undone (since it's now wrong) and is back to "undrawn" on the Draw page. Redraw it there once you're done fixing entries.`;
+    alert(`Draw undone: ${data.undoneDraws.join(', ')} — go to Draw page to redraw.`);
   }
-  alert(msg);
   await loadEvents();
   await loadCombineList();
   await loadSummary();
@@ -347,11 +342,9 @@ async function doDelete(entryId){
   const res = await fetch(`/api/races/entries/${entryId}`, { method:'DELETE' });
   const data = await res.json();
   if(!res.ok){ alert(data.error); return; }
-  let msg = 'Entry deleted.';
   if(data.undoneDraws && data.undoneDraws.length){
-    msg += `\n\nThey were already drawn into: ${data.undoneDraws.join(', ')} — that draw has been undone (since it's now wrong) and is back to "undrawn" on the Draw page. Redraw it there once you're done fixing entries.`;
+    alert(`Draw undone: ${data.undoneDraws.join(', ')} — go to Draw page to redraw.`);
   }
-  alert(msg);
   await loadEvents();
   await loadCombineList();
   await loadSummary();
