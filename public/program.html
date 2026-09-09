@@ -362,9 +362,9 @@ async function loadRaceList(keepOpen){
       });
     }
     const afterSel = document.getElementById('newBreakAfter');
-    afterSel.innerHTML = '<option value="0">— start of the day —</option>' + races.map((r,i) => {
-      const label = r.type === 'break' ? `After break: ${r.label}` : `After R${r.raceNumber}: ${r.combinedLabel || (r.event ? r.event.label : '')}`;
-      return `<option value="${i+1}">${label}</option>`;
+    afterSel.innerHTML = '<option value="" data-day="1">— start of programme —</option>' + races.filter(r=>r.type!=='break').map((r) => {
+      const label = `After R${r.raceNumber}: ${r.combinedLabel || (r.event ? r.event.label : '')} (Day ${r.day||1})`;
+      return `<option value="${r.id}" data-day="${r.day||1}">${label}</option>`;
     }).join('');
   } catch (err) {
     console.error(err);
@@ -715,11 +715,13 @@ async function addBreak(){
   const meetId = getMeetId();
   const label = document.getElementById('newBreakLabel').value;
   const durationMinutes = document.getElementById('newBreakDuration').value;
-  const afterIndex = document.getElementById('newBreakAfter').value;
+  const afterSel = document.getElementById('newBreakAfter');
+  const afterRaceId = afterSel.value;
+  const day = Number(afterSel.selectedOptions[0].dataset.day) || 1;
   if(!durationMinutes){ alert('How many minutes does this need?'); return; }
   const res = await fetch('/api/programme/breaks', {
     method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({meetId, day: 1, label, durationMinutes: Number(durationMinutes), afterIndex: Number(afterIndex)})
+    body: JSON.stringify({meetId, day, label, durationMinutes: Number(durationMinutes), afterRaceId: afterRaceId || null})
   });
   const data = await res.json();
   if(!res.ok){ alert(data.error); return; }

@@ -979,14 +979,22 @@ function sortKeyAfter(items, afterIndex) {
 // visible right away.
 router.post('/breaks', (req, res) => {
   const database = db.load();
-  const { meetId, day, label, durationMinutes, afterIndex } = req.body;
+  const { meetId, day, label, durationMinutes, afterRaceId } = req.body;
   if (!database.meets[meetId]) return res.status(400).json({ error: 'Meet not found.' });
   const dur = Number(durationMinutes);
   if (!dur || dur <= 0) return res.status(400).json({ error: 'durationMinutes must be a positive number.' });
 
   const dayNum = day ? Number(day) : 1;
   const items = combinedSchedule(database, meetId, dayNum);
-  const idx = afterIndex == null ? items.length : Math.max(0, Math.min(items.length, Number(afterIndex)));
+
+  let idx;
+  if (afterRaceId) {
+    // Find the position of the specified race in the combined schedule
+    const pos = items.findIndex((item) => item.ref && item.ref.id === afterRaceId);
+    idx = pos === -1 ? items.length : pos + 1;
+  } else {
+    idx = 0; // start of this day
+  }
   const sortKey = sortKeyAfter(items, idx - 1);
 
   const id = db.nextId();
