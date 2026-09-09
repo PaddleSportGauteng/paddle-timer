@@ -48,12 +48,10 @@
 
   <div class="card">
     <h2 style="margin-top:0">1. Start times</h2>
-    <p style="color:var(--gray);font-size:14px">Sets the anchor for race 1 — the rest space out by the interval below. Doesn't matter whether you do this before or after arranging the running order in section 2: reordering there always keeps race 1 pinned to whatever time you set here and re-flows everyone else to match, so nothing ever needs re-anchoring either way. New races created afterward (from combining, or heats auto-advancing to semis/finals) won't have a time until you run this again. Longer distances (2000m/5000m) needing more room than the standard gap? Set that race's own "min before next" in section 2 below — everything after it shifts to match automatically, wherever that race ends up if you reorder later.</p>
-    <div class="toolbar">
-      <div><label>First start time</label><input type="text" id="firstTime" placeholder="08:00" value="08:00"></div>
-      <div><label>Minutes between races</label><input type="number" id="intervalMin" value="4" style="width:80px"></div>
-      <div><label><input type="checkbox" id="overwriteTimes"> overwrite existing times</label></div>
-      <button class="primary" onclick="generateStartTimes()">Generate start times</button>
+    <p style="color:var(--gray);font-size:14px">Set the first start time and interval for each day. Each day restarts from its own time independently.</p>
+    <div id="startTimesRows"></div>
+    <div style="margin-top:8px">
+      <label style="font-size:13px;color:var(--gray)"><input type="checkbox" id="overwriteTimes"> overwrite existing times</label>
     </div>
     <div id="startTimesResult"></div>
   </div>
@@ -240,20 +238,40 @@ async function moveRaceTo(raceId, target){
   await loadRaceList();
 }
 
-async function generateStartTimes(){
+function loadStartTimesRows(){
+  const el = document.getElementById('startTimesRows');
+  if(!el) return;
+  const days = meetNumDays || 1;
+  let html = '';
+  for(let d = 1; d <= days; d++){
+    const label = days > 1 ? `Day ${d}` : 'All races';
+    html += `<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap">
+      <span style="font-size:13px;font-weight:600;min-width:50px">${label}</span>
+      <div><label style="font-size:12px;color:var(--gray)">First start</label>
+        <input type="text" id="firstTime-${d}" placeholder="08:00" value="08:00" style="width:80px;padding:6px;margin-left:6px"></div>
+      <div><label style="font-size:12px;color:var(--gray)">Min between races</label>
+        <input type="number" id="intervalMin-${d}" value="4" style="width:60px;padding:6px;margin-left:6px"></div>
+      <button class="primary" onclick="generateStartTimes(${d})">Set ${days > 1 ? 'Day '+d+' ' : ''}times</button>
+    </div>`;
+  }
+  el.innerHTML = html;
+}
+
+async function generateStartTimes(day){
   const meetId = getMeetId();
   if(!meetId){ alert('Pick a meet first.'); return; }
-  const firstTime = document.getElementById('firstTime').value;
-  const intervalMinutes = document.getElementById('intervalMin').value;
+  const d = day || 1;
+  const firstTime = document.getElementById(`firstTime-${d}`).value;
+  const intervalMinutes = document.getElementById(`intervalMin-${d}`).value;
   const overwrite = document.getElementById('overwriteTimes').checked;
   const res = await fetch('/api/programme/generate-start-times', {
     method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({meetId, firstTime, intervalMinutes, overwrite})
+    body: JSON.stringify({meetId, firstTime, intervalMinutes, overwrite, day: d})
   });
   const data = await res.json();
   const el = document.getElementById('startTimesResult');
   if(!res.ok){ el.innerHTML = `<div class="flag">${data.error}</div>`; return; }
-  el.innerHTML = `<div class="flag" style="background:#E4F5EC;border-color:#9ED8B8;color:#1E8E5A">Set start times on ${data.updated} race(s).</div>`;
+  el.innerHTML = `<div class="flag" style="background:#E4F5EC;border-color:#9ED8B8;color:#1E8E5A">${meetNumDays > 1 ? 'Day '+d+': ' : ''}${data.updated} race times set.</div>`;
   loadRaceList();
 }
 
@@ -302,6 +320,7 @@ async function loadRaceList(keepOpen){
       const meet = meets.find(m => m.id === meetId);
       meetNumDays = (meet && meet.numDays) || 1;
     } catch(e){ meetNumDays = 1; }
+    loadStartTimesRows();
 
     const mergeableByEvent = {};
     races.filter(r => r.phase==='heat' && r.status==='pending').forEach(r => {

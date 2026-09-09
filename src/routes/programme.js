@@ -879,7 +879,7 @@ function reflowTimes(database, meetId) {
 
 router.post('/generate-start-times', (req, res) => {
   const database = db.load();
-  const { meetId, firstTime, intervalMinutes, overwrite } = req.body;
+  const { meetId, firstTime, intervalMinutes, overwrite, day } = req.body;
   if (!database.meets[meetId]) return res.status(400).json({ error: 'Meet not found.' });
   const m = /^(\d{1,2}):(\d{2})$/.exec(firstTime || '');
   if (!m) return res.status(400).json({ error: 'firstTime must look like "08:00".' });
@@ -887,22 +887,18 @@ router.post('/generate-start-times', (req, res) => {
   const interval = Number(intervalMinutes);
   if (!interval || interval <= 0) return res.status(400).json({ error: 'intervalMinutes must be a positive number.' });
 
-  // Remember these BEFORE computing so gapAfter() (which reads
-  // meet.lastIntervalMinutes as the default gap) sees the new interval.
   database.meets[meetId].lastStartTime = startMinutes;
   database.meets[meetId].lastIntervalMinutes = interval;
   const meet = database.meets[meetId];
 
-  const items = combinedSchedule(database, meetId);
+  // If a specific day is requested, only reflow that day's races
+  const dayFilter = day ? Number(day) : null;
+  const items = combinedSchedule(database, meetId, dayFilter);
 
   let current = startMinutes;
   let updated = 0;
   items.forEach((item) => {
     if (item.ref.scheduledLabel && !overwrite) {
-      // Keep the existing manual time, but resync the running clock to it
-      // so items after this one are still spaced correctly from what's
-      // actually on screen, not from where the uniform formula would have
-      // put it.
       const existing = parseHHMM(item.ref.scheduledLabel);
       if (existing != null) current = existing;
     } else {
