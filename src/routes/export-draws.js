@@ -69,7 +69,7 @@ router.get('/draws.xlsx', async (req, res) => {
     headingRow.getCell(6).value = race.scheduledLabel || 'TBC';
     headingRow.getCell(6).font = boldFont;
 
-    writeRow(['Pos', race.isMassStart ? 'Slide' : 'Lane', 'Name', 'Surname', 'Club', 'PSA ID'], { font: boldFont });
+    writeRow(['Pos', race.isMassStart ? 'Slide' : 'Lane', 'Name', 'Surname', 'Club', 'Age', 'PSA ID'], { font: boldFont });
 
     const laneEntries = Object.entries(race.laneEntries).sort((a, b) => Number(a[0]) - Number(b[0]));
     const rowsToShow = race.isMassStart
@@ -86,7 +86,7 @@ router.get('/draws.xlsx', async (req, res) => {
 
     rowsToShow.forEach(([laneOrSlide, info]) => {
       if (!info) {
-        writeRow(['-', Number(laneOrSlide), '-', '-', '-', '-']);
+        writeRow(['-', Number(laneOrSlide), '-', '-', '-', '-', '-']);
         return;
       }
       const result = race.results[info.entryId];
@@ -110,12 +110,14 @@ router.get('/draws.xlsx', async (req, res) => {
         const surname = fullName ? fullName.split(' ').slice(1).join(' ') : '';
         const clubCode = athlete && athlete.club ? getClubCode(database, athlete.club) : (info.clubCode || '');
         const psaId = athlete ? athlete.psaId || '-' : '-';
+        const ageCategory = info.ageCategory || '';
         writeRow([
           crewIndex === 0 ? pos : '',
           Number(laneOrSlide),
           firstName,
           surname,
           clubCode,
+          ageCategory,
           psaId,
         ]);
       });
