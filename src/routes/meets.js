@@ -92,4 +92,17 @@ router.delete('/:id', (req, res) => {
   res.json({ deleted: meet.name });
 });
 
+router.patch('/:id/num-days', (req, res) => {
+  const database = db.load();
+  const meet = database.meets[req.params.id];
+  if (!meet) return res.status(404).json({ error: 'Meet not found.' });
+  const numDays = Number(req.body.numDays);
+  if (!Number.isInteger(numDays) || numDays < 1 || numDays > 14) {
+    return res.status(400).json({ error: 'Number of days must be between 1 and 14.' });
+  }
+  meet.numDays = numDays;
+  db.save();
+  res.json(meet);
+});
+
 module.exports = router;
