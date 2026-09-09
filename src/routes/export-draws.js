@@ -113,7 +113,8 @@ router.get('/draws.xlsx', async (req, res) => {
       const entry = database.entries[info.entryId];
       const athleteIds = entry && entry.athleteIds.length ? entry.athleteIds : [null];
       const ageCategory = info.ageCategory || '';
-      const gender = info.gender || '';
+      const gRaw = info.gender || '';
+      const gender = gRaw.toLowerCase().startsWith('f') ? 'F' : gRaw.toLowerCase().startsWith('m') ? 'M' : gRaw;
 
       if (isCrewRace) {
         const paddlerData = [0, 1].map(i => {
