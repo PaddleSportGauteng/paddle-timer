@@ -126,7 +126,7 @@ router.get('/programme.pdf', (req, res) => {
 });
 
 // Compact planning sheet — one line per race, blank time box, for printing
-// and writing on. Sort by race number, show Day column.
+// and writing on. Sorted by day then race number, with day separator headers.
 router.get('/schedule.pdf', (req, res) => {
   const database = db.load();
   const meetId = req.query.meetId;
@@ -137,9 +137,14 @@ router.get('/schedule.pdf', (req, res) => {
       .filter((e) => !meetId || e.meetId === meetId)
       .map((e) => e.id)
   );
-  const races = sortByScheduleThenNumber(
-    Object.values(database.races).filter((r) => eventIds.has(r.eventId))
-  ).map((r) => ({ ...enrichRace(database, { ...r, event: database.events[r.eventId] }), day: r.day || 1 }));
+
+  const races = Object.values(database.races)
+    .filter((r) => eventIds.has(r.eventId))
+    .map((r) => ({
+      ...enrichRace(database, { ...r, event: database.events[r.eventId] }),
+      day: r.day || (database.events[r.eventId] && database.events[r.eventId].day) || 1,
+    }))
+    .sort((a, b) => a.day !== b.day ? a.day - b.day : a.raceNumber - b.raceNumber);
 
   res.setHeader('Content-Type', 'application/pdf');
   res.setHeader('Content-Disposition', 'attachment; filename="schedule-planning.pdf"');
@@ -165,14 +170,13 @@ router.get('/schedule.pdf', (req, res) => {
   const right = doc.page.width - doc.page.margins.right;
   const pageWidth = right - left;
 
-  // Column positions
-  const cNum   = left;       const wNum   = 30;
-  const cDay   = cNum + wNum + 4;  const wDay = 28;
-  const cEvent = cDay + wDay + 6;  const wEvent = pageWidth - wNum - wDay - 100;
-  const cTime  = cEvent + wEvent + 6; const wTime = 54;  // blank box
+  const cNum   = left;            const wNum   = 30;
+  const cDay   = cNum + wNum + 4; const wDay   = 28;
+  const cEvent = cDay + wDay + 6; const wEvent = pageWidth - wNum - wDay - 100;
+  const cTime  = cEvent + wEvent + 6; const wTime = 54;
   const rowH = 18;
 
-  function header() {
+  function columnHeaders() {
     const y = doc.y;
     doc.fontSize(8).font('Helvetica-Bold').fillColor('#888');
     doc.text('#',     cNum,   y, { width: wNum });
@@ -185,33 +189,55 @@ router.get('/schedule.pdf', (req, res) => {
     doc.fillColor('#000');
   }
 
-  header();
-
-  races.forEach((race, i) => {
-    if (doc.y > doc.page.height - doc.page.margins.bottom - rowH) {
+  function dayHeader(day) {
+    if (doc.y > doc.page.height - doc.page.margins.bottom - rowH * 3) {
       doc.addPage();
-      header();
+    } else {
+      doc.moveDown(0.5);
     }
     const y = doc.y;
-    const shade = i % 2 === 0;
-    if (shade) {
+    doc.rect(left, y, pageWidth, rowH).fill('#1a3a5c');
+    doc.fontSize(10).font('Helvetica-Bold').fillColor('#fff');
+    doc.text(`DAY ${day}`, left + 6, y + 4, { width: pageWidth });
+    doc.fillColor('#000');
+    doc.y = y + rowH + 2;
+  }
+
+  columnHeaders();
+
+  let currentDay = null;
+  let rowIndex = 0;
+
+  races.forEach((race) => {
+    // Day separator
+    if (race.day !== currentDay) {
+      currentDay = race.day;
+      dayHeader(currentDay);
+      rowIndex = 0;
+    }
+
+    if (doc.y > doc.page.height - doc.page.margins.bottom - rowH) {
+      doc.addPage();
+      columnHeaders();
+      rowIndex = 0;
+    }
+
+    const y = doc.y;
+    if (rowIndex % 2 === 0) {
       doc.rect(left, y - 1, pageWidth, rowH).fill('#F7F8FA');
       doc.fillColor('#000');
     }
 
     const desc = raceDescription(race);
-    const dayLabel = `D${race.day}`;
     const timeLabel = race.scheduledLabel || '';
 
     doc.fontSize(9).font('Helvetica-Bold').fillColor('#1a3a5c');
     doc.text(String(race.raceNumber), cNum, y, { width: wNum });
     doc.font('Helvetica').fillColor('#666');
-    doc.text(dayLabel, cDay, y, { width: wDay });
-    doc.fillColor(race.type === 'break' ? '#999' : '#000');
-    doc.font(race.type === 'break' ? 'Helvetica-Oblique' : 'Helvetica');
+    doc.text(`D${race.day}`, cDay, y, { width: wDay });
+    doc.fillColor('#000');
     doc.text(desc, cEvent, y, { width: wEvent, lineBreak: false });
 
-    // Time box — filled if set, empty box outline if not
     if (timeLabel) {
       doc.font('Helvetica-Bold').fillColor('#1a3a5c');
       doc.text(timeLabel, cTime, y, { width: wTime, align: 'center' });
@@ -220,8 +246,8 @@ router.get('/schedule.pdf', (req, res) => {
     }
 
     doc.fillColor('#000');
-    doc.moveDown(0);
     doc.y = y + rowH;
+    rowIndex++;
   });
 
   doc.end();
