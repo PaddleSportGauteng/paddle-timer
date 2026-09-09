@@ -330,7 +330,29 @@ async function loadRaceList(keepOpen){
     }
 
     if(races.length===0){ el.innerHTML = '<p style="color:var(--gray)">No races generated yet.</p>'; } else {
-      el.innerHTML = races.map(r => raceBlockHtml(r)).join('');
+      // Group by day with separator headers, continuous race numbering
+      const numDays = meetNumDays || 1;
+      let html = '';
+      if(numDays > 1){
+        // Sort by day then race number for display
+        const sorted = [...races].sort((a,b) => {
+          const da = a.day || 1, db = b.day || 1;
+          if(da !== db) return da - db;
+          return (a.raceNumber||0) - (b.raceNumber||0);
+        });
+        let currentDay = null;
+        sorted.forEach(r => {
+          const rDay = r.day || 1;
+          if(rDay !== currentDay){
+            currentDay = rDay;
+            html += `<div style="background:var(--navy);color:#fff;font-weight:700;font-size:14px;padding:8px 14px;border-radius:6px;margin:12px 0 6px">DAY ${currentDay}</div>`;
+          }
+          html += raceBlockHtml(r);
+        });
+      } else {
+        html = races.map(r => raceBlockHtml(r)).join('');
+      }
+      el.innerHTML = html;
       // Restore any blocks that were open before the re-render
       keepOpen.forEach(raceId => {
         const lanesEl = document.getElementById(`lanes-${raceId}`);
@@ -645,7 +667,7 @@ async function setRaceDay(raceId, day){
     method:'PATCH', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({day: Number(day)})
   });
-  // No full reload needed - just a silent save
+  loadRaceList();
 }
 
 async function swapLanes(raceId, lane, targetLane){
