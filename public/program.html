@@ -10,16 +10,16 @@
   .race-block.published{border-left:4px solid var(--green);}
   .race-block.unpublished{border-left:4px solid var(--gray);}
   .race-block h4{margin:0 0 8px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;font-size:15px}
-  .lane-row{display:flex;align-items:flex-start;gap:8px;padding:8px 0;border-bottom:1px dashed var(--line);font-size:13px;}
+  .lane-row{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px dashed var(--line);font-size:13px;}
   .lane-row:last-child{border-bottom:none}
-  .lane-row .lanenum{width:60px;font-weight:700;color:var(--gray);padding-top:3px;flex-shrink:0}
+  .lane-row .lanenum{width:52px;font-weight:700;color:var(--gray);flex-shrink:0}
   .lane-row select{font-size:12px;padding:4px;border-radius:5px;border:1px solid var(--line)}
   .lane-row button{font-size:12px;padding:5px 8px;flex-shrink:0}
   .paddler-table{flex:1;min-width:0;border-collapse:collapse;}
-  .paddler-table td{padding:2px 10px 2px 0;font-size:13px;white-space:nowrap;}
-  .paddler-table td.pname{font-weight:600;min-width:180px;}
-  .paddler-table td.pmeta{color:var(--gray);font-size:12px;}
-  .lane-actions{display:flex;flex-wrap:wrap;gap:4px;align-items:flex-start;flex-shrink:0}
+  .paddler-table td{padding:1px 8px 1px 0;font-size:13px;}
+  .paddler-table td.pname{font-weight:600;word-break:break-word;white-space:normal;max-width:200px;}
+  .paddler-table td.pmeta{color:var(--gray);font-size:12px;white-space:nowrap;}
+  .lane-actions{display:flex;gap:4px;align-items:center;flex-shrink:0}
   .time-input{width:110px !important;display:inline-block}
   .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:10px}
   .toolbar label{font-size:12px;color:var(--gray);display:block;margin-bottom:4px}
@@ -576,16 +576,14 @@ function raceBlockHtml(race){
       <div class="lanenum">Lane ${lane}</div>
       ${paddlerTable}
       <div class="lane-actions">
-        <select id="swapSel-${race.id}-${lane}" title="Swap with another lane">
-          <option value="">Swap lane…</option>
+        <select onchange="if(this.value)swapLanes('${race.id}',${lane},this.value)" style="max-width:120px" title="Swap with another lane">
+          <option value="">Swap…</option>
           ${swapOptions}
         </select>
-        <button onclick="swapLanes('${race.id}', ${lane})">Swap</button>
-        <select id="moveRaceSel-${race.id}-${lane}" title="Move to a different race">
-          <option value="">Move to race…</option>
+        <select onchange="if(this.value)moveToRace('${race.id}',${lane},'${info ? info.entryId : ''}',this.value)" style="max-width:130px" title="Move to a different race">
+          <option value="">Move to…</option>
           ${moveOptions}
         </select>
-        <button onclick="moveToRace('${race.id}', ${lane}, '${info ? info.entryId : ''}')">Move →</button>
         ${info ? `<button class="red" onclick="scratchLane('${race.id}', ${lane})">Scratch</button>` : ''}
       </div>
     </div>`;
@@ -655,10 +653,8 @@ async function setRaceDay(raceId, day){
   // No full reload needed - just a silent save
 }
 
-async function swapLanes(raceId, lane){
-  const sel = document.getElementById(`swapSel-${raceId}-${lane}`);
-  const targetLane = sel ? sel.value : '';
-  if(!targetLane){ alert('Pick a lane to swap with.'); return; }
+async function swapLanes(raceId, lane, targetLane){
+  if(!targetLane){ return; }
   const res = await fetch(`/api/races/${raceId}/swap-lanes`, {
     method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({laneA: lane, laneB: Number(targetLane)})
@@ -668,10 +664,8 @@ async function swapLanes(raceId, lane){
   loadRaceList();
 }
 
-async function moveToRace(fromRaceId, lane, entryId){
-  const sel = document.getElementById(`moveRaceSel-${fromRaceId}-${lane}`);
-  const targetRaceId = sel ? sel.value : '';
-  if(!targetRaceId){ alert('Pick a target race from the dropdown first.'); return; }
+async function moveToRace(fromRaceId, lane, entryId, targetRaceId){
+  if(!targetRaceId){ return; }
   const res = await fetch(`/api/races/${fromRaceId}/move-to-race`, {
     method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({entryId, targetRaceId})
