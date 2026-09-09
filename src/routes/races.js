@@ -619,6 +619,21 @@ router.post('/entries/:entryId/weigh', (req, res) => {
   res.json({ entry, weighIn: database.weighIns[entry.id] });
 });
 
+// Swap two lanes within the same race.
+router.post('/:id/swap-lanes', (req, res) => {
+  const database = db.load();
+  const race = database.races[req.params.id];
+  if (!race) return res.status(404).json({ error: 'Race not found.' });
+  if (race.status !== 'pending') return res.status(400).json({ error: 'Can only swap lanes before the race starts.' });
+  const { laneA, laneB } = req.body;
+  const a = String(laneA), b = String(laneB);
+  const tmp = race.lanes[a] || null;
+  race.lanes[a] = race.lanes[b] || null;
+  race.lanes[b] = tmp;
+  db.save();
+  res.json(enrichRace(database, race));
+});
+
 // Move a boat from one race to another — takes them out of their current
 // lane and places them in the first empty lane of the target race.
 router.post('/:id/move-to-race', (req, res) => {

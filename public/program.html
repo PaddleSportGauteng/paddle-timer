@@ -481,19 +481,24 @@ function raceBlockHtml(race){
       return `<div class="lane-row"><div class="lanenum">Lane ${lane}</div><div style="flex:1">${info ? info.names.join(' / ') : '(empty)'}${details}</div></div>`;
     }
 
-    // Other races this paddler could move to (all pending races except this one)
+    // Swap with another lane in this race
+    const otherLanes = lanes.filter(([l]) => l !== lane);
+    const swapOptions = otherLanes.map(([l, i]) => `<option value="${l}">Lane ${l}${i ? ' — '+i.names[0] : ' (empty)'}</option>`).join('');
+
+    // Move to a different race entirely
     const otherRaces = allRaces.filter(r => r.id !== race.id && r.status === 'pending');
     const moveOptions = otherRaces.map(r => `<option value="${r.id}">Race ${r.raceNumber}: ${r.event ? r.event.label : ''} — ${phaseLabel(r)}</option>`).join('');
 
     return `<div class="lane-row">
       <div class="lanenum">Lane ${lane}</div>
-      <select onchange="setLane('${race.id}', ${lane}, this.value)" title="Swap with another paddler in this race">
-        <option value="">— empty —</option>
-        ${options(info ? info.entryId : null)}
-      </select>
-      <div style="min-width:180px;font-size:12px;color:var(--gray)">${info ? [info.club, info.union, info.ageCategory].filter(Boolean).join(' · ') : ''}</div>
+      <div style="flex:1;font-weight:500">${info ? info.names.join(' / ') : '<span style="color:var(--gray)">(empty)</span>'}${details}</div>
       ${info ? `
-        <select id="moveRaceSel-${race.id}-${lane}" style="font-size:12px;padding:4px;max-width:160px" title="Move to a different race">
+        <select id="swapSel-${race.id}-${lane}" style="font-size:12px;padding:4px;max-width:140px" title="Swap with another lane">
+          <option value="">Swap lane…</option>
+          ${swapOptions}
+        </select>
+        <button style="font-size:12px;padding:5px 8px" onclick="swapLanes('${race.id}', ${lane})">Swap</button>
+        <select id="moveRaceSel-${race.id}-${lane}" style="font-size:12px;padding:4px;max-width:150px" title="Move to a different race">
           <option value="">Move to race…</option>
           ${moveOptions}
         </select>
@@ -531,6 +536,19 @@ function raceBlockHtml(race){
     </h4>
     ${laneRows}
   </div>`;
+}
+
+async function swapLanes(raceId, lane){
+  const sel = document.getElementById(`swapSel-${raceId}-${lane}`);
+  const targetLane = sel ? sel.value : '';
+  if(!targetLane){ alert('Pick a lane to swap with.'); return; }
+  const res = await fetch(`/api/races/${raceId}/swap-lanes`, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({laneA: lane, laneB: Number(targetLane)})
+  });
+  const data = await res.json();
+  if(!res.ok){ alert(data.error); return; }
+  loadRaceList();
 }
 
 async function moveToRace(fromRaceId, lane, entryId){
