@@ -153,7 +153,7 @@ async function initMeetBar(containerId, opts){
   const options = opts || {};
   const el = document.getElementById(containerId);
   if(!el) return;
-  el.innerHTML = '<select id="meetSelect" style="max-width:260px"></select>' + (options.allowCreate === false ? '' : ' <button id="newMeetBtn" style="padding:8px 10px">+ New meet</button>');
+  el.innerHTML = '<select id="meetSelect" style="max-width:260px"></select>';
   const sel = document.getElementById('meetSelect');
   const btn = document.getElementById('newMeetBtn');
 

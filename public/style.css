@@ -107,5 +107,5 @@ input[type=file], input[type=number], input[type=text]{
 }
 
 /* PSG Logo in header */
-.psg-logo { height: 40px; width: auto; display: block; border-radius: 4px; }
+.psg-logo { height: 52px; width: auto; display: block; }
 header.topbar .title { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 16px; }
