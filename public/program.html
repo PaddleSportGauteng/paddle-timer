@@ -334,11 +334,13 @@ async function loadRaceList(keepOpen){
       const numDays = meetNumDays || 1;
       let html = '';
       if(numDays > 1){
-        // Sort by day then race number for display
+        // Sort by day then position (sortKey for breaks, raceNumber for races)
         const sorted = [...races].sort((a,b) => {
           const da = a.day || 1, db = b.day || 1;
           if(da !== db) return da - db;
-          return (a.raceNumber||0) - (b.raceNumber||0);
+          const sa = a.type === 'break' ? (a.sortKey||0) : (a.raceNumber||0);
+          const sb = b.type === 'break' ? (b.sortKey||0) : (b.raceNumber||0);
+          return sa - sb;
         });
         let currentDay = null;
         sorted.forEach(r => {
@@ -350,6 +352,7 @@ async function loadRaceList(keepOpen){
           html += raceBlockHtml(r);
         });
       } else {
+        // Single day — already sorted by schedule order from server
         html = races.map(r => raceBlockHtml(r)).join('');
       }
       el.innerHTML = html;

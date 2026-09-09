@@ -240,18 +240,18 @@ router.get('/schedule.pdf', (req, res) => {
 
     const y = doc.y;
 
-    // Break row — orange tint, italic label
+    // Break row — orange tint, italic label, vertically centred
     if (race.type === 'break') {
       doc.rect(left, y - 1, pageWidth, rowH).fill('#FFF3E0');
+      const textY = y + (rowH - 9) / 2 - 1; // vertically centre 9pt text in rowH
       doc.fontSize(9).font('Helvetica-Oblique').fillColor('#8A5A12');
-      doc.text('', cNum, y, { width: wNum });
-      doc.text(`D${race.day}`, cDay, y, { width: wDay });
-      doc.text(`— ${race.label}${race.durationMinutes ? ' ('+race.durationMinutes+' min)' : ''} —`, cEvent, y, { width: wEvent });
+      doc.text(`— ${race.label}${race.durationMinutes ? ' (' + race.durationMinutes + ' min)' : ''} —`, cEvent, textY, { width: wEvent });
+      doc.text(`D${race.day}`, cDay, textY, { width: wDay });
       if (race.scheduledLabel) {
         doc.font('Helvetica-Bold');
-        doc.text(race.scheduledLabel, cTime, y, { width: wTime, align: 'center' });
+        doc.text(race.scheduledLabel, cTime, textY, { width: wTime, align: 'center' });
       } else {
-        doc.rect(cTime, y, wTime, rowH - 3).strokeColor('#F3C98B').lineWidth(0.5).stroke();
+        doc.rect(cTime, y + 2, wTime, rowH - 5).strokeColor('#F3C98B').lineWidth(0.5).stroke();
       }
       doc.fillColor('#000');
       doc.y = y + rowH;
