@@ -79,6 +79,7 @@
       <div class="meta" id="existingMeetMeta"></div>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="red" onclick="deleteMeet()">🗑 Delete this event</button>
       <button onclick="document.getElementById('createSection').style.display='block';document.getElementById('existingMeetBanner').style.display='none'">+ Create new event</button>
       <a href="/race-sort.html"><button class="primary">Go to Race Sort →</button></a>
     </div>
@@ -291,6 +292,18 @@ async function editClubCode(clubName, code) {
 }
 
 // ── Init ──────────────────────────────────────────────────────────
+async function deleteMeet() {
+  const meetId = getMeetId();
+  if (!meetId) return;
+  const name = document.getElementById('existingMeetName').textContent;
+  if (!confirm(`Permanently delete "${name}" and ALL its data — entries, draws, times, results?\n\nThis cannot be undone.`)) return;
+  const res = await fetch(`/api/meets/${meetId}`, { method: 'DELETE' });
+  const data = await res.json();
+  if (!res.ok) { alert(data.error); return; }
+  localStorage.removeItem('paddleTimerMeetId');
+  location.reload();
+}
+
 async function init() {
   await initMeetBar('meetBar');
   const meetId = getMeetId();

@@ -61,4 +61,35 @@ router.patch('/:id/lanes', (req, res) => {
   res.json(meet);
 });
 
+// Delete a meet and ALL its data — athletes, events, entries, races,
+// results, weigh-ins. Irreversible. Confirmed on the client before calling.
+router.delete('/:id', (req, res) => {
+  const database = db.load();
+  const meet = database.meets[req.params.id];
+  if (!meet) return res.status(404).json({ error: 'Meet not found.' });
+
+  // Find all eventIds belonging to this meet
+  const eventIds = new Set(
+    Object.values(database.events).filter((e) => e.meetId === meet.id).map((e) => e.id)
+  );
+  // Find all entryIds belonging to those events
+  const entryIds = new Set(
+    Object.values(database.entries).filter((e) => eventIds.has(e.eventId)).map((e) => e.id)
+  );
+  // Find all raceIds belonging to those events
+  const raceIds = new Set(
+    Object.values(database.races).filter((r) => eventIds.has(r.eventId)).map((r) => r.id)
+  );
+
+  // Delete everything
+  raceIds.forEach((id) => { delete database.raceResults[id]; delete database.blindCrossings[id]; delete database.lapPasses[id]; });
+  raceIds.forEach((id) => delete database.races[id]);
+  entryIds.forEach((id) => { delete database.entries[id]; delete database.weighIns[id]; });
+  eventIds.forEach((id) => delete database.events[id]);
+  delete database.meets[meet.id];
+
+  db.save();
+  res.json({ deleted: meet.name });
+});
+
 module.exports = router;
