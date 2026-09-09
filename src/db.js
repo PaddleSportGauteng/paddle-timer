@@ -1,15 +1,15 @@
 // Lightweight JSON "database".
-//
-// On Render's free tier there is no persistent disk — writes survive the
-// session but are wiped on redeploy/restart. That's fine for race day use:
-// the meet runs, data lives in memory, results are exported/printed before
-// anyone restarts the server. We try to write to disk (data/db.json) but
-// catch any filesystem error silently so the app still works on Render.
+// Data is stored on Render's persistent disk at /opt/render/project/src/data/db.json
+// This path survives redeploys. Falls back to the local data/ folder for local dev.
 
 const fs = require('fs');
 const path = require('path');
 
-const DATA_FILE = path.join(__dirname, '..', 'data', 'db.json');
+// Render persistent disk mounts at /opt/render/project/src/data
+// For local development it falls back to ./data/db.json
+const DISK_PATH = '/opt/render/project/src/data';
+const DATA_DIR = fs.existsSync(DISK_PATH) ? DISK_PATH : path.join(__dirname, '..', 'data');
+const DATA_FILE = path.join(DATA_DIR, 'db.json');
 
 const EMPTY_DB = {
   nextId: 1,
@@ -46,8 +46,7 @@ function save() {
     fs.mkdirSync(path.dirname(DATA_FILE), { recursive: true });
     fs.writeFileSync(DATA_FILE, JSON.stringify(db, null, 2));
   } catch (e) {
-    // No persistent disk (e.g. Render free tier) — data lives in memory only.
-    // Fine for race day: import → race → export results before any restart.
+    console.error('db save error:', e.message);
   }
 }
 

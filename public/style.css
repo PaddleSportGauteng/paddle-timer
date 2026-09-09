@@ -105,3 +105,7 @@ tr.mass-done{background:#E4F5EC;}
 input[type=file], input[type=number], input[type=text]{
   font-family:inherit;font-size:15px;padding:9px;border:1px solid var(--line);border-radius:6px;width:100%;
 }
+
+/* PSG Logo in header */
+.psg-logo { height: 36px; width: auto; display: block; }
+header.topbar .title { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 16px; }

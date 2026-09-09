@@ -24,7 +24,7 @@
 </head>
 <body>
 <header class="topbar">
-  <a href="/" class="title">🛶 PADDLE TIMER</a>
+  <a href="/" class="title"><img src="/psg-logo.png" alt="PSG" class="psg-logo"> PaddleSport Gauteng</a>
   <nav><a href="/admin.html">Race Office</a><a href="/race-sort.html">Race Sort</a><a href="/draw.html">Draw</a><a href="/program.html">Race Program</a><a href="/tower.html">Tower</a><a href="/weigh.html">Weigh</a><a href="/results.html">Results</a><a href="/board.html">Board</a></nav>
   <div id="meetBar"></div>
 </header>
@@ -415,7 +415,7 @@ function setPhaseFilter(phase){
 }
 
 async function init(){
-  await initMeetBar('meetBar');
+  await initMeetBar('meetBar', {allowCreate:false});
   if(!getMeetId()){ document.getElementById('meetWarning').style.display = 'block'; return; }
   selectedDay = await initDayBar('dayBar');
   document.querySelector('.phase-btn[data-phase="all"]').classList.add('active');
