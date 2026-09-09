@@ -50,8 +50,9 @@ async function loadEvents(){
     if(!res.ok) throw new Error(`Server returned ${res.status}`);
     const events = await res.json();
     allEvents = events;
-    if(events.length===0){ el.innerHTML = '<p style="color:var(--gray)">No events yet — import entries in Race Office.</p>'; return; }
-    const rows = events.map(ev => {
+    const drawableEvents = events.filter(ev => ev.entryCount > 0);
+    if(drawableEvents.length===0){ el.innerHTML = '<p style="color:var(--gray)">No events with entries yet — import entries in Race Office.</p>'; return; }
+    const rows = drawableEvents.map(ev => {
       let fmtLabel, fmtClass;
       if(!ev.format.runnable){ fmtLabel = ev.format.reason; fmtClass='bad'; }
       else { fmtLabel = ev.format.rounds.join(' → '); fmtClass = ev.format.rounds.length>1 ? 'warn':'ok'; }
