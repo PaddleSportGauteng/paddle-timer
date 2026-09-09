@@ -45,9 +45,10 @@ function enrichRace(database, race) {
     const union = club ? (database.clubUnions[club] || '') : '';
     const event = database.events[entry.eventId];
     const ageCategory = event ? (event.ageCategory || '') : '';
+    const gender = event ? (event.gender || '') : '';
     const laps = race.isMassStart ? ((database.lapPasses[race.id] || {})[entryId] || []) : undefined;
     const weighIn = database.weighIns[entryId] || null;
-    laneEntries[lane] = { entryId, names, club, clubCode, union, ageCategory, scratched: entry.status === 'scratched', laps, weighIn };
+    laneEntries[lane] = { entryId, names, club, clubCode, union, ageCategory, gender, scratched: entry.status === 'scratched', laps, weighIn };
   });
   const results = database.raceResults[race.id] || {};
   const blindCrossings = database.blindCrossings ? (database.blindCrossings[race.id] || []) : [];
