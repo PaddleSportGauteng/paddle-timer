@@ -111,10 +111,6 @@
     <div class="lane-label">Number of lanes at this venue</div>
     <div class="lane-btns" id="laneBtns"></div>
 
-    <div class="days-row">
-      <label>How many days is this event?</label>
-      <input type="number" id="numDays" value="1" min="1" max="7">
-    </div>
 
     <div class="lane-label">Entries spreadsheet (the "System Race data" tab)</div>
     <div class="file-row">
@@ -127,14 +123,8 @@
     <div id="importResult" style="margin-top:12px"></div>
   </div>
 
-  <!-- Step 2: Race days (multi-day only, shown after import) -->
-  <div class="post-card" id="raceDaysCard">
-    <h2>2. Race days</h2>
-    <p style="color:var(--gray);font-size:14px">Assign which distance/boat class runs on which day.</p>
-    <div id="dayGroupsTable">Loading…</div>
-  </div>
 
-  <!-- Step 3: Club codes (shown after import) -->
+  <!-- Step 2: Club codes (shown after import) -->
   <div class="post-card" id="clubCodesCard">
     <h2>3. Club codes</h2>
     <p style="color:var(--gray);font-size:14px">Auto-set from the PSA reference. Edit below if any look wrong, or merge duplicate spellings.</p>
@@ -196,11 +186,10 @@ async function createAndImport(btn) {
 
   try {
     // 1. Create the meet
-    const numDays = parseInt(document.getElementById('numDays').value) || 1;
     const mRes = await fetch('/api/meets', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, raceType: selectedDisc, lanes: selectedLanes, numDays })
+      body: JSON.stringify({ name, raceType: selectedDisc, lanes: selectedLanes, numDays: 1 })
     });
     const meet = await mRes.json();
     if (!mRes.ok) { el.innerHTML = `<div class="flag">${meet.error}</div>`; return; }
@@ -226,7 +215,6 @@ async function createAndImport(btn) {
 
     // Show post-import cards
     document.getElementById('nextStepCard').style.display = 'block';
-    loadDayGroups(meet.id, numDays);
     loadClubCodes();
 
   } catch (err) {
