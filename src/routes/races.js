@@ -627,6 +627,31 @@ router.patch('/:id/day', (req, res) => {
   const day = Number(req.body.day);
   if (!Number.isInteger(day) || day < 1) return res.status(400).json({ error: 'day must be a positive number.' });
   race.day = day;
+
+  // Find the meet so we can renumber all its pending races
+  const event = database.events[race.eventId];
+  const meetId = event && event.meetId;
+  if (meetId) {
+    const eventIds = new Set(
+      Object.values(database.events).filter((e) => e.meetId === meetId).map((e) => e.id)
+    );
+    const locked = Object.values(database.races)
+      .filter((r) => eventIds.has(r.eventId) && r.status !== 'pending');
+    const pending = Object.values(database.races)
+      .filter((r) => eventIds.has(r.eventId) && r.status === 'pending');
+
+    const maxLocked = locked.reduce((m, r) => Math.max(m, r.raceNumber), 0);
+
+    // Sort pending by day then current race number, then reassign sequentially
+    pending
+      .sort((a, b) => {
+        const da = a.day || 1, db = b.day || 1;
+        if (da !== db) return da - db;
+        return a.raceNumber - b.raceNumber;
+      })
+      .forEach((r, i) => { r.raceNumber = maxLocked + i + 1; });
+  }
+
   db.save();
   res.json({ ok: true });
 });
