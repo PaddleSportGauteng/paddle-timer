@@ -395,9 +395,10 @@ function massRaceBlockHtml(race){
     const laps = info.laps || [];
     const done = laps.length >= race.totalLaps;
     const lapStr = laps.length ? laps.map(l => fmtMs(l.timeMs)).join(', ') : '—';
+    const details = `<small style="color:var(--gray);margin-left:6px">${[info.clubCode, info.union, info.ageCategory].filter(Boolean).join(' · ')}</small>`;
     return `<div class="lane-row">
       <div class="lanenum">Slide ${bib}</div>
-      <div style="flex:1">${info.names.join(' / ')} <small style="color:var(--gray)">${laps.length}/${race.totalLaps} laps ${done?'✓ finished':''} — ${lapStr}</small></div>
+      <div style="flex:1">${info.names.join(' / ')}${details} <small style="color:var(--gray)">${laps.length}/${race.totalLaps} laps ${done?'✓ finished':''} — ${lapStr}</small></div>
       ${!locked ? `
         <input type="number" placeholder="new #" style="width:70px;padding:5px;font-size:12px" id="renumber-${race.id}-${bib}">
         <button style="font-size:11px;padding:5px 8px" onclick="renumberSlide('${race.id}', ${bib})">Renumber</button>
