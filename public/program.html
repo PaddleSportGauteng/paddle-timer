@@ -65,6 +65,7 @@
         <button style="font-size:12px;padding:5px 10px" onclick="expandAll()">Expand all</button>
         <button style="font-size:12px;padding:5px 10px" onclick="collapseAll()">Collapse all</button>
         <button class="orange" onclick="downloadPdf()">Download Programme (PDF)</button>
+        <button class="orange" onclick="downloadSchedule()">Download Planning Sheet (PDF)</button>
         <button class="orange" onclick="downloadDraws()">Download Draws (Excel)</button>
         <button class="green" onclick="finalise()">Finalise → send to Tower</button>
       </div>
@@ -177,6 +178,12 @@ async function createNextRound(eventId, phase, btn){
   if(!res.ok){ alert(data.error); return; }
   await loadAdvanceTable();
   await loadRaceList();
+}
+
+function downloadSchedule(){
+  const meetId = getMeetId();
+  if(!meetId){ alert('Pick a meet first.'); return; }
+  window.open(`/api/export/schedule.pdf?meetId=${encodeURIComponent(meetId)}&_=${Date.now()}`, '_blank');
 }
 
 function downloadPdf(){
