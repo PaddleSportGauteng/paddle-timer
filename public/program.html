@@ -66,7 +66,9 @@
   <div class="card">
     <div class="toolbar" style="justify-content:space-between">
       <h2 style="margin:0">3. Race Program</h2>
-      <div style="display:flex;gap:8px">
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button style="font-size:12px;padding:5px 10px" onclick="expandAll()">Expand all</button>
+        <button style="font-size:12px;padding:5px 10px" onclick="collapseAll()">Collapse all</button>
         <button class="orange" onclick="downloadPdf()">Download Programme (PDF)</button>
         <button class="orange" onclick="downloadDraws()">Download Draws (Excel)</button>
         <button class="green" onclick="finalise()">Finalise → send to Tower</button>
@@ -524,31 +526,54 @@ function raceBlockHtml(race){
   const statusPill = race.status==='finished' ? 'ok' : race.status==='running' ? 'warn' : 'ok';
   const publishedPill = race.published ? `<span class="pill ok">Published</span>` : `<span class="pill warn">Draft</span>`;
 
-  return `<div class="race-block ${race.published?'published':'unpublished'}">
-    <h4>
-      <span>Race ${race.raceNumber}: ${race.combinedEventIds && race.combinedEventIds.length>1 ? `<input type="text" value="${race.combinedLabel}" style="font-weight:700;padding:3px;font-size:14px;width:220px" onchange="renameLabel('${race.id}', this.value)">` : race.event.label} — ${phaseLabel(race)}${race.overridden ? ' <span class="pill bad">OVERRIDDEN</span>' : ''}
-        <span class="pill ${statusPill}">${race.status}</span> ${publishedPill} ${resultsConfirmHtml(race)}
-      </span>
+  return `<div class="race-block ${race.published?'published':'unpublished'}" id="raceblock-${race.id}">
+    <h4 onclick="toggleRaceBlock('${race.id}')" style="cursor:pointer">
       <span>
+        <span style="color:var(--gray);font-size:13px;margin-right:6px" id="toggle-${race.id}">▶</span>
+        Race ${race.raceNumber}: ${race.combinedEventIds && race.combinedEventIds.length>1 ? `<b>${race.combinedLabel}</b>` : race.event.label} — ${phaseLabel(race)}${race.overridden ? ' <span class="pill bad">OVERRIDDEN</span>' : ''}
+        <span class="pill ${statusPill}">${race.status}</span> ${publishedPill} ${resultsConfirmHtml(race)}
+        <small style="color:var(--gray);margin-left:8px">${race.scheduledLabel||''}</small>
+      </span>
+      <span onclick="event.stopPropagation()">
         ${locked ? '' : `
           <button style="font-size:12px;padding:5px 8px" onclick="moveRaceTo('${race.id}','up')" title="Move up one">▲</button>
           <button style="font-size:12px;padding:5px 8px" onclick="moveRaceTo('${race.id}','down')" title="Move down one">▼</button>
           <span style="display:inline-flex;align-items:center;gap:3px">
             <input type="number" id="movePos-${race.id}" placeholder="Race #" title="Type the race number this should become, then press Enter or click →" style="width:64px;padding:5px;font-size:12px" onkeydown="if(event.key==='Enter'){moveRaceTo('${race.id}', this.value);}">
-            <button style="font-size:12px;padding:5px 8px" onclick="moveRaceTo('${race.id}', document.getElementById('movePos-${race.id}').value)" title="Move to this race number — the rest shift and renumber to match">→</button>
+            <button style="font-size:12px;padding:5px 8px" onclick="moveRaceTo('${race.id}', document.getElementById('movePos-${race.id}').value)" title="Move to this race number">→</button>
           </span>
           <input type="text" class="time-input" placeholder="Start time e.g. 08:00" value="${race.scheduledLabel||''}" onchange="setSchedule('${race.id}', this.value)">
           <span style="display:inline-flex;align-items:center;gap:3px">
-            <input type="number" min="1" value="${race.gapAfterMinutes||''}" placeholder="std gap" title="Minutes to leave before the NEXT race — e.g. 45-60 for a long mass start. Blank = standard gap. Applies to this race wherever it ends up, even after reordering." style="width:64px;padding:5px;font-size:12px" onchange="setGap('${race.id}', this.value)">
+            <input type="number" min="1" value="${race.gapAfterMinutes||''}" placeholder="std gap" title="Minutes before next race" style="width:64px;padding:5px;font-size:12px" onchange="setGap('${race.id}', this.value)">
             <small style="color:var(--gray);white-space:nowrap">min before next</small>
           </span>
           <button class="red" onclick="deleteRace('${race.id}')">Delete race</button>
         `}
-        ${!locked && race.scheduledLabel ? '' : ''}
       </span>
     </h4>
-    ${laneRows}
+    <div class="race-lanes" id="lanes-${race.id}" style="display:none">
+      ${laneRows}
+    </div>
   </div>`;
+}
+
+function toggleRaceBlock(raceId){
+  const lanes = document.getElementById(`lanes-${raceId}`);
+  const icon = document.getElementById(`toggle-${raceId}`);
+  if(!lanes) return;
+  const isOpen = lanes.style.display !== 'none';
+  lanes.style.display = isOpen ? 'none' : 'block';
+  if(icon) icon.textContent = isOpen ? '▶' : '▼';
+}
+
+function expandAll(){
+  document.querySelectorAll('.race-lanes').forEach(el => el.style.display = 'block');
+  document.querySelectorAll('[id^="toggle-"]').forEach(el => el.textContent = '▼');
+}
+
+function collapseAll(){
+  document.querySelectorAll('.race-lanes').forEach(el => el.style.display = 'none');
+  document.querySelectorAll('[id^="toggle-"]').forEach(el => el.textContent = '▶');
 }
 
 async function swapLanes(raceId, lane){
