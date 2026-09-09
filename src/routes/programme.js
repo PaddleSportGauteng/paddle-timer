@@ -980,6 +980,9 @@ function sortKeyAfter(items, afterIndex) {
 router.post('/breaks', (req, res) => {
   const database = db.load();
   const { meetId, day, label, durationMinutes, afterRaceId } = req.body;
+  console.log('[break] afterRaceId received:', afterRaceId, 'type:', typeof afterRaceId);
+  console.log('[break] race found:', !!database.races[afterRaceId]);
+  console.log('[break] all race ids:', Object.keys(database.races).slice(0,5));
   if (!database.meets[meetId]) return res.status(400).json({ error: 'Meet not found.' });
   const dur = Number(durationMinutes);
   if (!dur || dur <= 0) return res.status(400).json({ error: 'durationMinutes must be a positive number.' });
