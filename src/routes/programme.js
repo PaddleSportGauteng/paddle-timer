@@ -985,17 +985,27 @@ router.post('/breaks', (req, res) => {
   if (!dur || dur <= 0) return res.status(400).json({ error: 'durationMinutes must be a positive number.' });
 
   const dayNum = day ? Number(day) : 1;
-  const items = combinedSchedule(database, meetId, dayNum);
 
-  let idx;
-  if (afterRaceId) {
-    // Find the position of the specified race in the combined schedule
-    const pos = items.findIndex((item) => item.ref && item.ref.id === afterRaceId);
-    idx = pos === -1 ? items.length : pos + 1;
+  let sortKey;
+  if (afterRaceId && database.races[afterRaceId]) {
+    // Place the break just after this race's number (e.g. after race 4 → sortKey 4.5)
+    const afterRace = database.races[afterRaceId];
+    // Find the next race's number to interpolate between them
+    const eventIds = new Set(Object.values(database.events).filter((e) => e.meetId === meetId).map((e) => e.id));
+    const nextRace = Object.values(database.races)
+      .filter((r) => eventIds.has(r.eventId) && r.status === 'pending' && r.raceNumber > afterRace.raceNumber)
+      .sort((a, b) => a.raceNumber - b.raceNumber)[0];
+    sortKey = nextRace
+      ? (afterRace.raceNumber + nextRace.raceNumber) / 2
+      : afterRace.raceNumber + 0.5;
   } else {
-    idx = 0; // start of this day
+    // No race specified — put before all races (sortKey 0)
+    const eventIds = new Set(Object.values(database.events).filter((e) => e.meetId === meetId).map((e) => e.id));
+    const firstRace = Object.values(database.races)
+      .filter((r) => eventIds.has(r.eventId) && r.status === 'pending')
+      .sort((a, b) => a.raceNumber - b.raceNumber)[0];
+    sortKey = firstRace ? firstRace.raceNumber - 0.5 : 0.5;
   }
-  const sortKey = sortKeyAfter(items, idx - 1);
 
   const id = db.nextId();
   database.breaks[id] = { id, meetId, day: dayNum, label: (label || 'Break').trim() || 'Break', durationMinutes: dur, sortKey, scheduledLabel: null };
