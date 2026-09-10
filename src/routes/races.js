@@ -29,7 +29,7 @@ const router = express.Router();
 
 // A semi/final race isn't ready to run on Tower until the round that fed
 // it has cleared weigh-in (podium + 1 random check — see
-// rules.computeWeighInRequirement). autoAdvance still computes and fills
+// present.js weighInStatus). autoAdvance still computes and fills
 // the placeholder immediately when the predecessor round finishes — this
 // only holds back its VISIBILITY on Tower, so "it moves to the semi
 // screen after weighing" is enforced without delaying the actual
@@ -89,41 +89,6 @@ router.post('/:id/start', (req, res) => {
   db.save();
   res.json(enrichRace(database, race));
 });
-
-// Tap a lane the instant that boat crosses the line. Captures elapsed
-// time from THIS race's own start, independent of any other race running
-// concurrently. Crossing order becomes position automatically.
-router.post('/:id/lane-finish', (req, res) => {
-  const database = db.load();
-  const race = database.races[req.params.id];
-  if (!race) return res.status(404).json({ error: 'Race not found' });
-  if (race.status !== 'running') return res.status(400).json({ error: 'Race is not running' });
-  const { lane } = req.body;
-  const entryId = race.lanes[String(lane)];
-  if (!entryId) return res.status(400).json({ error: `No boat assigned to lane ${lane}` });
-
-  database.raceResults[race.id] = database.raceResults[race.id] || {};
-  const results = database.raceResults[race.id];
-  if (results[entryId] && results[entryId].status === 'OK') {
-    return res.status(400).json({ error: 'This lane already has a recorded finish — undo it first.' });
-  }
-
-  const finishTimeMs = Date.now() - race.startTimeMs;
-  const priorFinishes = Object.values(results).filter((r) => r.status === 'OK').length;
-  results[entryId] = { finishTimeMs, position: priorFinishes + 1, status: 'OK', dqReason: null, crossedAt: Date.now() };
-
-  db.save();
-  res.json(enrichRace(database, race));
-});
-
-// --- Blind crossing capture (lane races) ---------------------------------
-// Time-critical moment: a boat crosses, the operator presses ONE thing —
-// no aiming for the right lane button under pressure. This just logs a
-// timestamp and a position number (1st, 2nd, 3rd...); which LANE it was
-// gets assigned afterward, at whatever pace is safe. Mass-start races use
-// the separate bib-entry system instead (see lap-pass below) — bibs are
-// already visually distinguishable at a glance, this problem doesn't
-// apply there the same way.
 
 router.post('/:id/capture-crossing', (req, res) => {
   const database = db.load();
@@ -505,26 +470,6 @@ router.post('/:id/scratch-lane/:lane', (req, res) => {
   db.save();
   res.json(enrichRace(database, race));
 });
-
-// Place a boat into an empty lane of this race (e.g. after a swap/scratch,
-// or a late replacement crew).
-router.post('/:id/set-lane', (req, res) => {
-  const database = db.load();
-  const race = database.races[req.params.id];
-  if (!race) return res.status(404).json({ error: 'Race not found' });
-  if (race.status !== 'pending') return res.status(400).json({ error: 'Can only edit lanes before the race starts.' });
-  const { lane, entryId } = req.body;
-  if (entryId && !database.entries[entryId]) return res.status(400).json({ error: 'Entry not found' });
-  // If this boat is already sitting in a different lane of this same race,
-  // clear that lane first so it never appears twice.
-  if (entryId) {
-    Object.keys(race.lanes).forEach((l) => { if (race.lanes[l] === entryId) race.lanes[l] = null; });
-  }
-  race.lanes[String(lane)] = entryId || null;
-  db.save();
-  res.json(enrichRace(database, race));
-});
-
 router.patch('/:id/schedule', (req, res) => {
   const database = db.load();
   const race = database.races[req.params.id];
@@ -549,38 +494,6 @@ router.delete('/:id', (req, res) => {
   res.json({ deleted: race.id });
 });
 
-// Scratch an entry from the WHOLE event (athlete pulled out entirely).
-// Frees them from any pending race lane and excludes them from future
-// draws of this event. Does not touch a race that's already finished —
-// that result stands as history.
-router.post('/entries/:entryId/scratch', (req, res) => {
-  const database = db.load();
-  const entry = database.entries[req.params.entryId];
-  if (!entry) return res.status(404).json({ error: 'Entry not found' });
-  entry.status = 'scratched';
-  Object.values(database.races).forEach((race) => {
-    if (race.eventId !== entry.eventId || race.status === 'finished') return;
-    Object.entries(race.lanes).forEach(([lane, eid]) => {
-      if (eid === entry.id) race.lanes[lane] = null;
-    });
-  });
-  db.save();
-  res.json({ entry });
-});
-
-router.post('/entries/:entryId/unscratch', (req, res) => {
-  const database = db.load();
-  const entry = database.entries[req.params.entryId];
-  if (!entry) return res.status(404).json({ error: 'Entry not found' });
-  entry.status = 'active';
-  db.save();
-  res.json({ entry });
-});
-
-// Permanently remove an entry — for genuine mistakes (duplicate entry,
-// entered twice, shouldn't exist at all), not a normal withdrawal. Unlike
-// scratch, this can't be undone. Refuses if they're in a race that's
-// already started/finished, same as scratch, since that's real history.
 router.delete('/entries/:entryId', (req, res) => {
   const database = db.load();
   const entry = database.entries[req.params.entryId];
@@ -655,22 +568,6 @@ router.patch('/:id/laps', (req, res) => {
   db.save();
   res.json(enrichRace(database, race));
 });
-
-// Rename a combined race's display label. Works any time (even after it's
-// run) since it's purely display — Tower, Board, Results, and the PDF all
-// read this same field, so a rename here is what "sticks" everywhere.
-router.patch('/:id/label', (req, res) => {
-  const database = db.load();
-  const race = database.races[req.params.id];
-  if (!race) return res.status(404).json({ error: 'Race not found' });
-  if (!race.combinedEventIds || race.combinedEventIds.length < 2) return res.status(400).json({ error: 'Only combined races have an editable label.' });
-  const label = (req.body.label || '').trim();
-  if (!label) return res.status(400).json({ error: 'Label cannot be empty.' });
-  race.combinedLabel = label;
-  db.save();
-  res.json(enrichRace(database, race));
-});
-
 router.post('/:id/lap-pass', (req, res) => {
   const database = db.load();
   const race = database.races[req.params.id];

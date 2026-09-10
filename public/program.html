@@ -553,14 +553,6 @@ async function editLaps(raceId, totalLaps){
   loadRaceList();
 }
 
-async function renameLabel(raceId, label){
-  const res = await fetch(`/api/races/${raceId}/label`, {
-    method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({label})
-  });
-  const data = await res.json();
-  if(!res.ok){ alert(data.error); loadRaceList(); return; }
-  loadRaceList();
-}
 
 
 // A "space keeper" — jetty move, lunch, tea, anything that needs its own
@@ -764,10 +756,6 @@ async function moveToRace(fromRaceId, lane, entryId, targetRaceId){
   loadRaceList();
 }
 
-async function setLane(raceId, lane, entryId){
-  await fetch(`/api/races/${raceId}/set-lane`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({lane, entryId: entryId||null}) });
-  loadRaceList();
-}
 async function scratchLane(raceId, lane){
   await fetch(`/api/races/${raceId}/scratch-lane/${lane}`, { method:'POST' });
   loadRaceList();
@@ -842,51 +830,8 @@ async function mergeSelected(){
   loadRaceList();
 }
 
-async function loadDayAllocator(){
-  const meetId = getMeetId();
-  if(!meetId) return;
-  try {
-    const meets = await (await fetch('/api/meets')).json();
-    const meet = meets.find(m => m.id === meetId);
-    const numDays = (meet && meet.numDays) || 1;
-    document.getElementById('numDaysInput').value = numDays;
-    const el = document.getElementById('dayGroupsTable');
-    if(numDays <= 1){ el.innerHTML = '<p style="color:var(--gray);font-size:13px">Single-day event.</p>'; return; }
-    const groups = await (await fetch(`/api/programme/day-groups?meetId=${encodeURIComponent(meetId)}`)).json();
-    if(!groups.length){ el.innerHTML = '<p style="color:var(--gray);font-size:13px">No events drawn yet.</p>'; return; }
-    const dayOptions = Array.from({length: numDays}, (_,i) => i+1);
-    el.innerHTML = `<table><tr><th>Distance / class</th><th>Entries</th><th>Day</th></tr>
-      ${groups.map(g => `<tr>
-        <td>${g.distance} ${g.boatClass}</td>
-        <td>${g.entryCount}</td>
-        <td><select onchange="assignDay('${g.distance}','${g.boatClass}',this.value)">
-          ${dayOptions.map(d => `<option value="${d}" ${g.days.includes(d)&&g.days.length===1?'selected':''}>Day ${d}</option>`).join('')}
-        </select></td>
-      </tr>`).join('')}
-    </table>`;
-  } catch(err){ console.error(err); }
-}
 
-async function updateNumDays(){
-  const meetId = getMeetId();
-  const numDays = parseInt(document.getElementById('numDaysInput').value) || 1;
-  await fetch(`/api/meets/${meetId}/num-days`, {
-    method:'PATCH', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({numDays})
-  });
-  await loadDayAllocator();
-  // Reload day bar so filter tabs update
-  loadRaceList();
-}
 
-async function assignDay(distance, boatClass, day){
-  const meetId = getMeetId();
-  await fetch('/api/programme/assign-day', {
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({meetId, distance, boatClass, day: Number(day)})
-  });
-  await loadDayAllocator();
-}
 
 async function init(){
   await initMeetBar('meetBar', {allowCreate:false});

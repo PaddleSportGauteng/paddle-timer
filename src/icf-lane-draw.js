@@ -364,7 +364,7 @@ function applyICFFinalDraw(semiResults, numHeats, heatResults, directQualifierId
   };
 }
 
-module.exports = { applyICFSemiDraw, applyICFFinalDraw, PLANS };
+module.exports = { applyICFSemiDraw, applyICFFinalDraw };
 
 // ─────────────────────────────────────────────────────────────
 // GENERALISED ICF-PRINCIPLE DRAW for non-9-lane courses

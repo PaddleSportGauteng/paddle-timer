@@ -167,28 +167,4 @@ function checkWeight(boatClass, measuredWeightKg) {
   };
 }
 
-/**
- * ICF 7.3.5.c post-race boat control: "At least three (3) boats will be
- * selected at random from the participants in the races for boat control
- * after the finish." This system requires 3 weigh-ins per race (any 3
- * boats, chosen by the official) before results are marked official.
- *
- * `ranked` is the finish-order list for ONE race; `weighedEntryIds` is a
- * Set (or array) of entryIds with a weigh-in recorded, pass or fail.
- */
-function computeWeighInRequirement(ranked, weighedEntryIds) {
-  const weighed = weighedEntryIds instanceof Set ? weighedEntryIds : new Set(weighedEntryIds);
-  const required = Math.min(3, ranked.length); // min 3, or all if fewer than 3 finished
-  const weighedCount = ranked.filter((r) => weighed.has(r.entryId)).length;
-  const complete = weighedCount >= required;
-  const flag = complete ? null
-    : `${weighedCount} of ${required} required weigh-ins done — ${required - weighedCount} more needed before results are official.`;
-  return {
-    complete,
-    requiredCount: required,
-    weighedCount,
-    flag,
-  };
-}
-
-module.exports = { DEFAULT_LANES, centerOutLaneOrder, MIN_WEIGHT_KG, MEDAL_MINIMUMS, PROGRESSION_PLANS, finalsNeeded, decideFormat, computeMedalEligibility, computeWeighInRequirement, checkWeight };
+module.exports = { DEFAULT_LANES, centerOutLaneOrder, finalsNeeded, decideFormat, computeMedalEligibility, checkWeight };

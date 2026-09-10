@@ -56,10 +56,4 @@ function nextId() {
   return String(id);
 }
 
-function reset() {
-  db = JSON.parse(JSON.stringify(EMPTY_DB));
-  save();
-  return db;
-}
-
-module.exports = { load, save, nextId, reset, get DATA_FILE() { return DATA_FILE; } };
+module.exports = { load, save, nextId, get DATA_FILE() { return DATA_FILE; } };

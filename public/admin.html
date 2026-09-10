@@ -131,7 +131,7 @@
   <!-- Step 2: Club codes (shown after import) -->
   <div class="post-card" id="clubCodesCard">
     <h2>3. Club codes</h2>
-    <p style="color:var(--gray);font-size:14px">From the PSA club list. Edit or merge if needed.</p>
+    <p style="color:var(--gray);font-size:14px">From the PSA club list. Edit a code if it looks wrong.</p>
     <div id="clubCodesTable">Loading…</div>
   </div>
 
@@ -245,33 +245,7 @@ async function createAndImport(btn) {
   }
 }
 
-// ── Day groups ────────────────────────────────────────────────────
-async function loadDayGroups(meetId, numDays) {
-  const card = document.getElementById('raceDaysCard');
-  if (numDays <= 1) { card.style.display = 'none'; return; }
-  card.style.display = 'block';
-  const el = document.getElementById('dayGroupsTable');
-  try {
-    const groups = await (await fetch(`/api/programme/day-groups?meetId=${encodeURIComponent(meetId)}`)).json();
-    if (!groups.length) { el.innerHTML = '<p style="color:var(--gray)">No events yet.</p>'; return; }
-    const dayOptions = Array.from({length: numDays}, (_, i) => i+1);
-    el.innerHTML = `<table>${groups.map(g => `
-      <tr>
-        <td>${g.distance} ${g.boatClass}</td>
-        <td>${g.entryCount} entries</td>
-        <td><select onchange="assignDay('${g.distance}','${g.boatClass}',this.value,'${meetId}')">
-          ${dayOptions.map(d => `<option value="${d}" ${g.days.includes(d)&&g.days.length===1?'selected':''}>Day ${d}</option>`).join('')}
-        </select></td>
-      </tr>`).join('')}</table>`;
-  } catch (err) { el.innerHTML = `<div class="flag">${err.message}</div>`; }
-}
 
-async function assignDay(distance, boatClass, day, meetId) {
-  await fetch('/api/programme/assign-day', {
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({meetId, distance, boatClass, day: Number(day)})
-  });
-}
 
 // ── Club codes ────────────────────────────────────────────────────
 async function loadClubCodes() {

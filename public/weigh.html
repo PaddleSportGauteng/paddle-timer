@@ -41,14 +41,6 @@ let allRaces = [];
 let openBoat = null; // {raceId, entryId} of the currently-open weigh form
 let selectedDay = null;
 
-function fmtMs(ms){
-  const cs = Math.floor(ms/10)%100;
-  const totalSec = Math.floor(ms/1000);
-  const sec = totalSec%60;
-  const min = Math.floor(totalSec/60);
-  const pad=(n,l=2)=>String(n).padStart(l,'0');
-  return `${pad(min)}:${pad(sec)}.${pad(cs)}`;
-}
 function phaseLabel(r){
   const map = { heat: `Heat ${r.heatNumber}`, semi: `Semi ${r.heatNumber}`, final: 'Final A', finalB: 'Final B', finalC: 'Final C' };
   return map[r.phase] || r.phase;

@@ -243,4 +243,4 @@ function autoAdvance(database, eventId) {
   return null;
 }
 
-module.exports = { autoAdvance, rankedFinishers };
+module.exports = { autoAdvance };

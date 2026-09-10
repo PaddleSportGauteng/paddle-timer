@@ -88,79 +88,6 @@ router.get('/events', (req, res) => {
   });
   res.json(out);
 });
-
-// Distinct distance+boatClass combinations for this meet, with entry
-// counts and current day assignment — the raw material for deciding
-// "K1 1000m/500m/200m on day 1, K2 500m/200m on day 2" etc.
-router.get('/day-groups', (req, res) => {
-  const database = db.load();
-  const meetId = req.query.meetId;
-  if (!meetId) return res.status(400).json({ error: 'meetId is required — pick a meet first.' });
-  const events = Object.values(database.events).filter((ev) => ev.meetId === meetId);
-  const groups = {};
-  events.forEach((ev) => {
-    const key = `${ev.distance}|${ev.boatClass}`;
-    if (!groups[key]) groups[key] = { distance: ev.distance, boatClass: ev.boatClass, isMassStart: ev.isMassStart, entryCount: 0, days: new Set() };
-    groups[key].entryCount += eventEntries(database, ev.id).length;
-    groups[key].days.add(ev.day || 1);
-  });
-  const out = Object.values(groups).map((g) => ({ ...g, days: [...g.days].sort((a, b) => a - b) }))
-    .sort((a, b) => a.distance.localeCompare(b.distance) || a.boatClass.localeCompare(b.boatClass));
-  res.json(out);
-});
-
-// Bulk-assign every event matching this distance+boatClass to a day.
-router.post('/assign-day', (req, res) => {
-  const database = db.load();
-  const { meetId, distance, boatClass, day } = req.body;
-  if (!meetId || !distance || !boatClass) return res.status(400).json({ error: 'meetId, distance, and boatClass are required.' });
-  const dayNum = Number(day);
-  if (!Number.isInteger(dayNum) || dayNum < 1) return res.status(400).json({ error: 'day must be a positive whole number.' });
-  const meet = database.meets[meetId];
-  if (meet && meet.numDays && dayNum > meet.numDays) {
-    return res.status(400).json({ error: `This meet is only set up for ${meet.numDays} day(s) — change that in meet settings first if you need more.` });
-  }
-  let count = 0;
-  Object.values(database.events).forEach((ev) => {
-    if (ev.meetId === meetId && ev.distance === distance && ev.boatClass === boatClass) { ev.day = dayNum; count++; }
-  });
-  db.save();
-  res.json({ updated: count });
-});
-
-// Shared by both move-event (pick any existing event) and move-distance
-// (same category, different distance — see below): pulls the entry out
-// of any not-yet-started race (undoing that whole draw, since it's now
-// wrong), refuses if it's already racing/finished, then reassigns it.
-function moveEntry(database, entry, newEvent) {
-  const lockedRace = Object.values(database.races).find((r) => raceMatchesEvent(r, entry.eventId) && r.status !== 'pending' && Object.values(r.lanes).includes(entry.id));
-  if (lockedRace) return { error: 'This entry is in a race that has already started or finished — can\'t move it now.' };
-
-  const affectedRaces = Object.values(database.races).filter((race) =>
-    raceMatchesEvent(race, entry.eventId) && race.status === 'pending' && Object.values(race.lanes).includes(entry.id)
-  );
-  const undoneEventLabels = new Set();
-  affectedRaces.forEach((race) => {
-    const involvedEventIds = race.combinedEventIds && race.combinedEventIds.length > 1 ? race.combinedEventIds : [race.eventId];
-    involvedEventIds.forEach((id) => {
-      const ev = database.events[id];
-      if (ev) { ev.drawConfirmed = false; undoneEventLabels.add(ev.label); }
-    });
-    delete database.races[race.id];
-    delete database.raceResults[race.id];
-  });
-
-  entry.eventId = newEvent.id;
-  entry.boatNumber = null; // old event's slide/bib number (if any) no longer applies
-  return { entry, movedTo: newEvent.label, undoneDraws: [...undoneEventLabels] };
-}
-
-// Fix a data-entry mistake — athlete entered the wrong event (e.g. 2000m
-// instead of 5000m). Pulls them out of any not-yet-started race lane
-// (same as a scratch) and reassigns which event they belong to. If the
-// target event is already drawn, they show up as an available (unplaced)
-// entry there — either redraw that event, or assign them to an empty
-// lane manually in Race Program.
 router.post('/entries/:entryId/move-event', (req, res) => {
   const database = db.load();
   const entry = database.entries[req.params.entryId];
@@ -1117,18 +1044,6 @@ router.post('/unfinalise', (req, res) => {
   pendingRaces.forEach((r) => { r.published = false; });
   db.save();
   res.json({ unpublished: pendingRaces.length });
-});
-
-// Set ICF draw plan variant (P1 or P2) for an event
-router.patch('/events/:id/icf-plan-variant', (req, res) => {
-  const database = db.load();
-  const event = database.events[req.params.id];
-  if (!event) return res.status(404).json({ error: 'Event not found.' });
-  const variant = req.body.variant;
-  if (variant !== 'P1' && variant !== 'P2') return res.status(400).json({ error: 'Variant must be P1 or P2.' });
-  event.icfPlanVariant = variant;
-  db.save();
-  res.json({ ok: true, variant });
 });
 
 module.exports = router;

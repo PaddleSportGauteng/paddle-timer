@@ -58,9 +58,6 @@ function fmtTime(ms){
   return `${pad(min)}:${pad(sec)}.${pad(cs)}`;
 }
 
-function weightNote(weighIn){
-  return weighIn ? ` <small style="color:var(--gray)">· ${weighIn.weightKg}kg</small>` : '';
-}
 
 async function loadBoard(){
   const meetId = getMeetId();

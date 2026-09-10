@@ -269,11 +269,6 @@ function buildPrizeGroups(blocks) {
   return groups;
 }
 
-router.get('/prizes.json', (req, res) => {
-  const { blocks } = loadBlocks(req);
-  res.json(buildPrizeGroups(blocks));
-});
-
 router.get('/prizes.xlsx', async (req, res) => {
   const { meet, blocks, dayFilter } = loadBlocks(req);
   const groups = buildPrizeGroups(blocks);

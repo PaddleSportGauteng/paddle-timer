@@ -251,29 +251,4 @@ router.patch('/club-codes', (req, res) => {
   res.json({ clubName, code: clean });
 });
 
-// Merges two different spellings of the same real club (e.g. "Dabulamanzi
-// Canoe Club" and "DABS Canoe Club" that both showed up in imports) into
-// one. Reassigns every athlete's club field from `fromName` to `toName`,
-// then drops fromName's separate code — unlike just editing a code to
-// match, this actually unifies the underlying records, so anything that
-// groups/filters/searches by club sees them as one club everywhere.
-router.post('/merge-clubs', (req, res) => {
-  const database = db.load();
-  const { fromName, toName } = req.body;
-  if (!fromName || !toName) return res.status(400).json({ error: 'fromName and toName are required.' });
-  if (fromName === toName) return res.status(400).json({ error: 'Already the same club.' });
-  let count = 0;
-  Object.values(database.athletes).forEach((a) => {
-    if (a.club === fromName) { a.club = toName; count++; }
-  });
-  delete database.clubCodes[fromName];
-  if (!database.clubCodes[toName]) {
-    const official = lookupOfficial(toName);
-    database.clubCodes[toName] = official ? official.code : require('../present').autoClubCode(toName);
-    if (official && official.union) database.clubUnions[toName] = official.union;
-  }
-  db.save();
-  res.json({ merged: count, code: database.clubCodes[toName] });
-});
-
 module.exports = router;
