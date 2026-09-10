@@ -532,16 +532,25 @@ async function undoLap(raceId,bib){
   await refresh();
 }
 
-// Single keyboard handler - no inline handlers on inputs
+// Keyboard handler - single digit assigns immediately, no Enter needed
 document.addEventListener('keydown', function(e) {
   const isLaneInput = e.target && e.target.classList && e.target.classList.contains('lane-input');
 
   if(isLaneInput){
-    // Swallow space so it doesn't trigger TAP
-    if(e.key === ' '){ e.preventDefault(); e.stopImmediatePropagation(); return; }
+    e.stopImmediatePropagation();
+    e.stopPropagation();
+    if(e.key === ' '){ e.preventDefault(); return; }
+    // Single digit 1-9 — assign immediately, no Enter needed
+    if(/^[1-9]$/.test(e.key)){
+      e.preventDefault();
+      const raceId = e.target.getAttribute('data-race');
+      const pos    = e.target.getAttribute('data-pos');
+      if(raceId && pos) assignCrossing(raceId, pos, e.key);
+      return;
+    }
+    // Enter as fallback for multi-digit lanes
     if(e.key === 'Enter'){
       e.preventDefault();
-      e.stopImmediatePropagation();
       const val = e.target.value.trim();
       if(val){
         const raceId = e.target.getAttribute('data-race');
@@ -550,10 +559,10 @@ document.addEventListener('keydown', function(e) {
         if(raceId && pos) assignCrossing(raceId, pos, val);
       }
     }
-    return; // don't let any other handler see this keydown
+    return;
   }
 
-  // Not in a lane input — global TAP shortcut
+  // Global TAP shortcut
   if(e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') return;
   if(e.key === ' ' || e.key === 'Enter'){
     e.preventDefault();
