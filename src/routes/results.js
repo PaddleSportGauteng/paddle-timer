@@ -1,6 +1,7 @@
 const express = require('express');
 const db = require('../db');
 const rules = require('../rules');
+const { formatConditions } = require('../venues');
 const { sortByScheduleThenNumber, enrichRace } = require('../present');
 
 const router = express.Router();
@@ -89,6 +90,7 @@ function buildResultBlocks(database, meetId, dayFilter) {
       blocks.push({
         raceId: race.id, raceNumber: race.raceNumber, day: race.day || 1, phase: race.phase, phaseLabel, isFinal,
         distance: ev.distance || '', boatClass: ev.boatClass || '', ageCategory: ev.ageCategory || '', gender: ev.gender || '',
+        conditions: race.conditions ? formatConditions(race.conditions, race.conditions.waterTempC) : '',
         label, ranked, others, resultsConfirmed: !!race.resultsConfirmed, weighInStatus,
         noResultsRecorded: hasBoats && ranked.length === 0 && others.length === 0,
         medalEligibility: isFinal ? rules.computeMedalEligibility(ranked.length) : null,
@@ -105,6 +107,7 @@ function buildResultBlocks(database, meetId, dayFilter) {
         blocks.push({
           raceId: race.id, raceNumber: race.raceNumber, day: race.day || 1, phase: race.phase, phaseLabel, isFinal, weighInStatus,
           distance: memberEvent.distance || '', boatClass: memberEvent.boatClass || '', ageCategory: memberEvent.ageCategory || '', gender: memberEvent.gender || '',
+          conditions: race.conditions ? formatConditions(race.conditions, race.conditions.waterTempC) : '',
           label: memberEvent.label, combinedWith: race.combinedLabel, ranked, others, resultsConfirmed: !!race.resultsConfirmed,
           noResultsRecorded: ranked.length === 0 && others.length === 0,
           medalEligibility: isFinal ? rules.computeMedalEligibility(ranked.length) : null,

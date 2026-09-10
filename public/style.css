@@ -232,3 +232,7 @@ body.race-day .nav-group:first-child:hover a { display: inline; }
 .menu.open { display: block; }
 .menu button { display: block; width: 100%; text-align: left; border: none; background: #fff; border-radius: 5px; padding: 9px 12px; }
 .menu button:hover { background: #F3F6FA; }
+
+/* ── Race conditions footer ── */
+.conditions { margin-top:8px; padding-top:6px; border-top:1px dashed var(--line); font-size:11px; color:var(--gray); letter-spacing:.02em; }
+@media print { .conditions { color:#333; } }

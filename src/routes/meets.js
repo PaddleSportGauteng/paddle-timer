@@ -1,6 +1,7 @@
 const express = require('express');
 const db = require('../db');
 const rules = require('../rules');
+const { VENUES, fetchConditions, formatConditions } = require('../venues');
 
 const router = express.Router();
 
@@ -23,6 +24,7 @@ router.post('/', (req, res) => {
     return res.status(400).json({ error: 'Rest minutes must be a whole number between 0 and 240.' });
   }
   let numDays = req.body.numDays === undefined || req.body.numDays === '' ? 1 : Number(req.body.numDays);
+  const venueId = req.body.venueId && VENUES[req.body.venueId] ? req.body.venueId : null;
   if (!Number.isInteger(numDays) || numDays < 1 || numDays > 14) {
     return res.status(400).json({ error: 'Number of days must be a whole number between 1 and 14.' });
   }
@@ -36,7 +38,7 @@ router.post('/', (req, res) => {
     return res.status(400).json({ error: `${raceType} isn't supported yet — this app only runs Sprints for now.` });
   }
   const id = db.nextId();
-  database.meets[id] = { id, name, raceType, lanes, restMinutes, numDays, createdAt: Date.now(), nextRaceNumber: 1 };
+  database.meets[id] = { id, name, raceType, lanes, restMinutes, numDays, venueId, waterTempC: null, createdAt: Date.now(), nextRaceNumber: 1 };
   db.save();
   res.json(database.meets[id]);
 });
@@ -91,6 +93,36 @@ router.delete('/:id', (req, res) => {
   db.save();
   res.json({ deleted: meet.name });
 });
+router.get('/venues', (req, res) => {
+  res.json(Object.values(VENUES));
+});
+
+// Set venue and/or water temperature for a meet. Water temp is manual
+// (no API has dam water temp) and carries forward until changed.
+router.patch('/:id/conditions', (req, res) => {
+  const database = db.load();
+  const meet = database.meets[req.params.id];
+  if (!meet) return res.status(404).json({ error: 'Meet not found.' });
+  if (req.body.venueId !== undefined) meet.venueId = VENUES[req.body.venueId] ? req.body.venueId : null;
+  if (req.body.waterTempC !== undefined) {
+    const t = req.body.waterTempC === null || req.body.waterTempC === '' ? null : Number(req.body.waterTempC);
+    if (t !== null && (isNaN(t) || t < -5 || t > 50)) return res.status(400).json({ error: 'Water temp must be a number between -5 and 50.' });
+    meet.waterTempC = t;
+  }
+  db.save();
+  res.json({ ok: true, venueId: meet.venueId, waterTempC: meet.waterTempC });
+});
+
+router.get('/:id/conditions-now', async (req, res) => {
+  const database = db.load();
+  const meet = database.meets[req.params.id];
+  if (!meet) return res.status(404).json({ error: 'Meet not found.' });
+  const venue = meet.venueId ? VENUES[meet.venueId] : null;
+  if (!venue) return res.json({ text: '' });
+  const w = await fetchConditions(venue);
+  res.json({ text: formatConditions(w, meet.waterTempC), raw: w });
+});
+
 router.get('/:id', (req, res) => {
   const database = db.load();
   const meet = database.meets[req.params.id];

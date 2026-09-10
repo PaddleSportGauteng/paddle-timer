@@ -86,6 +86,21 @@
       <a href="/race-sort.html"><button class="primary">Go to Race Sort</button></a>
     </div>
   </div>
+  <div class="card" id="conditionsCard" style="display:none">
+    <h2 style="margin-top:0">Conditions</h2>
+    <div style="display:flex;gap:14px;align-items:flex-end;flex-wrap:wrap">
+      <div>
+        <label style="display:block;font-size:12px;color:var(--gray);margin-bottom:4px">Venue</label>
+        <select id="condVenue" onchange="saveConditions()" style="padding:8px;min-width:280px"></select>
+      </div>
+      <div>
+        <label style="display:block;font-size:12px;color:var(--gray);margin-bottom:4px">Water temp °C</label>
+        <input type="number" step="0.1" id="condWater" placeholder="e.g. 20.8" style="width:110px;padding:8px" onchange="saveConditions()">
+      </div>
+      <div id="condPreview" style="font-size:13px;color:var(--gray);flex:1;min-width:240px"></div>
+    </div>
+    <p style="font-size:12px;color:var(--gray);margin:8px 0 0">Air temp, humidity, wind and sky are captured automatically when each race is locked. Water temp is manual and carries forward until you change it.</p>
+  </div>
 
   <!-- Step 1: Create event + import -->
   <div class="step-card" id="createSection">
@@ -274,6 +289,33 @@ async function editClubCode(clubName, code) {
 }
 
 // ── Init ──────────────────────────────────────────────────────────
+async function loadConditions(meet){
+  const card = document.getElementById('conditionsCard');
+  card.style.display = 'block';
+  const vs = await (await fetch('/api/meets/venues')).json();
+  const sel = document.getElementById('condVenue');
+  sel.innerHTML = '<option value="">No venue (no weather)</option>' + vs.map(v => `<option value="${v.id}" ${meet.venueId===v.id?'selected':''}>${v.name} — course ${String(v.bearing).padStart(3,'0')}° ${v.direction}</option>`).join('');
+  document.getElementById('condWater').value = meet.waterTempC ?? '';
+  previewConditions();
+}
+async function previewConditions(){
+  const el = document.getElementById('condPreview');
+  const venueId = document.getElementById('condVenue').value;
+  if(!venueId){ el.textContent = ''; return; }
+  el.textContent = 'Fetching current conditions…';
+  try{
+    const w = await (await fetch(`/api/meets/${encodeURIComponent(getMeetId())}/conditions-now`)).json();
+    el.textContent = w.text ? `Now: ${w.text}` : 'Weather not available right now.';
+  }catch(e){ el.textContent = ''; }
+}
+async function saveConditions(){
+  const meetId = getMeetId(); if(!meetId) return;
+  const venueId = document.getElementById('condVenue').value || null;
+  const w = document.getElementById('condWater').value;
+  await fetch(`/api/meets/${encodeURIComponent(meetId)}/conditions`, {method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({venueId, waterTempC: w===''?null:Number(w)})});
+  previewConditions();
+}
+
 async function copyLiveLink(){
   const meetId = getMeetId(); if(!meetId){ alert('Pick a meet first.'); return; }
   const url = `${location.origin}/live.html?meet=${encodeURIComponent(meetId)}`;
@@ -307,6 +349,7 @@ async function init() {
         document.getElementById('existingMeetMeta').textContent =
           `${meet.raceType||'Sprint'} · ${meet.lanes||9} lanes · created ${new Date(meet.createdAt).toLocaleDateString()}`;
         document.getElementById('existingMeetBanner').style.display = 'flex';
+      loadConditions(meet);
         document.getElementById('createSection').style.display = 'none';
         loadClubCodes();
         return;

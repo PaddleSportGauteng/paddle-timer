@@ -182,6 +182,7 @@ function render(){
     el.innerHTML = shown.map(b => `<div class="race ${b.resultsConfirmed?'done':'prov'} ${blockHit(b)?'hit':''}">
         <div class="head"><span class="t">R${b.raceNumber} · ${b.label} — ${b.phaseLabel}</span><span class="s">${b.resultsConfirmed?'Official':'Provisional'}</span></div>
         ${resultTable(b)}
+        ${b.conditions ? `<div class="conditions">${b.conditions}</div>` : ''}
       </div>`).join('');
   }
 }

@@ -186,6 +186,7 @@ function render(){
         ${rankedRows}
         ${otherRows}
       </table></div>
+      ${b.conditions ? `<div class="conditions">${b.conditions}</div>` : ''}
     </div>`;
   }).join('');
 }

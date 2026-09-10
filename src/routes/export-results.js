@@ -117,6 +117,7 @@ router.get('/results.xlsx', async (req, res) => {
       row.getCell(9).font = arial({ bold: true, color: { argb: 'FF' + RED } });
       [1, 4, 5, 6, 7, 8, 9, 10].forEach((ci) => { row.getCell(ci).alignment = { horizontal: 'center' }; });
     });
+    if (b.conditions) put([b.conditions], { italic: true, size: 9, color: { argb: 'FF' + GRAY } });
     r++;
   });
 
@@ -221,6 +222,11 @@ router.get('/results.pdf', (req, res) => {
       cell(8, r.weighIn ? `${r.weighIn.weightKg} kg` : '', ry, 'Helvetica', '#' + GRAY);
       doc.y = ry + rowH;
     });
+    if (b.conditions) {
+      doc.moveTo(left, doc.y + 1).lineTo(right, doc.y + 1).strokeColor('#' + LINE).lineWidth(0.5).dash(2, { space: 2 }).stroke().undash();
+      doc.fontSize(7.5).font('Helvetica').fillColor('#' + GRAY).text(b.conditions, left, doc.y + 4, { width: pageW, lineBreak: false });
+      doc.y += 14;
+    }
     doc.y += 10;
   });
 

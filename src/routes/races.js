@@ -3,6 +3,7 @@ const db = require('../db');
 const rules = require('../rules');
 const { enrichRace, sortByScheduleThenNumber } = require('../present');
 const progression = require('../progression');
+const { VENUES, fetchConditions } = require('../venues');
 
 // Recompute finishing positions for a race's results, handling dead heats
 // per ICF 10.6.3 / 10.6.4: boats with identical finish times (to 1/100s)
@@ -334,7 +335,7 @@ router.post('/:id/stop-clock', (req, res) => {
   res.json({ ok: true, stopTimeMs: race.stopTimeMs });
 });
 
-router.post('/:id/finish-race', (req, res) => {
+router.post('/:id/finish-race', async (req, res) => {
   const database = db.load();
   const race = database.races[req.params.id];
   if (!race) return res.status(404).json({ error: 'Race not found' });
@@ -367,6 +368,17 @@ router.post('/:id/finish-race', (req, res) => {
   race.status = 'finished';
   race.resultsConfirmed = false; // provisional until weigh-ins are done and office confirms
   race.finishedAt = Date.now();
+  // Snapshot conditions at lock time. Never blocks: a failed fetch just
+  // leaves conditions null and the office can add them by hand later.
+  {
+    const event = database.events[race.eventId];
+    const meet = event && database.meets[event.meetId];
+    const venue = meet && meet.venueId ? VENUES[meet.venueId] : null;
+    if (venue) {
+      const w = await fetchConditions(venue);
+      race.conditions = w ? { ...w, waterTempC: meet.waterTempC ?? null } : { waterTempC: meet.waterTempC ?? null };
+    }
+  }
   const advanced = progression.autoAdvance(database, race.eventId);
   db.save();
   res.json({ ...enrichRace(database, race), advanced });
