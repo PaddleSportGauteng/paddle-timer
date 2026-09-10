@@ -247,7 +247,7 @@ function runningCardHtml(race){
 
   const allDone = realLanes.every(([,info]) => race.results[info.entryId]);
 
-  const allAssigned = race.blindCrossings.length > 0 && race.blindCrossings.every(c => c.assignedLane != null);
+  const allAssigned = realLanes.length > 0 && realLanes.every(([,info]) => race.results[info.entryId]);
 
   return `<div class="now-card" id="race-${race.id}">
     <div class="badge">🔴 Now Racing</div>
