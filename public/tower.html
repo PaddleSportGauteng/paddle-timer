@@ -14,14 +14,15 @@
   /* NOW RACING card */
   .now-card { background:#fff; border-radius:14px; border:3px solid var(--orange); padding:20px; margin-bottom:20px; box-shadow:0 4px 16px rgba(0,0,0,0.08); }
   .now-card .badge { font-size:11px; font-weight:700; letter-spacing:0.08em; color:var(--orange); text-transform:uppercase; margin-bottom:4px; }
-  .now-card .race-title { font-size:18px; font-weight:700; color:var(--navy); margin-bottom:2px; }
+  .now-card .race-title { font-size:16px; font-weight:700; color:var(--navy); }
   .now-card .race-sub { font-size:13px; color:var(--gray); margin-bottom:14px; }
 
-  .big-clock { font-size:48px; font-weight:700; font-family:monospace; text-align:center; color:var(--orange); letter-spacing:2px; margin:6px 0; }
-  .big-clock.stopped { color:var(--green); }
+  .clock-block { flex:1; background:#111; color:#fff; font-family:monospace; font-size:22px; font-weight:700; letter-spacing:1px; text-align:center; padding:14px 10px; border-radius:10px; }
+  .clock-block.stopped { background:#0e5c3a; }
+  .now-pill { display:inline-block; background:#E4F5EC; color:#C93B3B; font-weight:700; font-size:15px; padding:6px 14px; border-radius:8px; letter-spacing:0.02em; }
 
-  .ctrl-row { display:flex; gap:8px; margin:12px 0; }
-  .ctrl-row button { flex:1; padding:14px 10px; font-size:15px; font-weight:700; border-radius:10px; border:none; cursor:pointer; }
+  .ctrl-row { display:flex; gap:6px; margin:12px 0; align-items:stretch; }
+  .ctrl-row button { flex:1; padding:14px 8px; font-size:14px; font-weight:700; border-radius:10px; border:none; cursor:pointer; white-space:nowrap; }
   .btn-start { background:#27ae60; color:#fff; }
   .btn-start:disabled { background:#b7e4c7; cursor:not-allowed; color:#fff; }
   .btn-stop  { background:#C93B3B; color:#fff; }
@@ -237,25 +238,27 @@ function laneCardHtml(race){
       <td class="pmeta cunion">${info.union||''}</td>
       <td class="pmeta cpsa">${(info.psaIds||[])[0]||''}</td>
       <td class="ctime">${timeCell}</td>
-      <td style="white-space:nowrap;width:150px">
-        <button style="font-size:10px;padding:3px 5px" onclick="markLane('${race.id}','${info.entryId}','DNS')">DNS</button>
-        <button style="font-size:10px;padding:3px 5px" onclick="markLane('${race.id}','${info.entryId}','DNF')">DNF</button>
-        <button style="font-size:10px;padding:3px 5px" onclick="markDQ('${race.id}','${info.entryId}')">DQ</button>
-        ${r?`<button style="font-size:10px;padding:3px 5px" onclick="clearResult('${race.id}','${info.entryId}')">✕</button>`:''}
+      <td class="cact">
+        <button onclick="markLane('${race.id}','${info.entryId}','DNS')">DNS</button>
+        <button onclick="markLane('${race.id}','${info.entryId}','DNF')">DNF</button>
+        <button onclick="markDQ('${race.id}','${info.entryId}')">DQ</button>
+        ${r?`<button onclick="clearResult('${race.id}','${info.entryId}')">✕</button>`:''}
       </td>
     </tr>`;
   }).join('');
 
   return `<div class="now-card" id="race-${race.id}">
-    <div class="badge">🔴 Now Racing</div>
-    <div class="race-title">${raceLabel(race)}</div>
-    <div class="race-sub">${raceSub(race)}</div>
-    <div class="big-clock ${stopped?'stopped':''}" id="clock-${race.id}">00:00.00</div>
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:4px">
+      <span class="now-pill">● NOW RACING</span>
+      <span class="race-title" style="margin:0">${raceLabel(race)}</span>
+      <span class="race-sub" style="margin:0">${raceSub(race)}</span>
+    </div>
     ${!stopped?`<button class="tap-btn" onclick="tap('${race.id}')">TAP — BOAT CROSSED ⚡</button>`:''}
     <div class="ctrl-row">
+      <div class="clock-block ${stopped?'stopped':''}" id="clock-${race.id}">00:00.00</div>
       <button class="btn-start" disabled>▶ Started</button>
       <button class="btn-stop" ${stopped?'disabled':''} onclick="stopClock('${race.id}')">⏹ Stop</button>
-      <button class="btn-undo" onclick="undoTap('${race.id}')">↩ Undo tap</button>
+      <button class="btn-undo" onclick="undoTap('${race.id}')">↩ Undo</button>
       <button class="btn-lock" ${allDone?'':'disabled'} onclick="lockRace('${race.id}')">🔒 Lock</button>
     </div>
 
@@ -268,15 +271,15 @@ function laneCardHtml(race){
     ${allDone?`
     <div style="margin-top:14px">
       <div style="font-size:11px;font-weight:700;letter-spacing:0.06em;color:var(--gray);margin-bottom:6px">✓ ALL ASSIGNED — REVIEW THEN LOCK</div>
-      <table class="review-table">
+      <div class="table-scroll"><table class="review-table">
         <tr><th></th><th>LANE</th><th>NAME</th><th>AGE</th><th>CLUB</th><th>M/F</th><th>UNION</th><th>PSA</th><th>TIME</th><th></th></tr>
         ${reviewRows}
-      </table>
+      </table></div>
     </div>`:`
-    <table class="review-table" style="margin-top:10px">
+    <div class="table-scroll"><table class="review-table" style="margin-top:10px">
       <tr><th></th><th>LANE</th><th>NAME</th><th>AGE</th><th>CLUB</th><th>M/F</th><th>UNION</th><th>PSA</th><th>TIME</th><th></th></tr>
       ${reviewRows}
-    </table>`}
+    </table></div>`}
   </div>`;
 }
 
@@ -303,35 +306,37 @@ function massCardHtml(race){
       <td class="pmeta">${laps.length}/${race.totalLaps}${done?' ✓':''}</td>
       <td class="ctime">${laps.length?fmtTime(laps[laps.length-1].timeMs):'—'}</td>
       <td>${res}</td>
-      <td style="white-space:nowrap;width:170px">
-        ${laps.length?`<button style="font-size:10px;padding:3px 5px" onclick="undoLap('${race.id}','${bib}')">↩</button>`:''}
-        <button style="font-size:10px;padding:3px 5px" onclick="markLane('${race.id}','${info.entryId}','DNS')">DNS</button>
-        <button style="font-size:10px;padding:3px 5px" onclick="markLane('${race.id}','${info.entryId}','DNF')">DNF</button>
-        <button style="font-size:10px;padding:3px 5px" onclick="markDQ('${race.id}','${info.entryId}')">DQ</button>
-        ${r?`<button style="font-size:10px;padding:3px 5px" onclick="clearResult('${race.id}','${info.entryId}')">✕</button>`:''}
+      <td class="cact" style="width:160px">
+        ${laps.length?`<button onclick="undoLap('${race.id}','${bib}')">↩</button>`:''}
+        <button onclick="markLane('${race.id}','${info.entryId}','DNS')">DNS</button>
+        <button onclick="markLane('${race.id}','${info.entryId}','DNF')">DNF</button>
+        <button onclick="markDQ('${race.id}','${info.entryId}')">DQ</button>
+        ${r?`<button onclick="clearResult('${race.id}','${info.entryId}')">✕</button>`:''}
       </td>
     </tr>`;
   }).join('');
 
   return `<div class="now-card" id="race-${race.id}">
-    <div class="badge">🔴 Now Racing — Mass Start</div>
-    <div class="race-title">${raceLabel(race)}</div>
-    <div class="race-sub">${raceSub(race)}</div>
-    <div class="big-clock ${stopped?'stopped':''}" id="clock-${race.id}">00:00.00</div>
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:4px">
+      <span class="now-pill">● NOW RACING</span>
+      <span class="race-title" style="margin:0">${raceLabel(race)}</span>
+      <span class="race-sub" style="margin:0">${raceSub(race)}</span>
+    </div>
     <form class="bib-form" onsubmit="return submitBib(event,'${race.id}')">
       <input type="text" inputmode="numeric" placeholder="Slide #" autocomplete="off">
       <button class="primary" type="submit">Log pass</button>
     </form>
     <div class="ctrl-row">
+      <div class="clock-block ${stopped?'stopped':''}" id="clock-${race.id}">00:00.00</div>
       <button class="btn-start" disabled>▶ Started</button>
       <button class="btn-stop" ${stopped?'disabled':''} onclick="stopClock('${race.id}')">⏹ Stop</button>
-      <button class="btn-undo" onclick="undoLap('${race.id}',null)">↩ Undo last</button>
+      <button class="btn-undo" onclick="undoLap('${race.id}',null)">↩ Undo</button>
       <button class="btn-lock" ${allDone?'':'disabled'} onclick="lockRace('${race.id}')">🔒 Lock</button>
     </div>
-    <table class="lap-table">
+    <div class="table-scroll"><table class="lap-table">
       <tr><th>SLIDE</th><th>NAME</th><th>AGE</th><th>CLUB</th><th>M/F</th><th>UNION</th><th>PSA</th><th>LAPS</th><th>LAST</th><th>RESULT</th><th></th></tr>
-      ${rows||'<tr><td colspan="6" style="color:var(--gray)">No entries.</td></tr>'}
-    </table>
+      ${rows||'<tr><td colspan="11" style="color:var(--gray)">No entries.</td></tr>'}
+    </table></div>
   </div>`;
 }
 

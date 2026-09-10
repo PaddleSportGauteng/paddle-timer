@@ -172,10 +172,10 @@ async function toggleDrawView(eventId){
       const phaseLabel = { heat: `Heat ${r.heatNumber}`, semi: `Semi ${r.heatNumber}`, final: 'Final A', finalB: 'Final B', finalC: 'Final C' }[r.phase] || r.phase;
       return `<div style="margin-bottom:10px;padding:10px;background:var(--paper);border-radius:6px">
         <div style="font-weight:700;font-size:13px;margin-bottom:6px">R${r.raceNumber} — ${phaseLabel}${r.placeholder ? ' <span class="pill warn">TBC — pending qualifiers</span>' : ''}${r.scheduledLabel ? ` — ${r.scheduledLabel}` : ''}</div>
-        <table class="review-table" style="margin-top:0">
+        <div class="table-scroll"><table class="review-table" style="margin-top:0">
           <tr><th>${r.isMassStart?'SLIDE':'LANE'}</th><th>NAME</th><th>AGE</th><th>CLUB</th><th>M/F</th><th>UNION</th><th>PSA</th></tr>
           ${rows}
-        </table>
+        </table></div>
       </div>`;
     }).join('');
   } catch (err) {

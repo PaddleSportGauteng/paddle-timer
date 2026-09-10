@@ -34,7 +34,8 @@ header.topbar nav a:hover{opacity:1;text-decoration:underline;}
 #meetBar{display:flex;gap:6px;align-items:center;}
 #meetBar select, #meetBar button{font-size:13px;padding:7px 9px;border-radius:6px;border:1px solid var(--line);}
 #meetBar button{background:var(--orange);color:#fff;border-color:var(--orange);font-weight:600;cursor:pointer;white-space:nowrap;}
-main{max-width:960px;margin:0 auto;padding:18px;}
+main{max-width:1180px;margin:0 auto;padding:18px;overflow-x:hidden;}
+.card,.now-card{max-width:100%;overflow:hidden;}
 h1{font-size:22px;margin:0 0 14px;}
 h2{font-size:17px;margin:24px 0 10px;color:var(--navy);}
 .card{
@@ -136,16 +137,22 @@ header.topbar .title { display: flex; align-items: center; gap: 10px; font-weigh
   text-transform: uppercase;
 }
 .review-table td, .lap-table td { border-bottom: 1px dashed var(--line); }
-td.pname  { font-weight: 700; word-break: break-word; white-space: normal; width: 165px; }
+td.pname  { font-weight: 700; word-break: normal; overflow-wrap: anywhere; white-space: normal; width: auto; min-width: 130px; }
 td.pmeta  { color: var(--gray); white-space: nowrap; }
-td.cpos   { width: 32px; font-weight: 700; color: var(--navy); font-size: 14px; }
-td.clane  { width: 46px; font-weight: 700; color: var(--gray); }
-td.cage   { width: 52px; }
-td.cclub  { width: 48px; }
-td.csex   { width: 22px; }
-td.cunion { width: 40px; }
-td.cpsa   { width: 50px; }
-td.ctime  { width: 82px; font-family: monospace; font-weight: 700; color: var(--green); font-size: 13px; }
+td.cpos   { width: 34px; font-weight: 700; color: var(--navy); font-size: 14px; }
+td.clane  { width: 40px; font-weight: 700; color: var(--gray); }
+td.cage   { width: 44px; }
+td.cclub  { width: 46px; }
+td.csex   { width: 26px; }
+td.cunion { width: 42px; }
+td.cpsa   { width: 52px; }
+td.ctime  { width: 74px; font-family: monospace; font-weight: 700; color: var(--green); font-size: 13px; }
+td.cact   { width: 138px; white-space: nowrap; text-align: right; }
+td.cact button { font-size: 10px; padding: 3px 5px; margin-left: 2px; }
+
+/* Tables must never overflow their card */
+.review-table, .lap-table, .paddler-table { table-layout: auto; width: 100%; max-width: 100%; }
+.table-scroll { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
 
 /* Active nav link highlighting */
 header.topbar nav a.active {
