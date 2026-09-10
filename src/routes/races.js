@@ -313,6 +313,18 @@ router.post('/:id/mark/:entryId', (req, res) => {
 
 // Stop the clock — freezes the elapsed time display without locking results.
 // The race stays 'running' so crossings can still be assigned afterward.
+// Restart the clock — clears stopTimeMs so the clock runs again.
+// Use when Stop was hit by mistake before boats finished.
+router.post('/:id/restart-clock', (req, res) => {
+  const database = db.load();
+  const race = database.races[req.params.id];
+  if (!race) return res.status(404).json({ error: 'Race not found.' });
+  if (race.status !== 'running') return res.status(400).json({ error: 'Race is not running.' });
+  race.stopTimeMs = null;
+  db.save();
+  res.json({ ok: true });
+});
+
 router.post('/:id/stop-clock', (req, res) => {
   const database = db.load();
   const race = database.races[req.params.id];

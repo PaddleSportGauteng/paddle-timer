@@ -62,13 +62,10 @@ async function loadRaces(){
   try {
     const dayQS = selectedDay ? `&day=${selectedDay}` : '';
     const races = await (await fetch(`/api/programme/races?meetId=${encodeURIComponent(meetId)}${dayQS}`)).json();
-    allRaces = races.sort((a,b) => {
-      // Finished-most-recently first, then running, then pending, by race number within each group.
-      const rank = r => r.status==='finished' ? 0 : r.status==='running' ? 1 : 2;
-      if(rank(a) !== rank(b)) return rank(a)-rank(b);
-      if(a.status==='finished') return (b.finishedAt||0) - (a.finishedAt||0);
-      return a.raceNumber - b.raceNumber;
-    });
+    // Only show finished races — weigh-in happens after locking, not during
+    allRaces = races
+      .filter(r => r.status === 'finished')
+      .sort((a,b) => (b.finishedAt||0) - (a.finishedAt||0) || a.raceNumber - b.raceNumber);
     render();
   } catch (err) {
     console.error(err);

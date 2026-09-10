@@ -267,7 +267,7 @@ function laneCardHtml(race){
       <div class="clock-block ${stopped?'stopped':''}" id="clock-${race.id}">00:00.00</div>
       ${!stopped?`<button class="tap-btn" onclick="tap('${race.id}')">⚡ TAP (or Space)</button>`:''}
       <button class="btn-stop" ${stopped?'disabled':''} onclick="stopClock('${race.id}')">⏹ Stop</button>
-      <button class="btn-undo" onclick="undoTap('${race.id}')">↩ Undo</button>
+      ${stopped?`<button class="btn-undo" style="background:#e67e22" onclick="restartClock('${race.id}')">↺ Restart</button>`:`<button class="btn-undo" onclick="undoTap('${race.id}')">↩ Undo</button>`}
       <button class="btn-lock" ${allDone?'':'disabled'} onclick="lockRace('${race.id}')">🔒 Lock</button>
     </div>
 
@@ -458,6 +458,13 @@ async function clearCrossing(raceId,position){
   if(!res.ok){const d=await res.json();alert(d.error);return;}
   await refresh();
 }
+async function restartClock(raceId){
+  const res=await fetch(`/api/races/${raceId}/restart-clock`,{method:'POST'});
+  if(!res.ok){const d=await res.json();alert(d.error);return;}
+  lastRunningHash=''; // force re-render
+  await refresh();
+}
+
 async function stopClock(raceId){
   const res=await fetch(`/api/races/${raceId}/stop-clock`,{method:'POST'});
   if(!res.ok){const d=await res.json();alert(d.error);return;}
