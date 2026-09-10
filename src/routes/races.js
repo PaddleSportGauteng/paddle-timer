@@ -702,7 +702,18 @@ router.post('/entries/:entryId/weigh', (req, res) => {
   if (typeof weightKg !== 'number') return res.status(400).json({ error: 'weightKg (number) required' });
 
   const check = rules.checkWeight(event.boatClass, weightKg);
-  database.weighIns[entry.id] = { weightKg, timestamp: Date.now(), ...check };
+  // Store per-race weigh-in (keyed raceId:entryId) AND global (for backward compat)
+  // Find which race this entry is currently in (most recent finished race)
+  const raceForEntry = Object.values(database.races)
+    .filter(r => r.status === 'finished' && Object.values(r.lanes||{}).includes(entry.id))
+    .sort((a,b) => (b.finishedAt||0) - (a.finishedAt||0))[0];
+
+  const weighInData = { weightKg, timestamp: Date.now(), ...check };
+  database.weighIns[entry.id] = weighInData; // global (backward compat)
+  if (raceForEntry) {
+    if (!database.raceWeighIns) database.raceWeighIns = {};
+    database.raceWeighIns[`${raceForEntry.id}:${entry.id}`] = weighInData;
+  }
 
   if (check.checked && !check.passed) {
     Object.entries(database.raceResults).forEach(([raceId, raceResultMap]) => {
@@ -715,17 +726,20 @@ router.post('/entries/:entryId/weigh', (req, res) => {
     });
   }
 
-  // Auto-confirm results when minimum 3 weigh-ins are done for the race
+  // Auto-confirm when 3 per-race weigh-ins done
   Object.values(database.races).forEach(race => {
     if (race.status !== 'finished' || race.resultsConfirmed) return;
     const allEntryIds = Object.values(race.lanes || {}).filter(Boolean);
-    const weighedCount = allEntryIds.filter(id => database.weighIns && database.weighIns[id]).length;
+    const weighedCount = allEntryIds.filter(id => {
+      if (!database.raceWeighIns) return false;
+      return !!database.raceWeighIns[`${race.id}:${id}`];
+    }).length;
     const required = Math.min(3, allEntryIds.length);
     if (weighedCount >= required) race.resultsConfirmed = true;
   });
 
   db.save();
-  res.json({ entry, weighIn: database.weighIns[entry.id] });
+  res.json({ entry, weighIn: weighInData });
 });
 
 // Set which day a race runs on (for multi-day meets).

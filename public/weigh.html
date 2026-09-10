@@ -97,7 +97,8 @@ function render(){
       const isDNS = result && result.status === 'DNS';
       const blocked = isRaceDQ || isDNF || isDNS;
       const blockReason = isDNS ? 'DNS' : isDNF ? 'DNF' : `DQ — ${result.dqReason||'race disqualification'}`;
-      const weighIn = info.weighIn;
+      // Use per-race weigh-in (raceWeighIns) so each race needs fresh weighing
+      const weighIn = info.raceWeighIn || info.weighIn; // raceWeighIn set by API per race
       const isOpen = !blocked && ((openBoat && openBoat.raceId === race.id && openBoat.entryId === info.entryId) || !weighIn);
       const badge = weighIn ? (
         !weighIn.checked ? `<span class="weighed" style="color:var(--gray)">${weighIn.weightKg}kg (no minimum on file)</span>`
@@ -128,8 +129,22 @@ function render(){
         <tr><td colspan="8" style="padding:0"><div id="wresult-${race.id}-${info.entryId}"></div></td></tr>`;
     }).join('');
 
+    const weighedCount = Object.values(race.laneEntries||{}).filter(info => info && (info.raceWeighIn||info.weighIn)).length;
+    const required = Math.min(3, Object.values(race.laneEntries||{}).filter(i=>i).length);
+    const canLock = weighedCount >= required;
     return `<div class="wcard ${race.status}">
-      <div class="wlabel">R${race.raceNumber} — ${race.event ? race.event.label : ''} — ${phaseLabel(race)}${race.isMassStart?` (mass start)`:''}</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px">
+        <div class="wlabel" style="margin:0">R${race.raceNumber} — ${race.event ? race.event.label : ''} — ${phaseLabel(race)}${race.isMassStart?` (mass start)`:''}</div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:13px;color:${canLock?'var(--green)':'var(--gray)'}">
+            ${weighedCount}/${required} weighed${canLock?' ✓':''}
+          </span>
+          <button onclick="lockRaceWeigh('${race.id}')" ${canLock?'':'disabled'}
+            style="padding:8px 16px;background:${canLock?'var(--orange)':'#ccc'};color:#fff;border:none;border-radius:8px;font-weight:700;font-size:13px;cursor:${canLock?'pointer':'not-allowed'}">
+            🔒 Lock & confirm
+          </button>
+        </div>
+      </div>
       <div class="table-scroll"><table class="review-table">
         <tr><th>LANE</th><th>NAME</th><th>AGE</th><th>CLUB</th><th>M/F</th><th>UNION</th><th>PSA #</th><th style="text-align:right;width:180px">WEIGHT</th></tr>
         ${rows}
@@ -152,6 +167,13 @@ function toggleBoat(raceId, entryId){
   render();
   const input = document.getElementById(`winput-${raceId}-${entryId}`);
   if(input) input.focus();
+}
+
+async function lockRaceWeigh(raceId){
+  if(!confirm('Lock and confirm results for this race? It will disappear from the weigh station.')) return;
+  const res = await fetch(`/api/races/${raceId}/confirm-results`, {method:'POST'});
+  if(!res.ok){ const d=await res.json(); alert(d.error); return; }
+  await loadRaces();
 }
 
 async function submitWeight(raceId, entryId){

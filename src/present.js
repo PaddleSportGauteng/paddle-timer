@@ -49,7 +49,8 @@ function enrichRace(database, race) {
     const psaIds = entry.athleteIds.map(aid => (database.athletes[aid] || {}).psaId || '').filter(Boolean);
     const laps = race.isMassStart ? ((database.lapPasses[race.id] || {})[entryId] || []) : undefined;
     const weighIn = database.weighIns[entryId] || null;
-    laneEntries[lane] = { entryId, names, club, clubCode, union, ageCategory, gender, psaIds, scratched: entry.status === 'scratched', laps, weighIn };
+    const raceWeighIn = (database.raceWeighIns && database.raceWeighIns[`${race.id}:${entryId}`]) || null;
+    laneEntries[lane] = { entryId, names, club, clubCode, union, ageCategory, gender, psaIds, scratched: entry.status === 'scratched', laps, weighIn, raceWeighIn };
   });
   const results = database.raceResults[race.id] || {};
   const blindCrossings = database.blindCrossings ? (database.blindCrossings[race.id] || []) : [];
@@ -64,10 +65,12 @@ function enrichRace(database, race) {
   // rules.computeWeighInRequirement for the top-3 rule.
   let weighInStatus = null;
   if (race.status === 'finished') {
-    // Get all entry IDs in this race
     const allEntryIds = Object.values(race.lanes || {}).filter(Boolean);
-    // Count how many have been weighed (any boat in the race counts)
-    const weighedInThisRace = allEntryIds.filter(entryId => database.weighIns && database.weighIns[entryId]);
+    // Use per-race weigh-ins if available, fall back to global
+    const weighedInThisRace = allEntryIds.filter(entryId => {
+      if (database.raceWeighIns && database.raceWeighIns[`${race.id}:${entryId}`]) return true;
+      return false;
+    });
     const required = Math.min(3, allEntryIds.length);
     const weighedCount = weighedInThisRace.length;
     const complete = weighedCount >= required;
