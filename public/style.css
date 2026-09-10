@@ -109,3 +109,48 @@ input[type=file], input[type=number], input[type=text]{
 /* PSG Logo in header */
 .psg-logo { height: 52px; width: auto; display: block; }
 header.topbar .title { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 16px; }
+
+/* ── Shared paddler / lane table styling (used by Race Program, Tower, Results, Board) ── */
+.paddler-table, .review-table, .lap-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-family: Arial, Helvetica, sans-serif;
+}
+.paddler-table td, .review-table td, .lap-table td {
+  padding: 4px 6px;
+  font-size: 12px;
+  overflow: hidden;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  vertical-align: middle;
+}
+.review-table th, .lap-table th {
+  padding: 4px 6px;
+  text-align: left;
+  border-bottom: 2px solid var(--line);
+  font-size: 11px;
+  color: var(--gray);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.review-table td, .lap-table td { border-bottom: 1px dashed var(--line); }
+td.pname  { font-weight: 700; word-break: break-word; white-space: normal; width: 165px; }
+td.pmeta  { color: var(--gray); white-space: nowrap; }
+td.cpos   { width: 32px; font-weight: 700; color: var(--navy); font-size: 14px; }
+td.clane  { width: 46px; font-weight: 700; color: var(--gray); }
+td.cage   { width: 52px; }
+td.cclub  { width: 48px; }
+td.csex   { width: 22px; }
+td.cunion { width: 40px; }
+td.cpsa   { width: 50px; }
+td.ctime  { width: 82px; font-family: monospace; font-weight: 700; color: var(--green); font-size: 13px; }
+
+/* Active nav link highlighting */
+header.topbar nav a.active {
+  opacity: 1;
+  font-weight: 700;
+  border-bottom: 2px solid var(--orange);
+  padding-bottom: 2px;
+}

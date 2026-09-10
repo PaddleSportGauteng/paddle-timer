@@ -189,3 +189,13 @@ async function initMeetBar(containerId, opts){
     location.reload();
   };
 }
+
+// Highlight the nav link for the page you're currently on
+(function highlightActiveNav(){
+  document.addEventListener('DOMContentLoaded', () => {
+    const path = window.location.pathname;
+    document.querySelectorAll('header.topbar nav a').forEach(a => {
+      if(a.getAttribute('href') === path) a.classList.add('active');
+    });
+  });
+})();
