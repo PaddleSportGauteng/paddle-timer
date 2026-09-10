@@ -13,7 +13,6 @@ const VENUES = {
   dabs:       { id: 'dabs',       short: 'DABS',        name: 'Dabulamanzi, Emmarentia Dam',             lat: -26.15108,  lon: 28.00628,  bearing: 20  },
   rietvlei:   { id: 'rietvlei',   short: 'Rietvlei',    name: 'Centurion Canoe Club, Rietvlei Dam',      lat: -25.87390,  lon: 28.26580,  bearing: 295 },
   florida:    { id: 'florida',    short: 'Florida',     name: 'Florida Lake Canoe Club, Florida Lake',   lat: -26.17832,  lon: 27.90641,  bearing: 270 },
-  wemmer:     { id: 'wemmer',     short: 'Wemmer Pan',  name: 'Johannesburg Canoe Club, Wemmer Pan',     lat: -26.23076,  lon: 28.05794,  bearing: 270 },
 };
 
 // Classify wind relative to the course. windFrom is the meteorological
