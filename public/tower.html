@@ -178,10 +178,7 @@ function laneCardHtml(race){
       <td class="name-cell">${info?info.names[0]:''}</td>
       <td>${assigned
         ? `<button onclick="clearCrossing('${race.id}',${c.position})" style="font-size:11px;padding:3px 8px;background:#C93B3B;color:#fff;border:none;border-radius:5px;cursor:pointer">✕</button>`
-        : `<input class="lane-input" type="text" inputmode="numeric" placeholder="L#" 
-            data-race="${race.id}" data-pos="${c.position}"
-            onkeydown="if(event.key==='Enter'){var v=this.value.trim();if(v){assignCrossing(this.dataset.race,this.dataset.pos,v);this.value=String.fromCharCode(0).slice(1);}}"
-            onfocus="this.select()">`
+        : `<input class="lane-input" type="text" inputmode="numeric" placeholder="L#" data-race="${race.id}" data-pos="${c.position}" autocomplete="off">`
       }</td>
     </tr>`;
   }).join('');
@@ -453,28 +450,30 @@ async function undoLap(raceId,bib){
   await refresh();
 }
 
-// Keyboard handler - lane inputs get Enter for assignment, global space/Enter for TAP
-document.addEventListener('keydown', e => {
-  // If focus is on a lane input, Enter assigns - nothing else
-  if(e.target.classList && e.target.classList.contains('lane-input')){
-    e.stopImmediatePropagation();
-    e.stopPropagation();
+// Single keyboard handler - no inline handlers on inputs
+document.addEventListener('keydown', function(e) {
+  const isLaneInput = e.target && e.target.classList && e.target.classList.contains('lane-input');
+
+  if(isLaneInput){
+    // Swallow space so it doesn't trigger TAP
+    if(e.key === ' '){ e.preventDefault(); e.stopImmediatePropagation(); return; }
     if(e.key === 'Enter'){
       e.preventDefault();
+      e.stopImmediatePropagation();
       const val = e.target.value.trim();
       if(val){
-        const raceId = e.target.dataset.race;
-        const pos = e.target.dataset.pos;
+        const raceId = e.target.getAttribute('data-race');
+        const pos    = e.target.getAttribute('data-pos');
         e.target.value = '';
-        assignCrossing(raceId, pos, val);
+        if(raceId && pos) assignCrossing(raceId, pos, val);
       }
     }
-    return;
+    return; // don't let any other handler see this keydown
   }
-  // Any other input field - do nothing special
-  if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT'||e.target.tagName==='TEXTAREA') return;
-  // Global: space or Enter = TAP (only when not in any input)
-  if(e.key===' ' || e.key==='Enter'){
+
+  // Not in a lane input — global TAP shortcut
+  if(e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') return;
+  if(e.key === ' ' || e.key === 'Enter'){
     e.preventDefault();
     const btn = document.querySelector('.tap-btn');
     if(btn) btn.click();
