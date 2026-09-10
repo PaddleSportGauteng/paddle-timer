@@ -489,7 +489,7 @@ function massRaceBlockHtml(race){
         <td class="pmeta" style="color:var(--gray);font-size:11px">${laps.length}/${race.totalLaps} laps ${done?'✓':''} ${lapStr}</td>
       </tr></table>
       ${!locked ? `<div class="lane-actions">
-        <input type="number" placeholder="new #" style="width:65px;padding:5px;font-size:12px" id="renumber-${race.id}-${bib}">
+        <input type="number" placeholder="new #" class="sm w-num" id="renumber-${race.id}-${bib}">
         <button class="sm" onclick="renumberSlide('${race.id}', ${bib})">Renumber</button>
         <button class="sm red" onclick="scratchLane('${race.id}', ${bib})">Scratch</button>
       </div>` : ''}
@@ -501,25 +501,25 @@ function massRaceBlockHtml(race){
       <span>
         <span style="color:var(--gray);font-size:13px;margin-right:6px" id="toggle-${race.id}">▶</span>
         Race ${race.raceNumber}: ${race.combinedEventIds && race.combinedEventIds.length>1 ? `<b>${race.combinedLabel}</b>` : race.event.label} — ${phaseLabel(race)}
-        ${locked ? `(mass start, ${race.totalLaps} laps)` : `(mass start, <span onclick="event.stopPropagation()"><input type="number" value="${race.totalLaps}" style="width:50px;padding:3px;font-size:13px" onchange="editLaps('${race.id}', this.value)"></span> laps)`}
+        ${locked ? `(mass start, ${race.totalLaps} laps)` : `(mass start, <span onclick="event.stopPropagation()"><input type="number" value="${race.totalLaps}" class="sm" style="width:50px" onchange="editLaps('${race.id}', this.value)"></span> laps)`}
         ${race.overridden ? ' <span class="pill bad">OVERRIDDEN</span>' : ''}
         <span class="pill ${statusPill}">${race.status}</span> ${publishedPill} ${resultsConfirmHtml(race)}
         <small style="color:var(--gray);margin-left:8px">${race.scheduledLabel||''}</small>
       </span>
       <span onclick="event.stopPropagation()">
-        ${meetNumDays > 1 ? `<select style="font-size:12px;padding:4px;border-radius:6px;border:1px solid var(--line)" onchange="setRaceDay('${race.id}',this.value)">
+        ${meetNumDays > 1 ? `<select class="sm" onchange="setRaceDay('${race.id}',this.value)">
           ${Array.from({length:meetNumDays},(_,i)=>i+1).map(d=>`<option value="${d}" ${(race.day||1)===d?'selected':''}>Day ${d}</option>`).join('')}
         </select>` : ''}
         ${locked ? '' : `
           <button class="sm" onclick="moveRaceTo('${race.id}','up')" title="Move up one">Up</button>
           <button class="sm" onclick="moveRaceTo('${race.id}','down')" title="Move down one">Down</button>
           <span style="display:inline-flex;align-items:center;gap:3px">
-            <input type="number" id="movePos-${race.id}" placeholder="Race #" style="width:64px;padding:5px;font-size:12px" onkeydown="if(event.key==='Enter'){moveRaceTo('${race.id}', this.value);}">
+            <input type="number" id="movePos-${race.id}" placeholder="Race #" class="sm w-num" onkeydown="if(event.key==='Enter'){moveRaceTo('${race.id}', this.value);}">
             <button class="sm" onclick="moveRaceTo('${race.id}', document.getElementById('movePos-${race.id}').value)">Go</button>
           </span>
           <input type="text" class="time-input" placeholder="Start time e.g. 08:00" value="${race.scheduledLabel||''}" onchange="setSchedule('${race.id}', this.value)">
           <span style="display:inline-flex;align-items:center;gap:3px">
-            <input type="number" min="1" value="${race.gapAfterMinutes||''}" placeholder="std gap" style="width:64px;padding:5px;font-size:12px" onchange="setGap('${race.id}', this.value)">
+            <input type="number" min="1" value="${race.gapAfterMinutes||''}" placeholder="std gap" class="sm w-num" onchange="setGap('${race.id}', this.value)">
             <small style="color:var(--gray);white-space:nowrap">min before next</small>
           </span>
           <button class="sm red" onclick="deleteRace('${race.id}')">Change grouping (undo draw)</button>
@@ -564,19 +564,19 @@ function breakBlockHtml(brk){
     <h4>
       <span style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
         <span style="color:#8A5A12">⏸</span>
-        <input type="text" value="${brk.label.replace(/"/g,'&quot;')}" style="font-weight:700;padding:4px 6px;font-size:14px;border:1px solid var(--line);border-radius:5px;width:220px" onchange="editBreakLabel('${brk.id}', this.value)">
+        <input type="text" value="${brk.label.replace(/"/g,'&quot;')}" class="sm" style="font-weight:700;width:220px" onchange="editBreakLabel('${brk.id}', this.value)">
         <span class="pill warn">BREAK</span>
       </span>
       <span>
         <button class="sm" onclick="moveBreakTo('${brk.id}','up')" title="Move up one">Up</button>
         <button class="sm" onclick="moveBreakTo('${brk.id}','down')" title="Move down one">Down</button>
         <span style="display:inline-flex;align-items:center;gap:3px">
-          <input type="number" id="breakPos-${brk.id}" placeholder="Race #" title="Type the position this should become, then press Enter or click →" style="width:64px;padding:5px;font-size:12px" onkeydown="if(event.key==='Enter'){moveBreakTo('${brk.id}', this.value);}">
+          <input type="number" id="breakPos-${brk.id}" placeholder="Race #" title="Type the position this should become, then press Enter or click →" class="sm w-num" onkeydown="if(event.key==='Enter'){moveBreakTo('${brk.id}', this.value);}">
           <button class="sm" onclick="moveBreakTo('${brk.id}', document.getElementById('breakPos-${brk.id}').value)" title="Move to this position — the rest shift and renumber to match">Go</button>
         </span>
         <span style="display:inline-flex;align-items:center;gap:4px;padding:5px 8px;border:1px solid var(--line);border-radius:5px;background:#fff;font-size:13px;color:var(--gray)">${brk.scheduledLabel || 'TBC'}</span>
         <span style="display:inline-flex;align-items:center;gap:3px">
-          <input type="number" min="1" value="${brk.durationMinutes||''}" title="How long this break takes — everything after it shifts to match" style="width:64px;padding:5px;font-size:12px" onchange="editBreakDuration('${brk.id}', this.value)">
+          <input type="number" min="1" value="${brk.durationMinutes||''}" title="How long this break takes — everything after it shifts to match" class="sm w-num" onchange="editBreakDuration('${brk.id}', this.value)">
           <small style="color:var(--gray);white-space:nowrap">min</small>
         </span>
         <button class="sm red" onclick="deleteBreak('${brk.id}')">Delete</button>
@@ -671,19 +671,19 @@ function raceBlockHtml(race){
         <small style="color:var(--gray);margin-left:8px">${race.scheduledLabel||''}</small>
       </span>
       <span onclick="event.stopPropagation()">
-        ${meetNumDays > 1 ? `<select style="font-size:12px;padding:4px;border-radius:6px;border:1px solid var(--line)" onchange="setRaceDay('${race.id}',this.value)" title="Which day does this race run on">
+        ${meetNumDays > 1 ? `<select class="sm" onchange="setRaceDay('${race.id}',this.value)" title="Which day does this race run on">
           ${Array.from({length:meetNumDays},(_,i)=>i+1).map(d=>`<option value="${d}" ${(race.day||1)===d?'selected':''}>Day ${d}</option>`).join('')}
         </select>` : ''}
         ${locked ? '' : `
           <button class="sm" onclick="moveRaceTo('${race.id}','up')" title="Move up one">Up</button>
           <button class="sm" onclick="moveRaceTo('${race.id}','down')" title="Move down one">Down</button>
           <span style="display:inline-flex;align-items:center;gap:3px">
-            <input type="number" id="movePos-${race.id}" placeholder="Race #" title="Type the race number this should become, then press Enter or click →" style="width:64px;padding:5px;font-size:12px" onkeydown="if(event.key==='Enter'){moveRaceTo('${race.id}', this.value);}">
+            <input type="number" id="movePos-${race.id}" placeholder="Race #" title="Type the race number this should become, then press Enter or click →" class="sm w-num" onkeydown="if(event.key==='Enter'){moveRaceTo('${race.id}', this.value);}">
             <button class="sm" onclick="moveRaceTo('${race.id}', document.getElementById('movePos-${race.id}').value)" title="Move to this race number">Go</button>
           </span>
           <input type="text" class="time-input" placeholder="Start time e.g. 08:00" value="${race.scheduledLabel||''}" onchange="setSchedule('${race.id}', this.value)">
           <span style="display:inline-flex;align-items:center;gap:3px">
-            <input type="number" min="1" value="${race.gapAfterMinutes||''}" placeholder="std gap" title="Minutes before next race" style="width:64px;padding:5px;font-size:12px" onchange="setGap('${race.id}', this.value)">
+            <input type="number" min="1" value="${race.gapAfterMinutes||''}" placeholder="std gap" title="Minutes before next race" class="sm w-num" onchange="setGap('${race.id}', this.value)">
             <small style="color:var(--gray);white-space:nowrap">min before next</small>
           </span>
           <button class="sm red" onclick="deleteRace('${race.id}')">Delete race</button>

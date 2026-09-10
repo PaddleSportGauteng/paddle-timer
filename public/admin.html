@@ -7,8 +7,7 @@
 <link rel="stylesheet" href="style.css">
 <style>
   .step-card { background:#fff; border:1px solid var(--line); border-radius:12px; padding:24px; margin-bottom:20px; }
-  .step-card h2 { margin:0 0 6px; font-size:18px; color:var(--navy); }
-  .step-card p { margin:0 0 18px; color:var(--gray); font-size:14px; }
+  .step-card   .step-card p { margin:0 0 18px; color:var(--gray); font-size:14px; }
 
   /* Event name input */
   .event-name-input { width:100%; padding:11px 14px; font-size:16px; border:1px solid var(--line); border-radius:8px; box-sizing:border-box; margin-bottom:18px; }
@@ -38,14 +37,12 @@
   #fileChosen { font-size:14px; color:var(--gray); }
   #fileInput { display:none; }
 
-  .create-btn { width:100%; padding:14px; font-size:16px; font-weight:700; background:var(--orange); color:#fff; border:none; border-radius:10px; cursor:pointer; margin-top:6px; }
   .create-btn:hover { background:#d4420a; }
   .create-btn:disabled { opacity:0.6; cursor:not-allowed; }
 
   /* Post-import cards */
   .post-card { background:#fff; border:1px solid var(--line); border-radius:12px; padding:20px; margin-bottom:16px; display:none; }
-  .post-card h2 { margin:0 0 10px; font-size:16px; color:var(--navy); }
-
+  .post-card 
   /* Existing meet banner */
   .meet-banner { background:#EAF1FA; border:1px solid #B8D0EA; border-radius:10px; padding:14px 18px; margin-bottom:20px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
   .meet-banner strong { color:var(--navy); font-size:15px; }
@@ -151,7 +148,7 @@
       <span id="fileChosen">No file chosen</span>
     </div>
 
-    <button class="create-btn" id="createBtn" onclick="createAndImport(this)">Create event and import entries</button>
+    <button class="orange big" id="createBtn" onclick="createAndImport(this)">Create event and import entries</button>
     <div id="importResult" style="margin-top:12px"></div>
   </div>
 

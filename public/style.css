@@ -74,7 +74,7 @@ button.primary, button.navy{background:var(--navy);color:#fff;border-color:var(-
 button.orange{background:var(--orange);color:#fff;border-color:var(--orange);}
 button.green{background:var(--green);color:#fff;border-color:var(--green);}
 button.red{background:var(--red);color:#fff;border-color:var(--red);}
-button.big{font-size:20px;padding:18px;width:100%;}
+button.big{font-size:16px;padding:14px;width:100%;border-radius:8px;}
 /* Equal-width button groups (control rows) */
 .btn-row{display:flex;gap:6px;flex-wrap:wrap;}
 .btn-row.equal > button, .btn-row.equal > .clock-block{flex:1;}
@@ -236,3 +236,8 @@ body.race-day .nav-group:first-child:hover a { display: inline; }
 /* ── Race conditions footer ── */
 .conditions { margin-top:8px; padding-top:6px; border-top:1px dashed var(--line); font-size:11px; color:var(--gray); letter-spacing:.02em; }
 @media print { .conditions { color:#333; } }
+
+/* ── Inputs: one standard size, one small (row-level) ── */
+input[type=text], input[type=number], select { font-family:inherit; font-size:13px; padding:8px 10px; border:1px solid var(--line); border-radius:6px; background:#fff; color:var(--ink); }
+input.sm, select.sm { font-size:12px; padding:5px 8px; border-radius:5px; }
+input.w-num { width:64px; }
