@@ -86,7 +86,7 @@ th{color:var(--gray);font-size:11px;text-transform:uppercase;letter-spacing:0.05
 .pill.ok{background:#E4F5EC;color:var(--green);}
 .pill.warn{background:#FFF3E0;color:#8A5A12;}
 .pill.bad{background:#FBE7E7;color:var(--red);}
-.mono{font-family:'SF Mono','Roboto Mono',monospace;font-variant-numeric:tabular-nums;}
+.mono{font-family:'SF Mono','Menlo','Consolas',monospace;font-variant-numeric:tabular-nums;}
 .roles-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-top:20px;}
 .role-card{
   display:block;
@@ -115,7 +115,7 @@ th{color:var(--gray);font-size:11px;text-transform:uppercase;letter-spacing:0.05
 .lane-btn small{display:block;font-weight:400;font-size:11px;color:var(--gray);margin-top:4px;}
 .lane-btn.done{background:var(--navy);color:#fff;border-color:var(--navy);}
 .lane-btn.done small{color:#c9d6e5;}
-.clock{font-size:56px;font-weight:700;text-align:center;font-family:'SF Mono','Roboto Mono',monospace;margin:10px 0;}
+.clock{font-size:56px;font-weight:700;text-align:center;font-family:'SF Mono','Menlo','Consolas',monospace;margin:10px 0;}
 .race-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
 .race-tab{padding:8px 14px;border-radius:8px;border:1px solid var(--line);background:#fff;cursor:pointer;font-size:13px;}
 .race-tab.active{background:var(--navy);color:#fff;border-color:var(--navy);}
@@ -163,7 +163,7 @@ td.cclub  { width: 60px; }
 td.csex   { width: 34px; }
 td.cunion { width: 56px; }
 td.cpsa   { width: 70px; }
-td.ctime  { width: 96px; font-family: monospace; font-weight: 700; color: var(--green); font-size: 13px; }
+td.ctime  { width: 96px; font-family:'SF Mono','Menlo','Consolas',monospace; font-weight: 700; color: var(--green); font-size: 13px; }
 td.cact   { width: 138px; white-space: nowrap; text-align: right; }
 td.cact button { font-size: 10px; padding: 3px 5px; margin-left: 2px; }
 

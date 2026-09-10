@@ -61,6 +61,27 @@ function normalizeCategoryValue(raw) {
   return clean || null;
 }
 
+// Age category → canonical form: "u 12", "U-12", "u12", "Under 12" → "U12".
+// Anything not matching the U/age pattern is uppercased and trimmed as-is
+// (Guppy, Senior, Master, 35-39 etc).
+function normalizeAgeCategory(raw) {
+  const v = normalizeCategoryValue(raw);
+  if (!v) return null;
+  const m = /^(?:U|UNDER)\s*-?\s*(\d{1,2})$/.exec(v);
+  if (m) return `U${m[1]}`;
+  return v.replace(/\s+/g, '');
+}
+
+// Gender → "M" or "F". Accepts m/male/men/man/boy, f/female/women/woman/girl.
+// Anything else (mixed, open) is uppercased as-is.
+function normalizeGender(raw) {
+  const v = normalizeCategoryValue(raw);
+  if (!v) return null;
+  if (/^(M|MALE|MEN|MAN|BOY|BOYS)$/.test(v)) return 'M';
+  if (/^(F|FEMALE|WOMEN|WOMAN|GIRL|GIRLS)$/.test(v)) return 'F';
+  return v;
+}
+
 function findOrCreateAthlete(database, seat) {
   const existing = Object.values(database.athletes).find(
     (a) => a.psaId && seat.psaId && a.psaId === seat.psaId
@@ -138,15 +159,17 @@ router.post('/import', upload.single('file'), (req, res) => {
     const seats = [];
     for (const slot of ['K1', 'K2', 'K3', 'K4']) {
       const rawName = row[col[`${slot} MEMBER`]];
-      const name = (rawName == null ? '' : String(rawName)).trim();
+      // Names are stored UPPERCASE with single spaces so every screen and
+      // export shows the same thing regardless of how the sheet was typed.
+      const name = (rawName == null ? '' : String(rawName)).trim().replace(/\s+/g, ' ').toUpperCase();
       if (!name) continue;
       seats.push({
         name,
-        psaId: row[col[`${slot} PSA ID`]] || null,
+        psaId: row[col[`${slot} PSA ID`]] == null || String(row[col[`${slot} PSA ID`]]).trim() === '' ? null : String(row[col[`${slot} PSA ID`]]).trim(),
         dob: row[col[`${slot} DATE OF BIRTH`]] || null,
-        gender: normalizeCategoryValue(row[col[`${slot} GENDER`]]),
+        gender: normalizeGender(row[col[`${slot} GENDER`]]),
         club: normalizeClubName(row[col[`${slot} CLUB`]]) || null,
-        ageCategory: normalizeCategoryValue(row[col[`${slot} AGE CATEGORY`]]),
+        ageCategory: normalizeAgeCategory(row[col[`${slot} AGE CATEGORY`]]),
       });
     }
     if (seats.length === 0) { flagSet.add(`Some rows have no crew members and were skipped (row ${r + 1}+).`); continue; }
@@ -167,7 +190,7 @@ router.post('/import', upload.single('file'), (req, res) => {
       eventId = db.nextId();
       database.events[eventId] = {
         id: eventId, meetId, _key: eventKey, distance, boatClass, ageCategory, gender,
-        label: `${distance} ${boatClass} ${ageCategory} ${gender}`,
+        label: `${distance} ${boatClass} ${ageCategory} ${gender === 'M' ? 'MALE' : gender === 'F' ? 'FEMALE' : gender}`,
         isMassStart: distance === '2000m' || distance === '5000m',
         day: 1,
       };
