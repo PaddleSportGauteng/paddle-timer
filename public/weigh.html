@@ -117,7 +117,7 @@ function render(){
           <td class="pmeta csex">${g}</td>
           <td class="pmeta cunion">${info.union||''}</td>
           <td class="pmeta cpsa">${(info.psaIds||[])[0]||''}</td>
-          <td style="text-align:right;white-space:nowrap">${rightSide}</td>
+          <td style="text-align:right;white-space:nowrap;width:180px">${rightSide}</td>
         </tr>
         <tr><td colspan="8" style="padding:0"><div id="wresult-${race.id}-${info.entryId}"></div></td></tr>`;
     }).join('');
@@ -125,7 +125,7 @@ function render(){
     return `<div class="wcard ${race.status}">
       <div class="wlabel">R${race.raceNumber} — ${race.event ? race.event.label : ''} — ${phaseLabel(race)}${race.isMassStart?` (mass start)`:''}</div>
       <div class="table-scroll"><table class="review-table">
-        <tr><th>LANE</th><th>NAME</th><th>AGE</th><th>CLUB</th><th>M/F</th><th>UNION</th><th>PSA</th><th style="text-align:right">WEIGHT</th></tr>
+        <tr><th>LANE</th><th>NAME</th><th>AGE</th><th>CLUB</th><th>M/F</th><th>UNION</th><th>PSA</th><th style="text-align:right;width:180px">WEIGHT</th></tr>
         ${rows}
       </table></div>
     </div>`;
