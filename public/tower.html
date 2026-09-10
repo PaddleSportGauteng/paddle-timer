@@ -38,7 +38,7 @@
   .assign-table { width:100%; border-collapse:collapse; margin-top:14px; }
   .assign-table th { font-size:11px; color:var(--gray); font-weight:700; letter-spacing:0.06em; padding:4px 8px; text-align:left; border-bottom:2px solid var(--line); }
   .assign-table td { padding:8px 8px; border-bottom:1px dashed var(--line); vertical-align:middle; }
-  .assign-table td:last-child { width:130px; }
+  .assign-table td:last-child { width:150px; }
   .assign-table tr.assigned td { background:#f0faf4; }
   .assign-table tr.assigned .lane-cell { color:var(--green); font-weight:700; }
   .pos-cell { font-weight:700; color:var(--navy); width:36px; font-size:16px; }
@@ -186,10 +186,13 @@ function laneCardHtml(race){
       <td class="lane-cell">${assigned?c.assignedLane:''}</td>
       <td class="name-cell">${info?info.names[0]:''}</td>
       <td>${assigned
-        ? `<button onclick="clearCrossing('${race.id}',${c.position})" style="font-size:11px;padding:3px 8px;background:#C93B3B;color:#fff;border:none;border-radius:5px;cursor:pointer" title="Delete this crossing">✕</button>`
+        ? `<span style="display:inline-flex;gap:5px;align-items:center">
+             <button onclick="unassignCrossing('${race.id}',${c.position})" style="font-size:11px;padding:4px 9px;background:var(--orange);color:#fff;border:none;border-radius:5px;cursor:pointer" title="Change the lane — keeps the time">Edit</button>
+             <button onclick="clearCrossing('${race.id}',${c.position})" style="font-size:11px;padding:4px 8px;background:#C93B3B;color:#fff;border:none;border-radius:5px;cursor:pointer" title="Delete this crossing and its time">✕</button>
+           </span>`
         : `<span style="display:inline-flex;gap:6px;align-items:center">
              <input class="lane-input" type="text" inputmode="numeric" placeholder="L#" data-race="${race.id}" data-pos="${c.position}" autocomplete="off">
-             <button onclick="clearCrossing('${race.id}',${c.position})" style="font-size:11px;padding:3px 8px;background:#C93B3B;color:#fff;border:none;border-radius:5px;cursor:pointer" title="Delete this extra tap">✕</button>
+             <button onclick="clearCrossing('${race.id}',${c.position})" style="font-size:11px;padding:4px 8px;background:#C93B3B;color:#fff;border:none;border-radius:5px;cursor:pointer" title="Delete this extra tap">✕</button>
            </span>`
       }</td>
     </tr>`;
@@ -387,6 +390,19 @@ async function assignCrossing(raceId,position,laneVal){
     if(next) next.focus();
   },30);
 }
+async function unassignCrossing(raceId,position){
+  const res=await fetch(`/api/races/${raceId}/unassign-crossing`,{
+    method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({position})
+  });
+  if(!res.ok){const d=await res.json();alert(d.error);return;}
+  await refresh(true);
+  // Focus the now-empty input so you can retype straight away
+  setTimeout(()=>{
+    const inp=document.querySelector(`#race-${raceId} .lane-input[data-pos="${position}"]`);
+    if(inp) inp.focus();
+  },30);
+}
+
 async function clearCrossing(raceId,position){
   const res=await fetch(`/api/races/${raceId}/delete-crossing`,{
     method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({position})
