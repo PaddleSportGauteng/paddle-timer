@@ -121,6 +121,36 @@ router.post('/:id/capture-crossing', (req, res) => {
 // Removes the most recently CAPTURED crossing (last in the list), even if
 // it had already been assigned a lane — undoes that assignment's result
 // too, since "undo last crossing" means undo the last button press.
+// Delete a specific crossing by position number (not just the last one).
+router.post('/:id/delete-crossing', (req, res) => {
+  const database = db.load();
+  const race = database.races[req.params.id];
+  if (!race) return res.status(404).json({ error: 'Race not found' });
+  const position = Number(req.body.position);
+  const list = database.blindCrossings[race.id] || [];
+  const idx = list.findIndex((c) => c.position === position);
+  if (idx === -1) return res.status(404).json({ error: 'Crossing not found' });
+  const removed = list.splice(idx, 1)[0];
+  // Clear the result if it was already assigned
+  if (removed.assignedLane != null) {
+    const entryId = race.lanes[String(removed.assignedLane)];
+    if (entryId && database.raceResults[race.id]) {
+      delete database.raceResults[race.id][entryId];
+    }
+  }
+  // Renumber remaining crossings sequentially
+  list.forEach((c, i) => { c.position = i + 1; });
+  // Recompute positions for remaining OK results
+  if (database.raceResults[race.id]) {
+    const remaining = Object.entries(database.raceResults[race.id])
+      .filter(([, r]) => r.status === 'OK')
+      .sort((a, b) => a[1].finishTimeMs - b[1].finishTimeMs);
+    remaining.forEach(([, r], i) => { r.position = i + 1; });
+  }
+  db.save();
+  res.json(enrichRace(database, race));
+});
+
 router.post('/:id/undo-crossing', (req, res) => {
   const database = db.load();
   const race = database.races[req.params.id];

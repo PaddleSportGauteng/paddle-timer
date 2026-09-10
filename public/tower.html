@@ -210,6 +210,7 @@ function runningCardHtml(race){
         <span class="pos">${c.position}</span>
         <span class="t">${fmtTime(c.timeMs)}</span>
         <span class="crossing-assigned">✓ Lane ${c.assignedLane} — ${info?info.names[0]:'?'}</span>
+        <button onclick="deleteCrossing('${race.id}',${c.position})" style="font-size:11px;padding:3px 8px;background:#C93B3B;color:#fff;border:none;border-radius:5px;cursor:pointer" title="Delete this crossing">✕</button>
       </div>`;
     }
     return `<div class="crossing-row">
@@ -218,6 +219,7 @@ function runningCardHtml(race){
       <input type="number" placeholder="Lane #" min="1" max="9" style="width:70px;font-size:16px;padding:6px;text-align:center;border-radius:6px;border:2px solid var(--orange);font-family:monospace;font-weight:700"
         onkeydown="if(event.key==='Enter'&&this.value){assignCrossing('${race.id}',${c.position},this.value);this.value='';}"
         onblur="if(this.value){assignCrossing('${race.id}',${c.position},this.value);this.value='';}">
+      <button onclick="deleteCrossing('${race.id}',${c.position})" style="font-size:11px;padding:3px 8px;background:#C93B3B;color:#fff;border:none;border-radius:5px;cursor:pointer" title="Delete this crossing">✕</button>
     </div>`;
   }).join('');
 
@@ -361,6 +363,14 @@ function startTick(race){
 }
 
 // ── Actions ───────────────────────────────────────────────────────
+async function deleteCrossing(raceId, position){
+  const res = await fetch(`/api/races/${raceId}/delete-crossing`, {
+    method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({position})
+  });
+  if(!res.ok){ const d=await res.json(); alert(d.error); return; }
+  await refresh();
+}
+
 async function stopClock(raceId){
   const res = await fetch(`/api/races/${raceId}/stop-clock`, {method:'POST'});
   if(!res.ok){ const d=await res.json(); alert(d.error); return; }
