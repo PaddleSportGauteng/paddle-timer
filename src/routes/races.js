@@ -185,13 +185,19 @@ router.post('/:id/assign-crossing', (req, res) => {
   if (!crossing) return res.status(404).json({ error: `No crossing #${position}.` });
   const entryId = race.lanes[String(lane)];
   if (!entryId) return res.status(400).json({ error: `No boat assigned to lane ${lane}.` });
-  const alreadyTaken = list.find((c) => c.assignedLane === Number(lane) && c.position !== crossing.position);
-  if (alreadyTaken) return res.status(400).json({ error: `Lane ${lane} is already assigned to crossing #${alreadyTaken.position}.` });
 
   database.raceResults[race.id] = database.raceResults[race.id] || {};
   const results = database.raceResults[race.id];
 
-  // If this crossing was previously assigned elsewhere, undo that first.
+  // If target lane already has a crossing assigned, unassign it first
+  const alreadyTaken = list.find((c) => c.assignedLane === Number(lane) && c.position !== crossing.position);
+  if (alreadyTaken) {
+    const oldEntryId = race.lanes[String(alreadyTaken.assignedLane)];
+    if (oldEntryId) delete results[oldEntryId];
+    alreadyTaken.assignedLane = null;
+  }
+
+  // If this crossing was previously assigned elsewhere, undo that first
   if (crossing.assignedLane != null) {
     const oldEntryId = race.lanes[String(crossing.assignedLane)];
     if (oldEntryId) delete results[oldEntryId];
@@ -201,6 +207,12 @@ router.post('/:id/assign-crossing', (req, res) => {
   results[entryId] = { finishTimeMs: crossing.timeMs, position: crossing.position, status: 'OK', dqReason: null, crossedAt: Date.now() };
 
   autoAssignLastRemaining(database, race, list, results);
+
+  // Recompute positions by finish time
+  const sorted = Object.entries(results)
+    .filter(([, r]) => r.status === 'OK')
+    .sort((a, b) => a[1].finishTimeMs - b[1].finishTimeMs);
+  sorted.forEach(([, r], i) => { r.position = i + 1; });
 
   db.save();
   res.json(enrichRace(database, race));
