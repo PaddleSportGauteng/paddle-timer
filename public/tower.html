@@ -49,11 +49,19 @@
   .lane-input:focus { outline:none; border-color:var(--navy); }
 
   /* Results review */
-  .review-table { width:100%; border-collapse:collapse; margin-top:14px; }
-  .review-table th { font-size:11px; color:var(--gray); font-weight:700; letter-spacing:0.06em; padding:4px 8px; text-align:left; border-bottom:2px solid var(--line); }
-  .review-table td { padding:8px 8px; border-bottom:1px dashed var(--line); vertical-align:middle; font-size:13px; }
-  .review-table .t { font-family:monospace; font-weight:700; color:var(--green); }
-  .review-table .pos { font-weight:700; color:var(--navy); }
+  .review-table { width:100%; border-collapse:collapse; margin-top:14px; font-family:Arial,sans-serif; }
+  .review-table th { font-size:11px; color:var(--gray); font-weight:700; letter-spacing:0.06em; padding:4px 6px; text-align:left; border-bottom:2px solid var(--line); }
+  .review-table td { padding:6px 6px; border-bottom:1px dashed var(--line); vertical-align:middle; font-size:12px; text-transform:uppercase; letter-spacing:0.02em; overflow:hidden; }
+  .review-table td.pname { font-weight:700; word-break:break-word; white-space:normal; width:165px; text-transform:uppercase; }
+  .review-table td.pmeta { color:var(--gray); white-space:nowrap; }
+  .review-table td.cpos  { width:32px; font-weight:700; color:var(--navy); font-size:14px; }
+  .review-table td.clane { width:46px; font-weight:700; color:var(--gray); }
+  .review-table td.cage  { width:52px; }
+  .review-table td.cclub { width:48px; }
+  .review-table td.csex  { width:22px; }
+  .review-table td.cunion{ width:40px; }
+  .review-table td.cpsa  { width:50px; }
+  .review-table td.ctime { width:82px; font-family:monospace; font-weight:700; color:var(--green); font-size:13px; }
   .review-table .bad { color:#C93B3B; font-weight:700; }
 
   /* Upcoming */
@@ -69,9 +77,15 @@
   .bib-form { display:flex; gap:8px; margin:12px 0; }
   .bib-form input { flex:1; font-size:28px; padding:12px; text-align:center; border-radius:10px; border:2px solid var(--orange); font-family:monospace; font-weight:700; }
   .bib-form button { font-size:16px; padding:12px 20px; border-radius:10px; font-weight:700; }
-  .lap-table { width:100%; border-collapse:collapse; margin-top:10px; font-size:13px; }
-  .lap-table th { padding:4px 8px; text-align:left; border-bottom:2px solid var(--line); font-size:11px; color:var(--gray); font-weight:700; letter-spacing:0.05em; }
-  .lap-table td { padding:6px 8px; border-bottom:1px dashed var(--line); }
+  .lap-table { width:100%; border-collapse:collapse; margin-top:10px; font-family:Arial,sans-serif; }
+  .lap-table th { padding:4px 6px; text-align:left; border-bottom:2px solid var(--line); font-size:11px; color:var(--gray); font-weight:700; letter-spacing:0.06em; }
+  .lap-table td { padding:6px 6px; border-bottom:1px dashed var(--line); font-size:12px; text-transform:uppercase; letter-spacing:0.02em; }
+  .lap-table td.pname { font-weight:700; width:165px; text-transform:uppercase; }
+  .lap-table td.pmeta { color:var(--gray); white-space:nowrap; }
+  .lap-table td.clane { width:46px; font-weight:700; color:var(--gray); font-family:monospace; }
+  .lap-table td.cage{width:52px;} .lap-table td.cclub{width:48px;} .lap-table td.csex{width:22px;}
+  .lap-table td.cunion{width:40px;} .lap-table td.cpsa{width:50px;}
+  .lap-table td.ctime { width:82px; font-family:monospace; font-weight:700; color:var(--green); font-size:13px; }
   .lap-table tr.done td { background:#f0faf4; }
 </style>
 </head>
@@ -207,18 +221,28 @@ function laneCardHtml(race){
     const r=race.results[info.entryId];
     let timeCell='<span style="color:var(--gray)">—</span>';
     let posCell='';
-    if(r&&r.status==='OK'){ timeCell=`<span class="t">${fmtTime(r.finishTimeMs)}</span>`; posCell=`<span class="pos">${r.position}</span>`; }
+    if(r&&r.status==='OK'){ timeCell=fmtTime(r.finishTimeMs); posCell=r.position; }
     else if(r){ timeCell=`<span class="bad">${r.status}</span>`; }
+    const g=info.gender?(info.gender.toLowerCase().startsWith('f')?'F':info.gender.toLowerCase().startsWith('m')?'M':info.gender):'';
+    const isK2 = info.names.length>1;
+    const nameCell = isK2
+      ? `${info.names[0]}<br>${info.names[1]}`
+      : info.names[0];
     return `<tr>
-      <td>${posCell}</td>
-      <td style="font-weight:700">L${lane}</td>
-      <td style="font-size:13px">${info.names.join(' / ')}<br><small style="color:var(--gray)">${[info.clubCode,info.ageCategory].filter(Boolean).join(' · ')}</small></td>
-      <td>${timeCell}</td>
-      <td style="white-space:nowrap">
-        <button style="font-size:11px;padding:3px 5px" onclick="markLane('${race.id}','${info.entryId}','DNS')">DNS</button>
-        <button style="font-size:11px;padding:3px 5px" onclick="markLane('${race.id}','${info.entryId}','DNF')">DNF</button>
-        <button style="font-size:11px;padding:3px 5px" onclick="markDQ('${race.id}','${info.entryId}')">DQ</button>
-        ${r?`<button style="font-size:11px;padding:3px 5px" onclick="clearResult('${race.id}','${info.entryId}')">✕</button>`:''}
+      <td class="cpos">${posCell}</td>
+      <td class="clane">L${lane}</td>
+      <td class="pname">${nameCell}</td>
+      <td class="pmeta cage">${info.ageCategory||''}</td>
+      <td class="pmeta cclub">${info.clubCode||''}</td>
+      <td class="pmeta csex">${g}</td>
+      <td class="pmeta cunion">${info.union||''}</td>
+      <td class="pmeta cpsa">${(info.psaIds||[])[0]||''}</td>
+      <td class="ctime">${timeCell}</td>
+      <td style="white-space:nowrap;width:150px">
+        <button style="font-size:10px;padding:3px 5px" onclick="markLane('${race.id}','${info.entryId}','DNS')">DNS</button>
+        <button style="font-size:10px;padding:3px 5px" onclick="markLane('${race.id}','${info.entryId}','DNF')">DNF</button>
+        <button style="font-size:10px;padding:3px 5px" onclick="markDQ('${race.id}','${info.entryId}')">DQ</button>
+        ${r?`<button style="font-size:10px;padding:3px 5px" onclick="clearResult('${race.id}','${info.entryId}')">✕</button>`:''}
       </td>
     </tr>`;
   }).join('');
@@ -246,12 +270,12 @@ function laneCardHtml(race){
     <div style="margin-top:14px">
       <div style="font-size:11px;font-weight:700;letter-spacing:0.06em;color:var(--gray);margin-bottom:6px">✓ ALL ASSIGNED — REVIEW THEN LOCK</div>
       <table class="review-table">
-        <tr><th></th><th>LANE</th><th>PADDLER</th><th>TIME</th><th></th></tr>
+        <tr><th></th><th>LANE</th><th>NAME</th><th>AGE</th><th>CLUB</th><th>M/F</th><th>UNION</th><th>PSA</th><th>TIME</th><th></th></tr>
         ${reviewRows}
       </table>
     </div>`:`
     <table class="review-table" style="margin-top:10px">
-      <tr><th></th><th>LANE</th><th>PADDLER</th><th>TIME</th><th></th></tr>
+      <tr><th></th><th>LANE</th><th>NAME</th><th>AGE</th><th>CLUB</th><th>M/F</th><th>UNION</th><th>PSA</th><th>TIME</th><th></th></tr>
       ${reviewRows}
     </table>`}
   </div>`;
@@ -268,18 +292,24 @@ function massCardHtml(race){
     let res='';
     if(r&&r.status==='OK') res=`<span style="color:var(--green);font-family:monospace;font-weight:700">${fmtTime(r.finishTimeMs)}</span>`;
     else if(r) res=`<span style="color:#C93B3B;font-weight:700">${r.status}</span>`;
+    const g=info.gender?(info.gender.toLowerCase().startsWith('f')?'F':info.gender.toLowerCase().startsWith('m')?'M':info.gender):'';
     return `<tr class="${done?'done':''}">
-      <td style="font-family:monospace;font-weight:700">${bib}</td>
-      <td style="font-size:12px">${info.names[0]}<br><small style="color:var(--gray)">${info.clubCode||''}</small></td>
-      <td>${laps.length}/${race.totalLaps}${done?' ✓':''}</td>
-      <td style="font-family:monospace">${laps.length?fmtTime(laps[laps.length-1].timeMs):'—'}</td>
+      <td class="clane">${bib}</td>
+      <td class="pname">${info.names[0]}</td>
+      <td class="pmeta cage">${info.ageCategory||''}</td>
+      <td class="pmeta cclub">${info.clubCode||''}</td>
+      <td class="pmeta csex">${g}</td>
+      <td class="pmeta cunion">${info.union||''}</td>
+      <td class="pmeta cpsa">${(info.psaIds||[])[0]||''}</td>
+      <td class="pmeta">${laps.length}/${race.totalLaps}${done?' ✓':''}</td>
+      <td class="ctime">${laps.length?fmtTime(laps[laps.length-1].timeMs):'—'}</td>
       <td>${res}</td>
-      <td style="white-space:nowrap">
-        ${laps.length?`<button style="font-size:11px;padding:3px 5px" onclick="undoLap('${race.id}','${bib}')">↩</button>`:''}
-        <button style="font-size:11px;padding:3px 5px" onclick="markLane('${race.id}','${info.entryId}','DNS')">DNS</button>
-        <button style="font-size:11px;padding:3px 5px" onclick="markLane('${race.id}','${info.entryId}','DNF')">DNF</button>
-        <button style="font-size:11px;padding:3px 5px" onclick="markDQ('${race.id}','${info.entryId}')">DQ</button>
-        ${r?`<button style="font-size:11px;padding:3px 5px" onclick="clearResult('${race.id}','${info.entryId}')">✕</button>`:''}
+      <td style="white-space:nowrap;width:170px">
+        ${laps.length?`<button style="font-size:10px;padding:3px 5px" onclick="undoLap('${race.id}','${bib}')">↩</button>`:''}
+        <button style="font-size:10px;padding:3px 5px" onclick="markLane('${race.id}','${info.entryId}','DNS')">DNS</button>
+        <button style="font-size:10px;padding:3px 5px" onclick="markLane('${race.id}','${info.entryId}','DNF')">DNF</button>
+        <button style="font-size:10px;padding:3px 5px" onclick="markDQ('${race.id}','${info.entryId}')">DQ</button>
+        ${r?`<button style="font-size:10px;padding:3px 5px" onclick="clearResult('${race.id}','${info.entryId}')">✕</button>`:''}
       </td>
     </tr>`;
   }).join('');
@@ -300,7 +330,7 @@ function massCardHtml(race){
       <button class="btn-lock" ${allDone?'':'disabled'} onclick="lockRace('${race.id}')">🔒 Lock</button>
     </div>
     <table class="lap-table">
-      <tr><th>SLIDE</th><th>PADDLER</th><th>LAPS</th><th>LAST TIME</th><th>RESULT</th><th></th></tr>
+      <tr><th>SLIDE</th><th>NAME</th><th>AGE</th><th>CLUB</th><th>M/F</th><th>UNION</th><th>PSA</th><th>LAPS</th><th>LAST</th><th>RESULT</th><th></th></tr>
       ${rows||'<tr><td colspan="6" style="color:var(--gray)">No entries.</td></tr>'}
     </table>
   </div>`;
