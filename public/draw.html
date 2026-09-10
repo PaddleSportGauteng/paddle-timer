@@ -155,15 +155,27 @@ async function toggleDrawView(eventId){
     if(races.length === 0){ inner.innerHTML = '<span style="color:var(--gray)">No races.</span>'; return; }
     inner.innerHTML = races.map(r => {
       const lanes = Object.entries(r.laneEntries).sort((a,b) => Number(a[0])-Number(b[0]));
-      const rows = lanes.map(([lane, info]) => `
-        <div style="display:flex;gap:10px;padding:3px 0;font-size:13px;border-bottom:1px dashed var(--line)">
-          <span style="width:70px;color:var(--gray)">${r.isMassStart?'Slide':'Lane'} ${lane}</span>
-          <span>${info ? info.names.join(' / ') + (info.club ? ` <small style="color:var(--gray)">— ${info.club}</small>` : '') : '<span style="color:var(--gray)">— empty —</span>'}</span>
-        </div>`).join('');
+      const rows = lanes.map(([lane, info]) => {
+        if(!info) return `<tr><td class="clane">${r.isMassStart?'S':'L'}${lane}</td><td colspan="6" style="color:var(--gray)">— EMPTY —</td></tr>`;
+        const g = info.gender ? (info.gender.toLowerCase().startsWith('f') ? 'F' : info.gender.toLowerCase().startsWith('m') ? 'M' : info.gender) : '';
+        const nameCell = info.names.length > 1 ? `${info.names[0]}<br>${info.names[1]}` : info.names[0];
+        return `<tr>
+          <td class="clane">${r.isMassStart?'S':'L'}${lane}</td>
+          <td class="pname">${nameCell}</td>
+          <td class="pmeta cage">${info.ageCategory||''}</td>
+          <td class="pmeta cclub">${info.clubCode||''}</td>
+          <td class="pmeta csex">${g}</td>
+          <td class="pmeta cunion">${info.union||''}</td>
+          <td class="pmeta cpsa">${(info.psaIds||[])[0]||''}</td>
+        </tr>`;
+      }).join('');
       const phaseLabel = { heat: `Heat ${r.heatNumber}`, semi: `Semi ${r.heatNumber}`, final: 'Final A', finalB: 'Final B', finalC: 'Final C' }[r.phase] || r.phase;
-      return `<div style="margin-bottom:10px;padding:8px;background:var(--paper);border-radius:6px">
-        <div style="font-weight:700;font-size:13px;margin-bottom:4px">R${r.raceNumber} — ${phaseLabel}${r.placeholder ? ' <span class="pill warn">TBC — pending qualifiers</span>' : ''}${r.scheduledLabel ? ` — ${r.scheduledLabel}` : ''}</div>
-        ${rows}
+      return `<div style="margin-bottom:10px;padding:10px;background:var(--paper);border-radius:6px">
+        <div style="font-weight:700;font-size:13px;margin-bottom:6px">R${r.raceNumber} — ${phaseLabel}${r.placeholder ? ' <span class="pill warn">TBC — pending qualifiers</span>' : ''}${r.scheduledLabel ? ` — ${r.scheduledLabel}` : ''}</div>
+        <table class="review-table" style="margin-top:0">
+          <tr><th>${r.isMassStart?'SLIDE':'LANE'}</th><th>NAME</th><th>AGE</th><th>CLUB</th><th>M/F</th><th>UNION</th><th>PSA</th></tr>
+          ${rows}
+        </table>
       </div>`;
     }).join('');
   } catch (err) {

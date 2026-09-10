@@ -109,7 +109,7 @@ function render(){
         : `${badge} <button style="font-size:13px;padding:6px 10px" onclick="toggleBoat('${race.id}','${info.entryId}')">Re-weigh</button>`;
       return `<div class="wboat">
           <div class="num">${race.isMassStart?'Slide ':'Lane '}${num}</div>
-          <div class="name">${info.names.join(' / ')}${info.club?` <small style="color:var(--gray)">— ${info.club}</small>`:''}</div>
+          <div class="name">${info.names.join(' / ')}${info.clubCode?` <small style="color:var(--gray)">— ${info.clubCode}</small>`:''}</div>
           ${rightSide}
         </div>
         <div id="wresult-${race.id}-${info.entryId}"></div>`;

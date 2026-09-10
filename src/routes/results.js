@@ -7,13 +7,20 @@ const router = express.Router();
 
 function namesFor(database, entryId) {
   const entry = database.entries[entryId];
-  if (!entry) return { names: ['?'], club: null };
+  if (!entry) return { names: ['?'], club: null, clubCode: '', union: '', ageCategory: '', gender: '', psaIds: [] };
   const names = entry.athleteIds.map((aid) => {
     const a = database.athletes[aid];
     return a ? `${a.firstName} ${a.surname || ''}`.trim() : '?';
   });
   const first = database.athletes[entry.athleteIds[0]];
-  return { names, club: first ? first.club : null };
+  const club = first ? first.club : null;
+  const clubCode = club ? ((database.clubCodes && database.clubCodes[club]) || club.slice(0, 4).toUpperCase()) : '';
+  const union = club ? (database.clubUnions[club] || '') : '';
+  const event = database.events[entry.eventId];
+  const ageCategory = event ? (event.ageCategory || '') : '';
+  const gender = event ? (event.gender || '') : '';
+  const psaIds = entry.athleteIds.map((aid) => (database.athletes[aid] || {}).psaId || '').filter(Boolean);
+  return { names, club, clubCode, union, ageCategory, gender, psaIds };
 }
 
 function buildRanked(database, results, filterEntryId) {
@@ -21,9 +28,9 @@ function buildRanked(database, results, filterEntryId) {
     .filter(([entryId, r]) => r.status === 'OK' && (!filterEntryId || filterEntryId(entryId)))
     .sort((a, b) => a[1].finishTimeMs - b[1].finishTimeMs)
     .map(([entryId, r], i) => {
-      const { names, club } = namesFor(database, entryId);
+      const meta = namesFor(database, entryId);
       const weighIn = database.weighIns[entryId] || null;
-      return { place: i + 1, entryId, names, club, timeMs: r.finishTimeMs, weighIn };
+      return { place: i + 1, entryId, ...meta, timeMs: r.finishTimeMs, weighIn };
     });
 }
 
@@ -31,9 +38,9 @@ function buildOthers(database, results, filterEntryId) {
   return Object.entries(results)
     .filter(([entryId, r]) => r.status !== 'OK' && (!filterEntryId || filterEntryId(entryId)))
     .map(([entryId, r]) => {
-      const { names } = namesFor(database, entryId);
+      const meta = namesFor(database, entryId);
       const weighIn = database.weighIns[entryId] || null;
-      return { entryId, names, status: r.status, dqReason: r.dqReason, weighIn };
+      return { entryId, ...meta, status: r.status, dqReason: r.dqReason, weighIn };
     });
 }
 

@@ -96,7 +96,7 @@ function liveRaceHtml(r){
     else if(r.isMassStart && info.laps) resultText = `${info.laps.length}/${r.totalLaps} laps`;
     return `<div class="board-row">
       <div class="num">${r.isMassStart ? 'Slide '+num : 'Lane '+num}</div>
-      <div class="name">${info.names.join(' / ')}${info.club?` <small style="color:var(--gray)">— ${info.club}</small>`:''}</div>
+      <div class="name">${info.names.join(' / ')}${info.clubCode?` <small style="color:var(--gray)">— ${info.clubCode}</small>`:''}</div>
       <div class="result">${resultText}</div>
     </div>`;
   }).join('');
@@ -121,7 +121,7 @@ function resultBlockHtml(b){
   const rankedRows = b.ranked.map(r => `
     <div class="board-row">
       <div class="num">#${r.place}</div>
-      <div class="name">${medalFor(r.place)}${r.names.join(' / ')}${r.club?` <small style="color:var(--gray)">— ${r.club}</small>`:''}</div>
+      <div class="name">${medalFor(r.place)}${r.names.join(' / ')}${r.clubCode?` <small style="color:var(--gray)">— ${r.clubCode}</small>`:''}</div>
       <div class="result">${fmtTime(r.timeMs)}${weightNote(r.weighIn)}</div>
     </div>`).join('');
   const otherRows = b.others.map(o => `

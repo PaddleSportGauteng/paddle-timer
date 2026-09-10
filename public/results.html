@@ -86,18 +86,31 @@ function render(){
       if(place===3 && b.medalEligibility.bronze) return '<span class="medal">🥉</span>';
       return '';
     };
+    const genderLetter = g => g ? (g.toLowerCase().startsWith('f') ? 'F' : g.toLowerCase().startsWith('m') ? 'M' : g) : '';
     const rankedRows = b.ranked.map(r => `
-      <div class="rrow">
-        <div class="place">${r.place}</div>
-        <div class="name">${medalFor(r.place)}${r.names.join(' / ')}${r.club?` <small style="color:var(--gray)">— ${r.club}</small>`:''}</div>
-        <div class="time">${fmtMs(r.timeMs)}${r.weighIn?` <small style="color:var(--gray)">· ${r.weighIn.weightKg}kg</small>`:''}</div>
-      </div>`).join('');
+      <tr>
+        <td class="cpos">${medalFor(r.place)}${r.place}</td>
+        <td class="pname">${r.names.length>1?`${r.names[0]}<br>${r.names[1]}`:r.names[0]}</td>
+        <td class="pmeta cage">${r.ageCategory||''}</td>
+        <td class="pmeta cclub">${r.clubCode||''}</td>
+        <td class="pmeta csex">${genderLetter(r.gender)}</td>
+        <td class="pmeta cunion">${r.union||''}</td>
+        <td class="pmeta cpsa">${(r.psaIds||[])[0]||''}</td>
+        <td class="ctime">${fmtMs(r.timeMs)}</td>
+        <td class="pmeta">${r.weighIn?`${r.weighIn.weightKg}kg`:''}</td>
+      </tr>`).join('');
     const otherRows = b.others.map(o => `
-      <div class="rrow">
-        <div class="place">—</div>
-        <div class="name">${o.names.join(' / ')} <span class="pill bad">${o.status}</span>${o.dqReason?` <small style="color:var(--gray)">${o.dqReason}</small>`:''}</div>
-        <div class="time">${o.weighIn?`<small style="color:var(--gray)">${o.weighIn.weightKg}kg</small>`:''}</div>
-      </div>`).join('');
+      <tr>
+        <td class="cpos">—</td>
+        <td class="pname">${o.names.length>1?`${o.names[0]}<br>${o.names[1]}`:o.names[0]}</td>
+        <td class="pmeta cage">${o.ageCategory||''}</td>
+        <td class="pmeta cclub">${o.clubCode||''}</td>
+        <td class="pmeta csex">${genderLetter(o.gender)}</td>
+        <td class="pmeta cunion">${o.union||''}</td>
+        <td class="pmeta cpsa">${(o.psaIds||[])[0]||''}</td>
+        <td class="ctime"><span class="pill bad">${o.status}</span></td>
+        <td class="pmeta">${o.weighIn?`${o.weighIn.weightKg}kg`:''}${o.dqReason?` ${o.dqReason}`:''}</td>
+      </tr>`).join('');
     const flagMsg = b.medalEligibility && b.medalEligibility.flag ? `<div class="flag">${b.medalEligibility.flag}</div>` : '';
     // Weigh-ins pending only ever means the podium (positions 1-3) —
     // anything beyond that is the office's own choice, never required,
@@ -113,8 +126,11 @@ function render(){
       ${noResultsMsg}
       ${flagMsg}
       ${weighFlag}
-      ${rankedRows}
-      ${otherRows}
+      <table class="review-table">
+        <tr><th>POS</th><th>NAME</th><th>AGE</th><th>CLUB</th><th>M/F</th><th>UNION</th><th>PSA</th><th>TIME</th><th>WEIGH</th></tr>
+        ${rankedRows}
+        ${otherRows}
+      </table>
     </div>`;
   }).join('');
 }
