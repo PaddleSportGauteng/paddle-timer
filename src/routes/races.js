@@ -350,7 +350,11 @@ router.post('/:id/finish-race', (req, res) => {
   // too (see /mark/:entryId above), they get the same check.
   {
     const results = database.raceResults[race.id] || {};
-    const realLanes = Object.entries(race.lanes).filter(([, entryId]) => entryId);
+    const realLanes = Object.entries(race.lanes).filter(([, entryId]) => {
+      if (!entryId) return false;
+      const entry = database.entries[entryId];
+      return !entry || entry.status !== 'scratched'; // exclude scratched
+    });
     const unresolved = realLanes.filter(([, entryId]) => !results[entryId]);
     if (unresolved.length > 0) {
       const noun = race.isMassStart ? 'slide' : 'lane';

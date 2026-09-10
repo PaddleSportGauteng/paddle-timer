@@ -196,7 +196,7 @@ function renderRunning(races){
 
 function laneCardHtml(race){
   const crossings=race.blindCrossings||[];
-  const realLanes=Object.entries(race.laneEntries||{}).filter(([,i])=>i).sort((a,b)=>Number(a[0])-Number(b[0]));
+  const realLanes=Object.entries(race.laneEntries||{}).filter(([,i])=>i&&!i.scratched).sort((a,b)=>Number(a[0])-Number(b[0]));
   const allDone=realLanes.every(([,info])=>race.results[info.entryId]);
   const stopped=!!race.stopTimeMs;
 
@@ -473,14 +473,18 @@ async function stopClock(raceId){
 async function lockRace(raceId){
   const race=racesById[raceId];
   if(race){
-    const realLanes=Object.entries(race.laneEntries||{}).filter(([,i])=>i);
+    const realLanes=Object.entries(race.laneEntries||{}).filter(([,i])=>i&&!i.scratched);
     const missing=realLanes.filter(([,info])=>!race.results[info.entryId]);
-    if(missing.length){alert(`${missing.length} lane(s) still have no result — mark them DNS/DNF first.`);return;}
+    if(missing.length){
+      alert(`${missing.length} lane(s) still have no result — mark them DNS, DNF or DQ first.\n\nMissing: ${missing.map(([l])=>'Lane '+l).join(', ')}`);
+      return;
+    }
   }
   const ok=await customConfirm('Lock results for this race? This cannot be undone.');
   if(!ok)return;
   const res=await fetch(`/api/races/${raceId}/finish-race`,{method:'POST'});
   if(!res.ok){const d=await res.json();alert(d.error);return;}
+  lastRunningHash='';
   await refresh();
 }
 async function markLane(raceId,entryId,status,dqReason){
