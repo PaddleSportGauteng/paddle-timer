@@ -105,10 +105,11 @@ function render(){
       const nameCell = info.names.length>1 ? `${info.names[0]}<br>${info.names[1]}` : info.names[0];
       const rightSide = isOpen
         ? `<input type="number" step="0.1" class="winput" placeholder="kg" style="width:90px" id="winput-${race.id}-${info.entryId}"
+             value="${weighIn ? weighIn.weightKg : ''}"
              onkeydown="if(event.key==='Enter'){submitWeight('${race.id}','${info.entryId}');}">
            <button class="primary" style="font-size:12px;padding:5px 9px" onclick="submitWeight('${race.id}','${info.entryId}')">Log</button>
            ${weighIn ? `<button style="font-size:12px;padding:5px 9px" onclick="toggleBoat('${race.id}','${info.entryId}')">Cancel</button>` : ''}`
-        : `${badge} <button style="font-size:12px;padding:5px 9px" onclick="toggleBoat('${race.id}','${info.entryId}')">Weigh</button>`;
+        : `${badge} <button style="font-size:12px;padding:5px 9px" onclick="toggleBoat('${race.id}','${info.entryId}')">${weighIn ? 'Edit' : 'Weigh'}</button>`;
       return `<tr>
           <td class="clane">${race.isMassStart?'S':'L'}${num}</td>
           <td class="pname">${nameCell}</td>
