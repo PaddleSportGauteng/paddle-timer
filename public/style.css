@@ -19,15 +19,25 @@ body{
 header.topbar{
   background:var(--navy);
   color:#fff;
-  padding:14px 18px;
+  padding:0 18px 0 0;          /* no left padding — the white logo block sits flush */
   display:flex;
   justify-content:space-between;
-  align-items:center;
+  align-items:stretch;
   flex-wrap:wrap;
   gap:10px;
+  min-height:56px;              /* bar height unchanged */
 }
 header.topbar a{color:#fff;text-decoration:none;}
-header.topbar .title{font-weight:700;font-size:18px;letter-spacing:0.02em;}
+/* Logo on a white block outside the navy, title big beside it */
+header.topbar .title{
+  display:flex; align-items:center; gap:14px;
+  font-weight:800; font-size:26px; letter-spacing:0.01em; line-height:1;
+}
+header.topbar .title .psg-logo{
+  height:56px; width:auto; display:block;
+  background:#fff; padding:6px 12px; box-sizing:border-box;
+}
+header.topbar nav, header.topbar #meetBar{ align-self:center; }
 header.topbar nav{display:flex;gap:14px;font-size:14px;}
 header.topbar nav a{opacity:0.85;}
 header.topbar nav a:hover{opacity:1;text-decoration:underline;}
@@ -125,8 +135,6 @@ input[type=file], input[type=number], input[type=text]{
 }
 
 /* PSG Logo in header */
-.psg-logo { height: 52px; width: auto; display: block; }
-header.topbar .title { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 16px; }
 
 /* ── Shared paddler / lane table styling (used by Race Program, Tower, Results, Board) ── */
 .paddler-table, .review-table, .lap-table {
