@@ -53,8 +53,8 @@ function buildOthers(database, results, filterEntryId) {
 //  - Lane races combined to make up numbers (e.g. U14+U16 sharing a heat
 //    to use the lanes efficiently) split back into separate result blocks
 //    per original age-group event — they're still different categories
-//    and are ranked and medalled separately (PSG combined-start convention;
-//    ICF has no equivalent rule — this is an operational feature only).
+//    and are ranked and medalled separately per PSA 1.2.1/1.2.2 (medals
+//    awarded per the paddler's actual age group).
 //  - Mass-start races (2000m/5000m) are combined by DESIGN as one big
 //    group (e.g. "2000m U8-U12 Male") and stay that way — one result
 //    block for the whole race, not split back into individual ages.

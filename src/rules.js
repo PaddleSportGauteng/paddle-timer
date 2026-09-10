@@ -1,7 +1,8 @@
-// Rules engine — ICF Canoe Sprint Competition Rules 2025. Every rule below
-// is commented with its ICF clause so it can be checked against the
-// rulebook. The ONLY non-ICF rule is the Guppy minimum boat weight, which
-// ICF does not define and comes from the PSA Paddlers Handbook 2.2.1.
+// Rules engine. RACING follows ICF Canoe Sprint Competition Rules 2025
+// (the PSA Paddlers Handbook 1.1 states "Races are to be run under the ICF
+// racing rules"). AWARDS follow the PSA Paddlers Handbook 2026, which
+// adds rules ICF does not have: Guppy boat weight (1.1.2) and medal
+// minimums by entry count (9.4). Every rule below cites its source.
 //
 // LANE COUNT: venues differ (9 is the ICF/international standard, but
 // many club/provincial courses run 6, 7, or 8). Lane count is set PER
@@ -30,7 +31,7 @@ function centerOutLaneOrder(numLanes) {
 }
 
 // ICF Chapter 3 "BOATS SPECIFICATIONS" - minimum weight (kg).
-// Guppy (10kg) is the single PSA addition — ICF has no Guppy class.
+// Guppy (10kg) from PSA Paddlers Handbook 1.1.2 — ICF has no Guppy class.
 //
 // K3 is deliberately ABSENT: ICF has no K3 class and publishes no weight.
 // A guessed minimum could wrongly disqualify a boat, so if a K3 is ever
@@ -41,12 +42,13 @@ const MIN_WEIGHT_KG = {
   Guppy: 10,
 };
 
-// ICF 1.8.6.b — medals: 1st gold, 2nd silver, 3rd bronze. ICF sets no
-// entry-count minimum for awarding medals; the only related rule is 5.1.1
-// (at least 3 boats to hold the race). Kept as constants so the medal
-// logic reads clearly; all three are 1 = "always award if a valid finisher
-// exists in that place" (1.8.6.e — no medal for an IRM).
-const MEDAL_MINIMUMS = { gold: 1, silver: 1, bronze: 1 };
+// PSA Paddlers Handbook 9.4 "Sprint Racing Championships" — minimum
+// boats entered before each medal colour is awarded: Gold 3, Silver 5,
+// Bronze 5. NOTE: this differs from ICF 1.8.6 (which has no entry-count
+// minimum) — PSA governs medal awards at South African events, so PSA
+// applies here. Below Gold's minimum the race still runs and results
+// still stand; this only affects the prize table.
+const MEDAL_MINIMUMS = { gold: 3, silver: 5, bronze: 5 };
 
 // ICF Appendix 1 "Division Systems" — heat/semifinal/final progression.
 // Transcribed from the clear prose summary for each plan (e.g. Plan A,
@@ -129,22 +131,25 @@ function decideFormat(entryCount, lanes = DEFAULT_LANES) {
 }
 
 /**
- * ICF 1.8.6 medal eligibility for a single category. Medals go to 1st,
- * 2nd and 3rd valid finishers (1.8.6.b); IRM results (DNF/DSQ/DNS) are
- * never awarded (1.8.6.e). ICF sets no entry-count threshold, so a place
- * is eligible whenever a valid finisher occupies it.
+ * PSA 9.4 medal eligibility for a single category (already split out from
+ * any combined start per PSA 1.2.1/1.2.2). Returns which places are
+ * medal-eligible and a flag explaining any withheld medals.
  */
 function computeMedalEligibility(rankedEntryCount) {
   return {
-    gold: rankedEntryCount >= 1,
-    silver: rankedEntryCount >= 2,
-    bronze: rankedEntryCount >= 3,
-    flag: null,
+    gold: rankedEntryCount >= MEDAL_MINIMUMS.gold,
+    silver: rankedEntryCount >= MEDAL_MINIMUMS.silver,
+    bronze: rankedEntryCount >= MEDAL_MINIMUMS.bronze,
+    flag: rankedEntryCount < MEDAL_MINIMUMS.gold
+      ? `Only ${rankedEntryCount} boat(s) — below minimum of ${MEDAL_MINIMUMS.gold} for any medal (PSA 9.4). Race stands, no medals awarded.`
+      : rankedEntryCount < MEDAL_MINIMUMS.silver
+      ? `${rankedEntryCount} boats — Gold only awarded, below minimum of ${MEDAL_MINIMUMS.silver} for Silver/Bronze (PSA 9.4).`
+      : null,
   };
 }
 
 /**
- * ICF Ch.3 boat weight minimums (Guppy from PSA 2.2.1). Called after a
+ * ICF Ch.3 boat weight minimums (Guppy from PSA 1.1.2). Called after a
  * boat finishes and is weighed. Returns whether it passes and, if not,
  * the DQ reason to attach to the result.
  */
@@ -158,7 +163,7 @@ function checkWeight(boatClass, measuredWeightKg) {
     checked: true,
     passed,
     minRequiredKg: min,
-    dqReason: passed ? null : `Underweight: ${measuredWeightKg}kg < ${min}kg minimum for ${boatClass} (${boatClass === 'Guppy' ? 'PSA 2.2.1' : 'ICF Ch.3'}).`,
+    dqReason: passed ? null : `Underweight: ${measuredWeightKg}kg < ${min}kg minimum for ${boatClass} (${boatClass === 'Guppy' ? 'PSA 1.1.2' : 'ICF Ch.3'}).`,
   };
 }
 

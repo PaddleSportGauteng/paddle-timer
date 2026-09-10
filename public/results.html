@@ -131,7 +131,7 @@ function render(){
 
     return `<div class="rcard ${b.isFinal?'final':'heat-semi'}">
       <div class="rlabel">R${b.raceNumber} — ${b.label} — ${b.phaseLabel} ${confirmedPill}${officeBtns}</div>
-      ${b.combinedWith ? `<div class="rsub">Combined start with: ${b.combinedWith} — results split back to this category</div>` : ''}
+      ${b.combinedWith ? `<div class="rsub">Combined start with: ${b.combinedWith} — results split back to this category (PSA 1.2.1/1.2.2)</div>` : ''}
       ${noResultsMsg}
       ${flagMsg}
       <div class="table-scroll"><table class="review-table">
