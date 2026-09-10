@@ -207,7 +207,7 @@ async function initMeetBar(containerId, opts){
     if(!nav) return;
     const links = Array.from(nav.querySelectorAll('a'));
     const setup = ['/admin.html','/race-sort.html','/draw.html','/program.html'];
-    const raceDay = ['/tower.html','/weigh.html','/results.html','/board.html'];
+    const raceDay = ['/tower.html','/weigh.html','/results.html','/board.html','/live.html'];
     const mk = (label, hrefs) => {
       const g = document.createElement('span');
       g.className = 'nav-group';
@@ -220,6 +220,9 @@ async function initMeetBar(containerId, opts){
     };
     const s = mk('SETUP', setup);
     const r = mk('RACE DAY', raceDay);
+    // Live link carries the meet id so it opens the public page directly
+    const live = links.find(x => x.getAttribute('href') === '/live.html');
+    if(live){ const m = getMeetId(); if(m) live.setAttribute('href', `/live.html?meet=${encodeURIComponent(m)}`); live.setAttribute('target','_blank'); }
     nav.innerHTML = '';
     nav.appendChild(s);
     nav.appendChild(r);

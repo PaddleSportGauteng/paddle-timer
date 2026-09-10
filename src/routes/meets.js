@@ -106,6 +106,13 @@ router.patch('/:id/num-days', (req, res) => {
 });
 
 // Setup progress for the progress strip on setup pages.
+router.get('/:id', (req, res) => {
+  const database = db.load();
+  const meet = database.meets[req.params.id];
+  if (!meet) return res.status(404).json({ error: 'Meet not found.' });
+  res.json(meet);
+});
+
 router.get('/:id/setup-status', (req, res) => {
   const database = db.load();
   const meet = database.meets[req.params.id];

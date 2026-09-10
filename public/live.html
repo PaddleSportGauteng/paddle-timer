@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Live — PaddleSport Gauteng</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  body{background:var(--paper);}
+  main{max-width:900px;padding:12px;}
+  header.topbar{padding:10px 14px;}
+  header.topbar .title{font-size:16px;}
+  .meet-name{color:#fff;opacity:.85;font-size:13px;}
+
+  .now{background:#fff;border:3px solid var(--orange);border-radius:14px;padding:14px;margin-bottom:14px;box-shadow:0 4px 16px rgba(0,0,0,.08);}
+  .now .pill-now{display:inline-block;background:#E4F5EC;color:#C93B3B;font-weight:700;font-size:13px;padding:5px 12px;border-radius:8px;margin-bottom:6px;}
+  .now .title{font-size:17px;font-weight:700;color:var(--navy);}
+  .now .clock{font-family:monospace;font-size:26px;font-weight:700;color:var(--orange);margin:4px 0 8px;}
+
+  .tabs{display:flex;gap:6px;margin:14px 0 10px;}
+  .tab{flex:1;text-align:center;padding:10px;border-radius:8px;border:2px solid var(--line);background:#fff;font-weight:700;font-size:14px;cursor:pointer;}
+  .tab.active{background:var(--navy);color:#fff;border-color:var(--navy);}
+  .day-tabs{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;}
+  .day-tab{padding:6px 14px;border-radius:20px;border:2px solid var(--line);background:#fff;font-weight:600;font-size:13px;cursor:pointer;}
+  .day-tab.active{background:var(--navy);color:#fff;border-color:var(--navy);}
+
+  #searchBox{width:100%;padding:12px;font-size:16px;border-radius:8px;border:1px solid var(--line);margin-bottom:12px;}
+
+  .race{background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:10px;}
+  .race.next{border-left:5px solid var(--orange);}
+  .race.done{border-left:5px solid var(--green);}
+  .race.prov{border-left:5px solid #E9B44C;}
+  .race .head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:6px;}
+  .race .head .t{font-weight:700;color:var(--navy);font-size:14px;}
+  .race .head .s{color:var(--gray);font-size:12px;white-space:nowrap;}
+  .race.hit{outline:2px solid var(--orange);}
+  .hl{background:#FFF3D6;}
+  .section-label{font-size:12px;font-weight:700;color:var(--gray);letter-spacing:.06em;margin:16px 0 8px;}
+  .empty{color:var(--gray);text-align:center;padding:28px;}
+  .medal{font-size:15px;margin-right:2px;}
+  .updated{color:var(--gray);font-size:11px;text-align:center;margin:14px 0 6px;}
+  .review-table td{font-size:12px;padding:5px 6px;}
+  .review-table th{font-size:10px;}
+  td.pname{min-width:110px;}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <a class="title"><img src="/psg-logo.jpg" alt="PSG" class="psg-logo"> PaddleSport Gauteng</a>
+  <span class="meet-name" id="meetName"></span>
+</header>
+
+<main>
+  <div id="nowBox"></div>
+  <input type="text" id="searchBox" placeholder="Search your name or club…" oninput="render()">
+  <div class="tabs">
+    <div class="tab active" data-tab="schedule" onclick="setTab('schedule')">Schedule</div>
+    <div class="tab" data-tab="results" onclick="setTab('results')">Results</div>
+  </div>
+  <div class="day-tabs" id="dayTabs"></div>
+  <div id="content"><div class="empty">Loading…</div></div>
+  <div class="updated" id="updated"></div>
+</main>
+
+<script>
+const params = new URLSearchParams(location.search);
+const meetId = params.get('meet');
+let tab = 'schedule';
+let day = null;
+let races = [];      // all published races (pending/running/finished), enriched
+let blocks = [];     // results blocks
+let tick = null;
+
+function phaseLabel(r){
+  const m = { heat:`Heat ${r.heatNumber}`, semi:`Semi ${r.heatNumber}`, final:'Final A', finalB:'Final B', finalC:'Final C' };
+  return m[r.phase] || r.phase;
+}
+function raceTitle(r){ return `R${r.raceNumber} · ${r.combinedLabel || (r.event ? r.event.label : '')} — ${phaseLabel(r)}`; }
+function fmt(ms){
+  if(ms==null) return '';
+  const cs=Math.floor(ms/10)%100, s=Math.floor(ms/1000)%60, m=Math.floor(ms/60000);
+  return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}.${String(cs).padStart(2,'0')}`;
+}
+const gl = g => g ? (g.toLowerCase().startsWith('f')?'F':g.toLowerCase().startsWith('m')?'M':g) : '';
+const q = () => document.getElementById('searchBox').value.trim().toLowerCase();
+function matches(info){
+  const s = q(); if(!s) return false;
+  return (info.names||[]).join(' ').toLowerCase().includes(s) || (info.clubCode||'').toLowerCase().includes(s) || (info.club||'').toLowerCase().includes(s);
+}
+
+function laneTable(r, opts={}){
+  const lanes = Object.entries(r.laneEntries||{}).sort((a,b)=>Number(a[0])-Number(b[0]));
+  const rows = lanes.map(([lane, info]) => {
+    if(!info) return '';
+    const res = r.results && r.results[info.entryId];
+    let pos='', time='';
+    if(res && res.status==='OK'){ pos=res.position; time=fmt(res.finishTimeMs); }
+    else if(res){ time=`<span class="pill bad">${res.status}</span>`; }
+    const hit = matches(info) ? ' class="hl"' : '';
+    return `<tr${hit}>
+      ${opts.pos ? `<td class="cpos">${pos}</td>` : ''}
+      <td class="clane">${r.isMassStart?'S':'L'}${lane}</td>
+      <td class="pname">${(info.names||[]).join(' / ')}</td>
+      <td class="pmeta cage">${info.ageCategory||''}</td>
+      <td class="pmeta cclub">${info.clubCode||''}</td>
+      <td class="pmeta csex">${gl(info.gender)}</td>
+      ${opts.pos ? `<td class="ctime">${time}</td>` : ''}
+    </tr>`;
+  }).join('');
+  return `<div class="table-scroll"><table class="review-table">
+    <tr>${opts.pos?'<th>POS</th>':''}<th>${r.isMassStart?'SLIDE':'LANE'}</th><th>NAME</th><th>AGE</th><th>CLUB</th><th>M/F</th>${opts.pos?'<th>TIME</th>':''}</tr>
+    ${rows}
+  </table></div>`;
+}
+
+function resultTable(b){
+  const medal = p => !b.medalEligibility ? '' :
+    p===1&&b.medalEligibility.gold ? '<span class="medal">🥇</span>' :
+    p===2&&b.medalEligibility.silver ? '<span class="medal">🥈</span>' :
+    p===3&&b.medalEligibility.bronze ? '<span class="medal">🥉</span>' : '';
+  const row = (r, bad) => {
+    const hit = matches(r) ? ' class="hl"' : '';
+    return `<tr${hit}>
+      <td class="cpos">${bad?'—':medal(r.place)+r.place+(r.deadHeat?'<span style="color:var(--orange);font-size:10px">=</span>':'')}</td>
+      <td class="pname">${(r.names||[]).join(' / ')}</td>
+      <td class="pmeta cage">${r.ageCategory||''}</td>
+      <td class="pmeta cclub">${r.clubCode||''}</td>
+      <td class="pmeta csex">${gl(r.gender)}</td>
+      <td class="ctime">${bad?`<span class="pill bad">${r.status}</span>`:fmt(r.timeMs)}</td>
+    </tr>`;
+  };
+  return `<div class="table-scroll"><table class="review-table">
+    <tr><th>POS</th><th>NAME</th><th>AGE</th><th>CLUB</th><th>M/F</th><th>TIME</th></tr>
+    ${b.ranked.map(r=>row(r,false)).join('')}${b.others.map(o=>row(o,true)).join('')}
+  </table></div>`;
+}
+
+function raceHit(r){ return Object.values(r.laneEntries||{}).some(i => i && matches(i)); }
+function blockHit(b){ return b.ranked.some(matches) || b.others.some(matches); }
+
+function renderNow(){
+  const el = document.getElementById('nowBox');
+  const running = races.filter(r => r.status==='running');
+  if(!running.length){ el.innerHTML=''; if(tick){cancelAnimationFrame(tick);tick=null;} return; }
+  const r = running[0];
+  el.innerHTML = `<div class="now">
+    <span class="pill-now">● NOW RACING</span>
+    <div class="title">${raceTitle(r)}</div>
+    <div class="clock" id="nowClock">00:00.00</div>
+    ${laneTable(r,{pos:true})}
+  </div>`;
+  if(tick) cancelAnimationFrame(tick);
+  const run = () => {
+    const c = document.getElementById('nowClock'); if(!c) return;
+    const ms = r.stopTimeMs ? r.stopTimeMs - r.startTimeMs : Date.now() - r.startTimeMs;
+    c.textContent = fmt(Math.max(0, ms));
+    if(!r.stopTimeMs) tick = requestAnimationFrame(run);
+  };
+  run();
+}
+
+function render(){
+  renderNow();
+  const el = document.getElementById('content');
+  const dayF = r => !day || (r.day||1)===day;
+  const s = q();
+
+  if(tab==='schedule'){
+    const pending = races.filter(r => r.status==='pending' && dayF(r)).sort((a,b)=>a.raceNumber-b.raceNumber);
+    const shown = s ? pending.filter(raceHit) : pending;
+    if(!shown.length){ el.innerHTML = `<div class="empty">${s?'No upcoming races match your search.':'No races scheduled yet.'}</div>`; return; }
+    const nextIds = new Set(pending.slice(0,3).map(r=>r.id));
+    el.innerHTML = `<div class="section-label">${s?'YOUR UPCOMING RACES':'UP NEXT'}</div>` +
+      shown.map(r => `<div class="race ${nextIds.has(r.id)?'next':''} ${raceHit(r)?'hit':''}">
+        <div class="head"><span class="t">${raceTitle(r)}</span><span class="s">${r.scheduledLabel?'Start '+r.scheduledLabel:''}</span></div>
+        ${laneTable(r)}
+      </div>`).join('');
+  } else {
+    const done = blocks.filter(b => !day || (b.day||1)===day);
+    const shown = s ? done.filter(blockHit) : done;
+    if(!shown.length){ el.innerHTML = `<div class="empty">${s?'No results match your search.':'No results yet.'}</div>`; return; }
+    el.innerHTML = shown.map(b => `<div class="race ${b.resultsConfirmed?'done':'prov'} ${blockHit(b)?'hit':''}">
+        <div class="head"><span class="t">R${b.raceNumber} · ${b.label} — ${b.phaseLabel}</span><span class="s">${b.resultsConfirmed?'✅ Official':'⏳ Provisional'}</span></div>
+        ${resultTable(b)}
+      </div>`).join('');
+  }
+}
+
+function setTab(t){ tab=t; document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x.dataset.tab===t)); render(); }
+function setDay(d){ day=d; buildDays(); render(); }
+function buildDays(){
+  const days=[...new Set(races.map(r=>r.day||1))].sort((a,b)=>a-b);
+  const el=document.getElementById('dayTabs');
+  if(days.length<=1){ el.innerHTML=''; day=null; return; }
+  if(day===null) day=days[0];
+  el.innerHTML=days.map(d=>`<button class="day-tab ${d===day?'active':''}" onclick="setDay(${d})">Day ${d}</button>`).join('');
+}
+
+async function load(){
+  if(!meetId){ document.getElementById('content').innerHTML='<div class="empty">No meet in this link. Ask the race office for the live link.</div>'; return; }
+  try{
+    const [meet, rs, bl] = await Promise.all([
+      fetch(`/api/meets/${encodeURIComponent(meetId)}`).then(r=>r.json()),
+      fetch(`/api/programme/races?meetId=${encodeURIComponent(meetId)}`).then(r=>r.json()),
+      fetch(`/api/results/all?meetId=${encodeURIComponent(meetId)}`).then(r=>r.json()),
+    ]);
+    document.getElementById('meetName').textContent = meet && meet.name ? meet.name : '';
+    races = rs.filter(r => r.published);
+    blocks = bl;
+    buildDays();
+    render();
+    document.getElementById('updated').textContent = 'Updated ' + new Date().toLocaleTimeString();
+  }catch(e){
+    document.getElementById('content').innerHTML = `<div class="empty">Can't reach the timing server. Check your connection.</div>`;
+  }
+}
+load();
+setInterval(load, 4000);
+</script>
+</body>
+</html>

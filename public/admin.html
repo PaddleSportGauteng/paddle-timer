@@ -80,6 +80,7 @@
       <div class="meta" id="existingMeetMeta"></div>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button onclick="copyLiveLink()" style="background:var(--green);color:#fff;border:none;border-radius:6px;padding:8px 14px;font-weight:700;cursor:pointer">🔗 Copy public live link</button>
       <button class="red" onclick="deleteMeet()">🗑 Delete this event</button>
       <button onclick="document.getElementById('createSection').style.display='block';document.getElementById('existingMeetBanner').style.display='none'">+ Create new event</button>
       <a href="/race-sort.html"><button class="primary">Go to Race Sort →</button></a>
@@ -299,6 +300,13 @@ async function editClubCode(clubName, code) {
 }
 
 // ── Init ──────────────────────────────────────────────────────────
+async function copyLiveLink(){
+  const meetId = getMeetId(); if(!meetId){ alert('Pick a meet first.'); return; }
+  const url = `${location.origin}/live.html?meet=${encodeURIComponent(meetId)}`;
+  try { await navigator.clipboard.writeText(url); alert('Copied:\n' + url + '\n\nShare this with athletes and spectators. It shows the live race, schedule and results only — no access to the rest of the system.'); }
+  catch(e){ prompt('Copy this link:', url); }
+}
+
 async function deleteMeet() {
   const meetId = getMeetId();
   if (!meetId) return;

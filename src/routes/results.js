@@ -90,7 +90,7 @@ router.get('/all', (req, res) => {
       const others = buildOthers(database, results);
       const hasBoats = Object.values(race.lanes).some(Boolean);
       blocks.push({
-        raceId: race.id, raceNumber: race.raceNumber, phase: race.phase, phaseLabel, isFinal,
+        raceId: race.id, raceNumber: race.raceNumber, day: race.day || 1, phase: race.phase, phaseLabel, isFinal,
         label, ranked, others, resultsConfirmed: !!race.resultsConfirmed, weighInStatus,
         noResultsRecorded: hasBoats && ranked.length === 0 && others.length === 0,
         medalEligibility: isFinal ? rules.computeMedalEligibility(ranked.length) : null,
@@ -105,7 +105,7 @@ router.get('/all', (req, res) => {
         const hasSeatedBoats = Object.values(race.lanes).some((entryId) => entryId && filter(entryId));
         if (!hasSeatedBoats) return; // nobody from this category was ever in this race
         blocks.push({
-          raceId: race.id, raceNumber: race.raceNumber, phase: race.phase, phaseLabel, isFinal, weighInStatus,
+          raceId: race.id, raceNumber: race.raceNumber, day: race.day || 1, phase: race.phase, phaseLabel, isFinal, weighInStatus,
           label: memberEvent.label, combinedWith: race.combinedLabel, ranked, others, resultsConfirmed: !!race.resultsConfirmed,
           noResultsRecorded: ranked.length === 0 && others.length === 0,
           medalEligibility: isFinal ? rules.computeMedalEligibility(ranked.length) : null,
