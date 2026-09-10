@@ -6,57 +6,128 @@
 <title>Tower — Paddle Timer</title>
 <link rel="stylesheet" href="style.css">
 <style>
-  #raceList{display:flex;flex-direction:column;gap:14px;}
-  .race-card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px;}
-  .race-card.running{border-left:5px solid var(--orange);}
-  .race-card.finished{border-left:5px solid var(--green);}
-  .race-card .rlabel{font-weight:700;font-size:15px;margin-bottom:8px;text-align:center}
-  .race-card .clock{font-size:38px;}
-  .bib-row{display:flex;gap:8px;margin:10px 0}
-  .bib-row input{flex:1;font-size:20px;padding:12px;text-align:center}
-  .bib-row button{font-size:16px;padding:0 20px}
-  table.lapsheet{width:100%;font-size:13px;}
-  table.lapsheet th,table.lapsheet td{padding:5px 6px;text-align:left;border-bottom:1px solid var(--line)}
-  tr.mass-done{background:#E4F5EC}
-  .phase-btn{padding:8px 16px;border-radius:8px;border:1px solid var(--line);background:#fff;cursor:pointer;font-size:14px;}
-  .phase-btn.active{background:var(--navy);color:#fff;border-color:var(--navy);font-weight:600;}
+  body { background: #f0f2f5; }
+
+  /* Day tabs */
+  .day-tabs { display:flex; gap:6px; margin-bottom:16px; flex-wrap:wrap; }
+  .day-tab { padding:7px 18px; border-radius:20px; border:2px solid var(--line); background:#fff; font-weight:600; font-size:13px; cursor:pointer; }
+  .day-tab.active { background:var(--navy); color:#fff; border-color:var(--navy); }
+
+  /* NOW RACING card */
+  .now-card { background:#fff; border-radius:14px; border:3px solid var(--orange); padding:20px; margin-bottom:20px; box-shadow:0 4px 16px rgba(0,0,0,0.08); }
+  .now-card .badge { font-size:11px; font-weight:700; letter-spacing:0.08em; color:var(--orange); text-transform:uppercase; margin-bottom:4px; }
+  .now-card .race-title { font-size:18px; font-weight:700; color:var(--navy); margin-bottom:4px; }
+  .now-card .race-sub { font-size:13px; color:var(--gray); margin-bottom:14px; }
+
+  /* Big clock */
+  .big-clock { font-size:64px; font-weight:700; font-family:monospace; text-align:center; color:var(--navy); letter-spacing:2px; margin:10px 0; }
+  .big-clock.running { color:var(--orange); }
+
+  /* Control row */
+  .ctrl-row { display:flex; gap:8px; margin:12px 0; }
+  .ctrl-row button { flex:1; padding:14px 10px; font-size:15px; font-weight:700; border-radius:10px; border:none; cursor:pointer; }
+  .btn-start { background:#27ae60; color:#fff; }
+  .btn-start:disabled { background:#95d5b2; cursor:not-allowed; }
+  .btn-stop  { background:#C93B3B; color:#fff; }
+  .btn-stop:disabled  { background:#e8a0a0; cursor:not-allowed; }
+  .btn-lock  { background:var(--orange); color:#fff; }
+  .btn-lock:disabled  { background:#f0b48a; cursor:not-allowed; }
+
+  /* TAP button */
+  .tap-btn { width:100%; padding:40px 20px; font-size:28px; font-weight:800; background:var(--orange); color:#fff; border:none; border-radius:14px; cursor:pointer; letter-spacing:1px; margin:10px 0; active:scale(0.97); transition:transform 0.05s; }
+  .tap-btn:active { transform:scale(0.97); background:#d4420a; }
+  .tap-btn:disabled { background:#ccc; cursor:not-allowed; }
+
+  /* Crossing list */
+  .crossings { margin:10px 0; }
+  .crossing-row { display:flex; align-items:center; gap:8px; padding:7px 10px; background:#f8f8f8; border-radius:8px; margin-bottom:5px; font-size:13px; }
+  .crossing-row .pos { font-weight:700; min-width:24px; color:var(--navy); }
+  .crossing-row .t { font-family:monospace; min-width:80px; }
+  .crossing-row select { flex:1; font-size:12px; padding:4px; border-radius:6px; border:1px solid var(--line); }
+  .crossing-assigned { color:var(--green); font-weight:600; flex:1; }
+
+  /* Lane status mini table */
+  .lane-mini { width:100%; border-collapse:collapse; font-size:13px; margin-top:10px; }
+  .lane-mini td { padding:5px 8px; border-bottom:1px dashed var(--line); }
+  .lane-mini td:first-child { font-weight:700; color:var(--gray); width:55px; }
+  .result-ok { color:var(--green); font-family:monospace; font-weight:700; }
+  .result-bad { color:#C93B3B; font-weight:700; }
+
+  /* Bib input for mass start */
+  .bib-form { display:flex; gap:8px; margin:12px 0; }
+  .bib-form input { flex:1; font-size:22px; padding:12px; text-align:center; border-radius:10px; border:2px solid var(--line); font-family:monospace; }
+  .bib-form button { font-size:16px; padding:12px 20px; border-radius:10px; }
+
+  /* Mass start lap sheet */
+  .lapsheet { width:100%; border-collapse:collapse; font-size:13px; margin-top:10px; }
+  .lapsheet th { padding:5px 8px; text-align:left; border-bottom:2px solid var(--line); font-size:12px; color:var(--gray); }
+  .lapsheet td { padding:5px 8px; border-bottom:1px dashed var(--line); }
+  .lapsheet tr.done td { background:#E4F5EC; }
+
+  /* Upcoming races */
+  .upcoming-section h2 { font-size:15px; color:var(--gray); font-weight:700; letter-spacing:0.05em; margin-bottom:10px; }
+  .upcoming-card { background:#fff; border-radius:10px; border:1px solid var(--line); padding:14px 16px; margin-bottom:8px; display:flex; align-items:center; justify-content:space-between; gap:10px; }
+  .upcoming-card .u-title { font-weight:700; font-size:14px; color:var(--navy); }
+  .upcoming-card .u-sub { font-size:12px; color:var(--gray); margin-top:2px; }
+  .upcoming-card .u-time { font-size:13px; color:var(--orange); font-weight:600; white-space:nowrap; }
+
+  /* Finished races */
+  .finished-card { background:#f8f8f8; border-radius:10px; border:1px solid var(--line); padding:12px 16px; margin-bottom:8px; display:flex; align-items:center; justify-content:space-between; }
+  .finished-card .f-title { font-size:13px; color:var(--gray); }
+  .finished-pill { background:#E4F5EC; color:#1E8E5A; border-radius:20px; padding:3px 10px; font-size:11px; font-weight:700; }
 </style>
 </head>
 <body>
 <header class="topbar">
   <a href="/" class="title"><img src="/psg-logo.jpg" alt="PSG" class="psg-logo"> PaddleSport Gauteng</a>
-  <nav><a href="/admin.html">Race Office</a><a href="/race-sort.html">Race Sort</a><a href="/draw.html">Draw</a><a href="/program.html">Race Program</a><a href="/tower.html">Tower</a><a href="/weigh.html">Weigh</a><a href="/results.html">Results</a><a href="/board.html">Board</a></nav>
+  <nav>
+    <a href="/admin.html">Race Office</a>
+    <a href="/race-sort.html">Race Sort</a>
+    <a href="/draw.html">Draw</a>
+    <a href="/program.html">Race Program</a>
+    <a href="/tower.html">Tower</a>
+    <a href="/weigh.html">Weigh</a>
+    <a href="/results.html">Results</a>
+    <a href="/board.html">Board</a>
+  </nav>
   <div id="meetBar"></div>
 </header>
-<main>
-  <h1>Tower</h1>
-  <div class="flag" id="meetWarning" style="display:none">No meet selected — pick one at the top-right first.</div>
-  <div id="dayBar" style="margin-bottom:12px"></div>
-  <div style="margin-bottom:12px;display:flex;gap:6px" id="phaseFilterBar">
-    <button class="phase-btn" onclick="setPhaseFilter('all')" data-phase="all">All</button>
-    <button class="phase-btn" onclick="setPhaseFilter('semi')" data-phase="semi">Semis</button>
-    <button class="phase-btn" onclick="setPhaseFilter('final')" data-phase="final">Finals</button>
-  </div>
-  <p style="color:var(--gray);font-size:14px">Every finalised race that's still going shows here at once — no switching. <b>All</b> always has everything, heats included — nothing here is ever only reachable from another tab. <b>Semis</b> and <b>Finals</b> are just a focused view for events that actually go through that progression — a straight final (small enough field to skip heats/semis entirely) stays on All only, since there's no round it's "advancing" from. A semi/final only appears here once its predecessor round's weigh-ins (podium + 1 random check) are done — it's still being computed behind the scenes, just held back from view until then.</p>
 
-  <div id="raceList"></div>
+<main>
+  <div class="flag" id="meetWarning" style="display:none">No meet selected — pick one at the top-right first.</div>
+
+  <div class="day-tabs" id="dayTabs"></div>
+
+  <!-- Running races -->
+  <div id="runningSection"></div>
+
+  <!-- Upcoming races -->
+  <div class="upcoming-section" id="upcomingSection"></div>
+
+  <!-- Finished today -->
+  <div class="upcoming-section" id="finishedSection"></div>
 </main>
+
 <script src="common.js"></script>
 <script>
-let selectedDay = null;
-let phaseFilter = 'all';
+let selectedDay = 1;
+let allDays = 1;
 let racesById = {};
 let raceHashes = {};
 let tickHandles = {};
 
 function phaseLabel(r){
-  const map = { heat: `Heat ${r.heatNumber}`, semi: `Semi ${r.heatNumber}`, final: 'Final A', finalB: 'Final B', finalC: 'Final C' };
+  const map = {heat:`Heat ${r.heatNumber}`,semi:`Semi ${r.heatNumber}`,final:'Final A',finalB:'Final B',finalC:'Final C'};
   return map[r.phase] || r.phase;
 }
 function raceLabel(r){
-  const parts = [`R${r.raceNumber}`, r.combinedLabel || (r.event ? r.event.label : ''), phaseLabel(r)];
+  return `R${r.raceNumber} · ${r.combinedLabel || (r.event ? r.event.label : '')} — ${phaseLabel(r)}`;
+}
+function raceSub(r){
+  const parts = [];
   if(r.scheduledLabel) parts.push(r.scheduledLabel);
-  return parts.filter(Boolean).join(' · ');
+  if(r.isMassStart) parts.push(`Mass start · ${r.totalLaps} laps`);
+  return parts.join(' · ');
 }
 function fmtTime(ms){
   if(ms==null) return '00:00.00';
@@ -68,215 +139,210 @@ function fmtTime(ms){
   return `${pad(min)}:${pad(sec)}.${pad(cs)}`;
 }
 
+// ── Day tabs ──────────────────────────────────────────────────────
+function buildDayTabs(races){
+  const days = [...new Set(races.map(r => r.day || 1))].sort((a,b)=>a-b);
+  allDays = days;
+  const el = document.getElementById('dayTabs');
+  if(days.length <= 1){ el.innerHTML = ''; return; }
+  el.innerHTML = days.map(d =>
+    `<button class="day-tab ${d===selectedDay?'active':''}" onclick="switchDay(${d})">Day ${d}</button>`
+  ).join('');
+}
+
+function switchDay(d){
+  selectedDay = d;
+  raceHashes = {};
+  refresh();
+}
+
+// ── Main render ───────────────────────────────────────────────────
 async function refresh(){
   const meetId = getMeetId();
   if(!meetId) return;
   let races;
   try {
-    const dayQS = selectedDay ? `&day=${selectedDay}` : '';
-    const res = await fetch(`/api/races/active?meetId=${encodeURIComponent(meetId)}${dayQS}`);
-    if(!res.ok) throw new Error(`Server returned ${res.status}`);
+    const res = await fetch(`/api/races/active?meetId=${encodeURIComponent(meetId)}`);
+    if(!res.ok) throw new Error(res.status);
     races = await res.json();
-  } catch (err) {
-    console.error(err);
-    document.getElementById('raceList').innerHTML = `<div class="flag">Couldn't reach the server: ${err.message}. Check the black server window is still running, then reload this page.</div>`;
+  } catch(err){
+    document.getElementById('runningSection').innerHTML = `<div class="flag">Can't reach server: ${err.message}</div>`;
     return;
   }
 
-  if(phaseFilter === 'semi'){
-    races = races.filter(r => r.phase === 'semi');
-  } else if(phaseFilter === 'final'){
-    // A straight final (field small enough to skip heats/semis) isn't
-    // "advancing" from anything — only include finals that are actually
-    // part of a heat/semi/final progression, per event.plan.rounds.
-    races = races.filter(r => (r.phase==='final'||r.phase==='finalB'||r.phase==='finalC')
-      && r.event && r.event.plan && r.event.plan.rounds && r.event.plan.rounds.length > 1);
-  }
+  buildDayTabs(races);
 
-  const container = document.getElementById('raceList');
-  const currentIds = new Set(races.map(r => r.id));
+  // Filter to selected day
+  const dayRaces = races.filter(r => (r.day||1) === selectedDay);
 
-  Object.keys(racesById).forEach(id => {
-    if(!currentIds.has(id)){
-      if(tickHandles[id]) cancelAnimationFrame(tickHandles[id]);
-      delete tickHandles[id]; delete racesById[id]; delete raceHashes[id];
-      const el = document.getElementById('race-'+id);
-      if(el) el.remove();
-    }
-  });
+  const running  = dayRaces.filter(r => r.status === 'running');
+  const pending  = dayRaces.filter(r => r.status === 'pending');
+  const finished = dayRaces.filter(r => r.status === 'finished');
 
-  if(races.length === 0){
-    container.innerHTML = '<p style="color:var(--gray)">No races finalised yet — draw and finalise them in Race Program.</p>';
-    return;
-  }
+  // Update racesById
+  races.forEach(r => { racesById[r.id] = r; });
 
-  races.forEach(race => {
-    racesById[race.id] = race;
-    const hash = JSON.stringify(race);
-    let cardEl = document.getElementById('race-'+race.id);
-
-    const bibInput = cardEl ? cardEl.querySelector('.bib-input') : null;
-    if(bibInput && document.activeElement === bibInput && bibInput.value !== ''){
-      return;
-    }
-    const crossingInput = cardEl && document.activeElement && document.activeElement.classList && document.activeElement.classList.contains('crossing-input') ? document.activeElement : null;
-    if(crossingInput && cardEl.contains(crossingInput) && crossingInput.value !== ''){
-      return;
-    }
-
-    if(raceHashes[race.id] === hash && cardEl){
-      return;
-    }
-    raceHashes[race.id] = hash;
-
-    if(!cardEl){
-      cardEl = document.createElement('div');
-      cardEl.id = 'race-'+race.id;
-      container.appendChild(cardEl);
-    }
-    renderRaceCard(cardEl, race);
-  });
-
-  const activeInCard = document.activeElement && document.activeElement.closest && document.activeElement.closest('.race-card');
-  if(!activeInCard){
-    races.forEach(race => {
-      const el = document.getElementById('race-'+race.id);
-      if(el) container.appendChild(el);
-    });
-  }
+  renderRunning(running);
+  renderUpcoming(pending);
+  renderFinished(finished);
 }
 
-function renderRaceCard(cardEl, race){
-  cardEl.className = 'race-card ' + race.status;
+// ── Running races ─────────────────────────────────────────────────
+function renderRunning(races){
+  const el = document.getElementById('runningSection');
+  if(!races.length){ el.innerHTML = ''; return; }
+  el.innerHTML = races.map(r => runningCardHtml(r)).join('');
+  races.forEach(r => startTick(r));
+}
 
-  if(race.status === 'pending'){
-    cardEl.innerHTML = `<div class="rlabel">${raceLabel(race)}</div>
-      <p style="text-align:center;color:var(--gray)">Waiting for the starter's "go" call.</p>
-      <button class="primary big" onclick="startRace('${race.id}')">Start Clock</button>`;
-    return;
-  }
+function runningCardHtml(race){
+  if(race.isMassStart) return massCardHtml(race);
 
-  if(race.isMassStart){ renderMassCard(cardEl, race); return; }
+  const realLanes = Object.entries(race.laneEntries||{}).filter(([,i])=>i);
 
-  const wasCaptureFocused = document.activeElement === cardEl.querySelector('.capture-btn');
-  const realLanes = Object.entries(race.laneEntries).filter(([,info]) => info);
+  // Lane options for crossing assignment
+  const laneOpts = realLanes.map(([l,i])=>`<option value="${l}">L${l} — ${i.names[0]}</option>`).join('');
 
-  const crossingRows = race.blindCrossings.map(c => {
+  const crossings = race.blindCrossings.map(c => {
     if(c.assignedLane != null){
       const info = race.laneEntries[c.assignedLane];
-      return `<tr>
-        <td class="mono">${c.position}</td>
-        <td class="mono">${fmtTime(c.timeMs)}</td>
-        <td>Lane ${c.assignedLane} — ${info ? info.names.join(' / ') : '?'}</td>
-      </tr>`;
+      return `<div class="crossing-row">
+        <span class="pos">${c.position}</span>
+        <span class="t">${fmtTime(c.timeMs)}</span>
+        <span class="crossing-assigned">✓ Lane ${c.assignedLane} — ${info?info.names[0]:'?'}</span>
+      </div>`;
     }
-    return `<tr>
-      <td class="mono">${c.position}</td>
-      <td class="mono">${fmtTime(c.timeMs)}</td>
-      <td>
-        <input type="number" placeholder="Lane #" class="crossing-input" style="width:70px"
-          onkeydown="if(event.key==='Enter'){ assignCrossing('${race.id}', ${c.position}, this.value); }"
-          onblur="if(this.value){ assignCrossing('${race.id}', ${c.position}, this.value); }">
-        <button style="font-size:12px;padding:6px 10px" onclick="assignCrossing('${race.id}', ${c.position}, this.previousElementSibling.value)">Assign</button>
-      </td>
-    </tr>`;
-  }).join('');
-
-  const laneStatusRows = realLanes.map(([lane, info]) => {
-    const r = race.results[info.entryId];
-    let statusHtml;
-    if(!r) statusHtml = '<span style="color:var(--gray)">no result yet</span>';
-    else if(r.status === 'OK') statusHtml = `<span class="mono">${fmtTime(r.finishTimeMs)}</span>${r.position?` <small style="color:var(--gray)">(pos ${r.position})</small>`:''}`;
-    else statusHtml = `<b style="color:#C93B3B">${r.status}</b>${r.dqReason?` <small style="color:var(--gray)">— ${r.dqReason}</small>`:''}`;
-    return `<tr>
-      <td class="mono">${lane}</td>
-      <td>${info.names.join(' / ')}</td>
-      <td>${statusHtml}</td>
-      <td style="white-space:nowrap">
-        <button style="font-size:11px;padding:4px 7px" onclick="markLane('${race.id}','${info.entryId}','DNS')">DNS</button>
-        <button style="font-size:11px;padding:4px 7px" onclick="markLane('${race.id}','${info.entryId}','DNF')">DNF</button>
-        <button style="font-size:11px;padding:4px 7px" onclick="markDQ('${race.id}','${info.entryId}')">DQ</button>
-        ${r ? `<button style="font-size:11px;padding:4px 7px" onclick="clearResult('${race.id}','${info.entryId}')">Clear</button>` : ''}
-      </td>
-    </tr>`;
-  }).join('');
-
-  cardEl.innerHTML = `<div class="rlabel">${raceLabel(race)}</div>
-    <div class="clock mono" id="clock-${race.id}">00:00.00</div>
-    <button class="capture-btn primary big" style="font-size:22px;padding:22px" onclick="captureCrossing('${race.id}')">TAP or press ENTER/SPACE — a boat just crossed</button>
-    <div style="display:flex;justify-content:space-between;align-items:center;margin:10px 0">
-      <span style="color:var(--gray);font-size:13px">${race.blindCrossings.length} crossing(s) captured</span>
-      <button style="font-size:12px" onclick="undoCrossing('${race.id}')">Undo last crossing</button>
-    </div>
-    <button class="red" style="width:100%;margin-bottom:10px" onclick="finishRace('${race.id}')">Race fully complete — lock results</button>
-    ${race.blindCrossings.length ? `<table><tr><th>#</th><th>Time</th><th>Lane</th></tr>${crossingRows}</table>` : ''}
-    <div style="margin-top:10px;font-size:13px">
-      <div style="color:var(--gray);margin-bottom:4px">Every lane — mark DNS/DNF/DQ here any time before locking, even if it already has a time:</div>
-      <table><tr><th>Lane</th><th>Paddler</th><th>Result</th><th></th></tr>${laneStatusRows}</table>
+    return `<div class="crossing-row">
+      <span class="pos">${c.position}</span>
+      <span class="t">${fmtTime(c.timeMs)}</span>
+      <select onchange="assignCrossing('${race.id}',${c.position},this.value)">
+        <option value="">Assign lane…</option>
+        ${laneOpts}
+      </select>
     </div>`;
+  }).join('');
 
-  const btn = cardEl.querySelector('.capture-btn');
-  if(btn && wasCaptureFocused) btn.focus();
-
-  startTick(race);
-}
-
-function renderMassCard(cardEl, race){
-  // The card gets rebuilt (innerHTML replaced) on every refresh — including
-  // the one submitBib triggers right after logging a pass, and the plain
-  // 1500ms poll. Either one throws away the OLD bib-input DOM node and
-  // creates a fresh one, so if we don't explicitly refocus the NEW input
-  // afterward, the timekeeper loses their cursor after every single
-  // number and has to click back into the box before the next one — the
-  // exact friction this is fixing. (The outer guard in refresh() already
-  // protects a box that's mid-typing with something in it; this covers
-  // the moment right after submit, when it's back to empty.)
-  const wasFocused = document.activeElement === cardEl.querySelector('.bib-input');
-  const bibs = Object.entries(race.laneEntries).sort((a,b)=>Number(a[0])-Number(b[0]));
-  const rows = bibs.filter(([,info]) => info).map(([bib, info]) => {
-    const laps = info.laps || [];
-    const done = laps.length >= race.totalLaps;
-    const lastLap = laps.length ? fmtTime(laps[laps.length-1].timeMs) : '—';
+  const laneRows = realLanes.map(([lane,info]) => {
     const r = race.results[info.entryId];
-    const statusHtml = !r ? '' : r.status === 'OK'
-      ? `<span style="color:var(--green)">OK</span>`
-      : `<b style="color:#C93B3B">${r.status}</b>${r.dqReason?` <small style="color:var(--gray)">— ${r.dqReason}</small>`:''}`;
-    return `<tr class="${done?'mass-done':''}">
-      <td class="mono">${bib}</td>
-      <td>${info.names.join(' / ')}</td>
-      <td class="mono">${laps.length}/${race.totalLaps}${done?' ✓':''}</td>
-      <td class="mono">${lastLap}</td>
-      <td>${statusHtml}</td>
+    let res = '<span style="color:var(--gray)">—</span>';
+    if(r && r.status==='OK') res = `<span class="result-ok">${fmtTime(r.finishTimeMs)}</span>`;
+    else if(r) res = `<span class="result-bad">${r.status}</span>`;
+    return `<tr>
+      <td>L${lane}</td>
+      <td style="font-family:Arial;font-size:12px">${info.names.join(' / ')}<br><small style="color:var(--gray)">${[info.clubCode,info.ageCategory].filter(Boolean).join(' · ')}</small></td>
+      <td>${res}</td>
       <td style="white-space:nowrap">
-        ${laps.length ? `<button class="red" style="font-size:11px;padding:4px 7px" onclick="undoLap('${race.id}','${bib}')">Undo lap</button>` : ''}
-        <button style="font-size:11px;padding:4px 7px" onclick="markLane('${race.id}','${info.entryId}','DNS')">DNS</button>
-        <button style="font-size:11px;padding:4px 7px" onclick="markLane('${race.id}','${info.entryId}','DNF')">DNF</button>
-        <button style="font-size:11px;padding:4px 7px" onclick="markDQ('${race.id}','${info.entryId}')">DQ</button>
-        ${r ? `<button style="font-size:11px;padding:4px 7px" onclick="clearResult('${race.id}','${info.entryId}')">Clear</button>` : ''}
+        <button style="font-size:11px;padding:3px 6px" onclick="markLane('${race.id}','${info.entryId}','DNS')">DNS</button>
+        <button style="font-size:11px;padding:3px 6px" onclick="markLane('${race.id}','${info.entryId}','DNF')">DNF</button>
+        <button style="font-size:11px;padding:3px 6px" onclick="markDQ('${race.id}','${info.entryId}')">DQ</button>
+        ${r?`<button style="font-size:11px;padding:3px 6px" onclick="clearResult('${race.id}','${info.entryId}')">✕</button>`:''}
       </td>
     </tr>`;
   }).join('');
 
-  cardEl.innerHTML = `<div class="rlabel">${raceLabel(race)} — ${race.totalLaps} laps</div>
-    <div class="clock mono" id="clock-${race.id}">00:00.00</div>
-    <form class="bib-row" onsubmit="return submitBib(event,'${race.id}')">
-      <input type="number" class="bib-input" placeholder="Slide number" autocomplete="off">
-      <button class="primary" type="submit">Log pass</button>
-    </form>
-    <button class="red" style="width:100%;margin-bottom:10px" onclick="finishRace('${race.id}')">Race fully complete — lock results</button>
-    <table class="lapsheet">
-      <tr><th>Slide #</th><th>Paddler</th><th>Laps</th><th>Last pass</th><th>Result</th><th></th></tr>
-      ${rows || '<tr><td colspan="6" style="color:var(--gray)">No bibs in this race.</td></tr>'}
-    </table>`;
+  const allDone = realLanes.every(([,info]) => race.results[info.entryId]);
 
-  if(wasFocused){
-    const newInput = cardEl.querySelector('.bib-input');
-    if(newInput) newInput.focus();
-  }
-
-  startTick(race);
+  return `<div class="now-card" id="race-${race.id}">
+    <div class="badge">🔴 Now Racing</div>
+    <div class="race-title">${raceLabel(race)}</div>
+    <div class="race-sub">${raceSub(race)}</div>
+    <div class="big-clock running" id="clock-${race.id}">00:00.00</div>
+    <button class="tap-btn" onclick="captureCrossing('${race.id}')">TAP — BOAT CROSSED ⚡</button>
+    <div class="ctrl-row">
+      <button class="btn-start" disabled>▶ Started</button>
+      <button class="btn-stop" onclick="undoCrossing('${race.id}')">↩ Undo last</button>
+      <button class="btn-lock" ${allDone?'':'disabled'} onclick="finishRace('${race.id}')">🔒 Lock results</button>
+    </div>
+    ${crossings ? `<div class="crossings"><b style="font-size:12px;color:var(--gray)">CROSSINGS</b>${crossings}</div>` : ''}
+    <table class="lane-mini">
+      <tr><td colspan="4" style="font-size:11px;color:var(--gray);padding-bottom:4px">LANES</td></tr>
+      ${laneRows}
+    </table>
+  </div>`;
 }
 
+function massCardHtml(race){
+  const bibs = Object.entries(race.laneEntries||{}).sort((a,b)=>Number(a[0])-Number(b[0]));
+  const rows = bibs.filter(([,i])=>i).map(([bib,info]) => {
+    const laps = info.laps||[];
+    const done = laps.length >= race.totalLaps;
+    const r = race.results[info.entryId];
+    let res = '';
+    if(r && r.status==='OK') res = `<span class="result-ok">${fmtTime(r.finishTimeMs)}</span>`;
+    else if(r) res = `<span class="result-bad">${r.status}</span>`;
+    return `<tr class="${done?'done':''}">
+      <td class="mono">${bib}</td>
+      <td style="font-size:12px">${info.names[0]}<br><small style="color:var(--gray)">${info.clubCode||''}</small></td>
+      <td>${laps.length}/${race.totalLaps}${done?' ✓':''}</td>
+      <td class="mono">${laps.length?fmtTime(laps[laps.length-1].timeMs):'—'}</td>
+      <td>${res}</td>
+      <td style="white-space:nowrap">
+        ${laps.length?`<button style="font-size:11px;padding:3px 6px" onclick="undoLap('${race.id}','${bib}')">↩</button>`:''}
+        <button style="font-size:11px;padding:3px 6px" onclick="markLane('${race.id}','${info.entryId}','DNS')">DNS</button>
+        <button style="font-size:11px;padding:3px 6px" onclick="markLane('${race.id}','${info.entryId}','DNF')">DNF</button>
+        <button style="font-size:11px;padding:3px 6px" onclick="markDQ('${race.id}','${info.entryId}')">DQ</button>
+        ${r?`<button style="font-size:11px;padding:3px 6px" onclick="clearResult('${race.id}','${info.entryId}')">✕</button>`:''}
+      </td>
+    </tr>`;
+  }).join('');
+
+  const allDone = bibs.filter(([,i])=>i).every(([,info]) => race.results[info.entryId]);
+
+  return `<div class="now-card" id="race-${race.id}">
+    <div class="badge">🔴 Now Racing — Mass Start</div>
+    <div class="race-title">${raceLabel(race)}</div>
+    <div class="race-sub">${raceSub(race)}</div>
+    <div class="big-clock running" id="clock-${race.id}">00:00.00</div>
+    <form class="bib-form" onsubmit="return submitBib(event,'${race.id}')">
+      <input type="number" class="bib-input" placeholder="Slide #" autocomplete="off">
+      <button class="primary" type="submit" style="white-space:nowrap">Log pass</button>
+    </form>
+    <div class="ctrl-row">
+      <button class="btn-start" disabled>▶ Started</button>
+      <button class="btn-stop" onclick="undoLap('${race.id}', null)">↩ Undo last</button>
+      <button class="btn-lock" ${allDone?'':'disabled'} onclick="finishRace('${race.id}')">🔒 Lock results</button>
+    </div>
+    <table class="lapsheet">
+      <tr><th>Slide</th><th>Paddler</th><th>Laps</th><th>Last</th><th>Result</th><th></th></tr>
+      ${rows||'<tr><td colspan="6" style="color:var(--gray)">No entries.</td></tr>'}
+    </table>
+  </div>`;
+}
+
+// ── Upcoming races ────────────────────────────────────────────────
+function renderUpcoming(races){
+  const el = document.getElementById('upcomingSection');
+  if(!races.length){ el.innerHTML = ''; return; }
+  el.innerHTML = `<h2>UP NEXT</h2>` + races.map(r => `
+    <div class="upcoming-card">
+      <div>
+        <div class="u-title">${raceLabel(r)}</div>
+        <div class="u-sub">${lanesPreview(r)}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        ${r.scheduledLabel ? `<span class="u-time">${r.scheduledLabel}</span>` : ''}
+        <button class="btn-start" style="padding:10px 18px;border-radius:8px;border:none;cursor:pointer;font-weight:700;font-size:14px" onclick="startRace('${r.id}')">▶ Start</button>
+      </div>
+    </div>`).join('');
+}
+
+function lanesPreview(r){
+  const lanes = Object.entries(r.laneEntries||{}).filter(([,i])=>i).slice(0,4);
+  return lanes.map(([l,i])=>`L${l}: ${i.names[0]}`).join(' · ') + (Object.keys(r.laneEntries||{}).length > 4 ? ' …' : '');
+}
+
+// ── Finished races ────────────────────────────────────────────────
+function renderFinished(races){
+  const el = document.getElementById('finishedSection');
+  if(!races.length){ el.innerHTML = ''; return; }
+  el.innerHTML = `<h2>FINISHED</h2>` + races.map(r => `
+    <div class="finished-card">
+      <div class="f-title">${raceLabel(r)}</div>
+      <span class="finished-pill">✓ Done</span>
+    </div>`).join('');
+}
+
+// ── Tick ──────────────────────────────────────────────────────────
 function startTick(race){
   if(tickHandles[race.id]) cancelAnimationFrame(tickHandles[race.id]);
   const tick = () => {
@@ -288,92 +354,77 @@ function startTick(race){
   tick();
 }
 
+// ── Actions ───────────────────────────────────────────────────────
 async function startRace(id){
-  try {
-    const res = await fetch(`/api/races/${id}/start`, { method:'POST' });
-    if(!res.ok){ const d = await res.json(); alert(d.error); return; }
-    await refresh();
-  } catch (err) { console.error(err); alert(`Couldn't start the race: ${err.message}`); }
+  const res = await fetch(`/api/races/${id}/start`, {method:'POST'});
+  if(!res.ok){ const d=await res.json(); alert(d.error); return; }
+  await refresh();
+  // Focus the tap button on the newly started race
+  const btn = document.querySelector(`#race-${id} .tap-btn`);
+  if(btn) btn.focus();
 }
 
 async function captureCrossing(raceId){
-  try {
-    const res = await fetch(`/api/races/${raceId}/capture-crossing`, { method:'POST' });
-    const data = await res.json();
-    if(!res.ok){ alert(data.error); return; }
-    await refresh();
-    const cardEl = document.getElementById('race-'+raceId);
-    const btn = cardEl && cardEl.querySelector('.capture-btn');
-    if(btn) btn.focus();
-  } catch (err) { console.error(err); alert(`Couldn't capture that: ${err.message}`); }
+  const res = await fetch(`/api/races/${raceId}/capture-crossing`, {method:'POST'});
+  const data = await res.json();
+  if(!res.ok){ alert(data.error); return; }
+  await refresh();
+  const btn = document.querySelector(`#race-${raceId} .tap-btn`);
+  if(btn) btn.focus();
 }
 
 async function undoCrossing(raceId){
-  try {
-    const res = await fetch(`/api/races/${raceId}/undo-crossing`, { method:'POST' });
-    if(!res.ok){ const d = await res.json(); alert(d.error); return; }
-    await refresh();
-  } catch (err) { console.error(err); alert(`Couldn't undo: ${err.message}`); }
+  const res = await fetch(`/api/races/${raceId}/undo-crossing`, {method:'POST'});
+  if(!res.ok){ const d=await res.json(); alert(d.error); return; }
+  await refresh();
 }
 
 async function assignCrossing(raceId, position, laneValue){
   const lane = Number(laneValue);
-  if(!lane){ return; }
-  try {
-    const res = await fetch(`/api/races/${raceId}/assign-crossing`, {
-      method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({position, lane})
-    });
-    const data = await res.json();
-    if(!res.ok){ alert(data.error); return; }
-    await refresh();
-    // Jump focus to the next still-unassigned crossing, if any — keeps
-    // "type, Enter, type, Enter" flowing without reaching for the mouse.
-    const cardEl = document.getElementById('race-'+raceId);
-    const nextInput = cardEl && cardEl.querySelector('.crossing-input');
-    if(nextInput) nextInput.focus();
-  } catch (err) { console.error(err); alert(`Couldn't assign that: ${err.message}`); }
+  if(!lane) return;
+  const res = await fetch(`/api/races/${raceId}/assign-crossing`, {
+    method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({position,lane})
+  });
+  const data = await res.json();
+  if(!res.ok){ alert(data.error); return; }
+  await refresh();
+  const next = document.querySelector(`#race-${raceId} .crossings select`);
+  if(next) next.focus();
 }
 
 async function markLane(raceId, entryId, status, dqReason){
-  try {
-    const res = await fetch(`/api/races/${raceId}/mark/${entryId}`, {
-      method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({status, dqReason})
-    });
-    if(!res.ok){ const d = await res.json(); alert(d.error); return; }
-    await refresh();
-  } catch (err) { console.error(err); alert(`Couldn't mark that: ${err.message}`); }
+  const res = await fetch(`/api/races/${raceId}/mark/${entryId}`, {
+    method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({status,dqReason})
+  });
+  if(!res.ok){ const d=await res.json(); alert(d.error); return; }
+  await refresh();
 }
 async function markDQ(raceId, entryId){
-  const reason = prompt('Reason for disqualification (optional):') || null;
+  const reason = prompt('DQ reason (optional):') || null;
   await markLane(raceId, entryId, 'DQ', reason);
 }
 async function clearResult(raceId, entryId){
-  try {
-    const res = await fetch(`/api/races/${raceId}/undo/${entryId}`, { method:'POST' });
-    if(!res.ok){ const d = await res.json(); alert(d.error); return; }
-    await refresh();
-  } catch (err) { console.error(err); alert(`Couldn't clear that: ${err.message}`); }
+  const res = await fetch(`/api/races/${raceId}/undo/${entryId}`, {method:'POST'});
+  if(!res.ok){ const d=await res.json(); alert(d.error); return; }
+  await refresh();
 }
 
 async function finishRace(raceId){
   const race = racesById[raceId];
   if(race){
-    const realLanes = Object.entries(race.laneEntries || {}).filter(([,info]) => info);
-    const unresolved = realLanes.filter(([,info]) => !race.results[info.entryId]);
-    if(unresolved.length > 0){
-      const noun = race.isMassStart ? 'Slide' : 'Lane';
-      const list = unresolved.map(([lane,info]) => `${noun} ${lane} (${info.names.join(' / ')})`).join(', ');
-      alert(`Can't close this race yet — ${unresolved.length} ${noun.toLowerCase()}(s) still have no result: ${list}.\n\n${race.isMassStart ? 'Mark them DNS/DNF below' : 'Assign their crossing above, or mark them DNS/DNF'}, then try again.`);
+    const realLanes = Object.entries(race.laneEntries||{}).filter(([,i])=>i);
+    const unresolved = realLanes.filter(([,info])=>!race.results[info.entryId]);
+    if(unresolved.length){
+      const noun = race.isMassStart?'Slide':'Lane';
+      alert(`${unresolved.length} ${noun}(s) still have no result — mark them DNS/DNF first.`);
       return;
     }
   }
-  const ok = await customConfirm('Lock this race\'s results? It\'ll move to weighing next.');
+  const ok = await customConfirm('Lock results for this race?');
   if(!ok) return;
-  try {
-    const res = await fetch(`/api/races/${raceId}/finish-race`, { method:'POST' });
-    if(!res.ok){ const d = await res.json(); alert(d.error); return; }
-    await refresh();
-  } catch (err) { console.error(err); alert(`Couldn't end the race: ${err.message}. Try again — the clock is still running.`); }
+  const res = await fetch(`/api/races/${raceId}/finish-race`, {method:'POST'});
+  if(!res.ok){ const d=await res.json(); alert(d.error); return; }
+  await refresh();
 }
 
 async function submitBib(evt, raceId){
@@ -383,42 +434,48 @@ async function submitBib(evt, raceId){
   const bib = input.value;
   if(!bib) return false;
   input.value = '';
-  try {
-    const res = await fetch(`/api/races/${raceId}/lap-pass`, {
-      method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({bib})
-    });
-    const data = await res.json();
-    if(!res.ok){ alert(data.error); }
-    // refresh() rebuilds this card (replacing `input` with a fresh DOM
-    // node), so focusing the OLD `input` reference after this point would
-    // silently do nothing — renderMassCard's own wasFocused check handles
-    // refocusing the new one instead, as long as this box still has focus
-    // going into that rebuild.
-    await refresh();
-  } catch (err) { console.error(err); alert(`Couldn't log that pass: ${err.message}`); }
+  const res = await fetch(`/api/races/${raceId}/lap-pass`, {
+    method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({bib})
+  });
+  const data = await res.json();
+  if(!res.ok){ alert(data.error); }
+  await refresh();
   return false;
 }
 
 async function undoLap(raceId, bib){
-  try {
-    const res = await fetch(`/api/races/${raceId}/undo-lap/${bib}`, { method:'POST' });
-    if(!res.ok){ const d = await res.json(); alert(d.error); return; }
-    await refresh();
-  } catch (err) { console.error(err); alert(`Couldn't undo: ${err.message}`); }
+  if(!bib){
+    // Undo the most recent lap pass across all bibs
+    const race = racesById[raceId];
+    if(!race) return;
+    const allLaps = [];
+    Object.entries(race.laneEntries||{}).forEach(([b,info]) => {
+      if(info && info.laps) info.laps.forEach(l => allLaps.push({bib:b, timeMs:l.timeMs}));
+    });
+    if(!allLaps.length) return;
+    allLaps.sort((a,b)=>b.timeMs-a.timeMs);
+    bib = allLaps[0].bib;
+  }
+  const res = await fetch(`/api/races/${raceId}/undo-lap/${bib}`, {method:'POST'});
+  if(!res.ok){ const d=await res.json(); alert(d.error); return; }
+  await refresh();
 }
 
-function setPhaseFilter(phase){
-  phaseFilter = phase;
-  document.querySelectorAll('.phase-btn').forEach(b => b.classList.toggle('active', b.dataset.phase === phase));
-  raceHashes = {}; // force a clean re-render under the new filter
-  refresh();
-}
+// Keyboard shortcut: Enter/Space triggers TAP on the running race
+document.addEventListener('keydown', e => {
+  if(e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') return;
+  if(e.key === ' ' || e.key === 'Enter'){
+    e.preventDefault();
+    const btn = document.querySelector('.tap-btn');
+    if(btn) btn.click();
+  }
+});
 
 async function init(){
   await initMeetBar('meetBar', {allowCreate:false});
-  if(!getMeetId()){ document.getElementById('meetWarning').style.display = 'block'; return; }
-  selectedDay = await initDayBar('dayBar');
-  document.querySelector('.phase-btn[data-phase="all"]').classList.add('active');
+  if(!getMeetId()){ document.getElementById('meetWarning').style.display='block'; return; }
+  // Set selectedDay to 1 initially
+  selectedDay = 1;
   await refresh();
   setInterval(refresh, 1500);
 }
