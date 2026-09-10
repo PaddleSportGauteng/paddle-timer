@@ -233,7 +233,6 @@ function setPrintHeader(){
   const dateStr = d.toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
   const el = document.getElementById('printHeader');
   if(el) el.innerHTML = `<div style="display:flex;align-items:center;gap:14px;border-bottom:3px solid #0B2540;padding-bottom:10px;margin-bottom:16px">
-    <img src="/psg-logo.jpg" alt="" style="height:48px">
     <div>
       <div style="font-size:20px;font-weight:700;color:#0B2540">PaddleSport Gauteng — Results</div>
       <div style="font-size:13px;color:#555">${meetName}${meetName?' · ':''}Printed ${dateStr}</div>
