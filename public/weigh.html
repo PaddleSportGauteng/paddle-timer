@@ -125,7 +125,7 @@ function render(){
     return `<div class="wcard ${race.status}">
       <div class="wlabel">R${race.raceNumber} — ${race.event ? race.event.label : ''} — ${phaseLabel(race)}${race.isMassStart?` (mass start)`:''}</div>
       <div class="table-scroll"><table class="review-table">
-        <tr><th>LANE</th><th>NAME</th><th>AGE</th><th>CLUB</th><th>M/F</th><th>UNION</th><th>PSA</th><th style="text-align:right;width:180px">WEIGHT</th></tr>
+        <tr><th>LANE</th><th>NAME</th><th>AGE</th><th>CLUB</th><th>M/F</th><th>UNION</th><th>PSA #</th><th style="text-align:right;width:180px">WEIGHT</th></tr>
         ${rows}
       </table></div>
     </div>`;

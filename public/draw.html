@@ -173,7 +173,7 @@ async function toggleDrawView(eventId){
       return `<div style="margin-bottom:10px;padding:10px;background:var(--paper);border-radius:6px">
         <div style="font-weight:700;font-size:13px;margin-bottom:6px">R${r.raceNumber} — ${phaseLabel}${r.placeholder ? ' <span class="pill warn">TBC — pending qualifiers</span>' : ''}${r.scheduledLabel ? ` — ${r.scheduledLabel}` : ''}</div>
         <div class="table-scroll"><table class="review-table" style="margin-top:0">
-          <tr><th>${r.isMassStart?'SLIDE':'LANE'}</th><th>NAME</th><th>AGE</th><th>CLUB</th><th>M/F</th><th>UNION</th><th>PSA</th></tr>
+          <tr><th>${r.isMassStart?'SLIDE':'LANE'}</th><th>NAME</th><th>AGE</th><th>CLUB</th><th>M/F</th><th>UNION</th><th>PSA #</th></tr>
           ${rows}
         </table></div>
       </div>`;

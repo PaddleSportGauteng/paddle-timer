@@ -281,12 +281,12 @@ function laneCardHtml(race){
     <div style="margin-top:14px">
       <div style="font-size:11px;font-weight:700;letter-spacing:0.06em;color:var(--gray);margin-bottom:6px">✓ ALL ASSIGNED — REVIEW THEN LOCK</div>
       <div class="table-scroll"><table class="review-table">
-        <tr><th></th><th>LANE</th><th>NAME</th><th>AGE</th><th>CLUB</th><th>M/F</th><th>UNION</th><th>PSA</th><th>TIME</th><th></th></tr>
+        <tr><th></th><th>LANE</th><th>NAME</th><th>AGE</th><th>CLUB</th><th>M/F</th><th>UNION</th><th>PSA #</th><th>TIME</th><th></th></tr>
         ${reviewRows}
       </table></div>
     </div>`:`
     <div class="table-scroll"><table class="review-table" style="margin-top:10px">
-      <tr><th></th><th>LANE</th><th>NAME</th><th>AGE</th><th>CLUB</th><th>M/F</th><th>UNION</th><th>PSA</th><th>TIME</th><th></th></tr>
+      <tr><th></th><th>LANE</th><th>NAME</th><th>AGE</th><th>CLUB</th><th>M/F</th><th>UNION</th><th>PSA #</th><th>TIME</th><th></th></tr>
       ${reviewRows}
     </table></div>`}
   </div>`;
@@ -343,7 +343,7 @@ function massCardHtml(race){
       <button class="btn-lock" ${allDone?'':'disabled'} onclick="lockRace('${race.id}')">🔒 Lock</button>
     </div>
     <div class="table-scroll"><table class="lap-table">
-      <tr><th>SLIDE</th><th>NAME</th><th>AGE</th><th>CLUB</th><th>M/F</th><th>UNION</th><th>PSA</th><th>LAPS</th><th>LAST</th><th>RESULT</th><th></th></tr>
+      <tr><th>SLIDE</th><th>NAME</th><th>AGE</th><th>CLUB</th><th>M/F</th><th>UNION</th><th>PSA #</th><th>LAPS</th><th>LAST</th><th>RESULT</th><th></th></tr>
       ${rows||'<tr><td colspan="11" style="color:var(--gray)">No entries.</td></tr>'}
     </table></div>
   </div>`;
