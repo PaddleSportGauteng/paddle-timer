@@ -66,10 +66,10 @@ function enrichRace(database, race) {
   let weighInStatus = null;
   if (race.status === 'finished') {
     const allEntryIds = Object.values(race.lanes || {}).filter(Boolean);
-    // Use per-race weigh-ins if available, fall back to global
+    const hasPerRace = database.raceWeighIns && allEntryIds.some(id => database.raceWeighIns[`${race.id}:${id}`]);
     const weighedInThisRace = allEntryIds.filter(entryId => {
-      if (database.raceWeighIns && database.raceWeighIns[`${race.id}:${entryId}`]) return true;
-      return false;
+      if (hasPerRace) return !!(database.raceWeighIns && database.raceWeighIns[`${race.id}:${entryId}`]);
+      return !!(database.weighIns && database.weighIns[entryId]);
     });
     const required = Math.min(3, allEntryIds.length);
     const weighedCount = weighedInThisRace.length;
@@ -78,7 +78,7 @@ function enrichRace(database, race) {
       complete,
       requiredCount: required,
       weighedCount,
-      flag: complete ? null : `${weighedCount} of ${required} required weigh-ins done — ${required - weighedCount} more needed before results are official.`,
+      flag: complete ? null : `${weighedCount} of ${required} weigh-ins done.`,
     };
   }
 

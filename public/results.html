@@ -115,9 +115,7 @@ function render(){
     // Weigh-ins pending only ever means the podium (positions 1-3) —
     // anything beyond that is the office's own choice, never required,
     // so this never lingers on "pending" once the podium's actually done.
-    const weighFlag = !b.resultsConfirmed && b.weighInStatus && !b.weighInStatus.complete
-      ? `<div class="flag">${b.weighInStatus.flag}</div>` : '';
-    const confirmedPill = b.isFinal ? `<span class="pill ${b.resultsConfirmed?'ok':'warn'}">${b.resultsConfirmed?'Official':'Provisional'}</span>` : '';
+    const confirmedPill = b.isFinal ? `<span class="pill ${b.resultsConfirmed?'ok':'warn'}">${b.resultsConfirmed?'Official':'Provisional — awaiting weigh-in'}</span>` : '';
     const noResultsMsg = b.noResultsRecorded ? `<div class="flag" style="background:#FBE7E7;border-color:#EBAFAF;color:#C93B3B">This race was locked with no results recorded at all — likely ended before lane/crossing assignment finished. Go to Race Program and click <b>"Reopen race"</b> on R${b.raceNumber}, finish assigning, then lock it again.</div>` : '';
 
     return `<div class="rcard ${b.isFinal?'final':'heat-semi'}">
@@ -125,7 +123,6 @@ function render(){
       ${b.combinedWith ? `<div class="rsub">Combined start with: ${b.combinedWith} — results split back to this category per PSA 1.2.1/1.2.2</div>` : ''}
       ${noResultsMsg}
       ${flagMsg}
-      ${weighFlag}
       <div class="table-scroll"><table class="review-table">
         <tr><th>POS</th><th>NAME</th><th>AGE</th><th>CLUB</th><th>M/F</th><th>UNION</th><th>PSA #</th><th>TIME</th><th>WEIGH</th></tr>
         ${rankedRows}

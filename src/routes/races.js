@@ -726,13 +726,14 @@ router.post('/entries/:entryId/weigh', (req, res) => {
     });
   }
 
-  // Auto-confirm when 3 per-race weigh-ins done
+  // Auto-confirm when 3 weigh-ins done for the race (per-race or global fallback)
   Object.values(database.races).forEach(race => {
     if (race.status !== 'finished' || race.resultsConfirmed) return;
     const allEntryIds = Object.values(race.lanes || {}).filter(Boolean);
+    const hasPerRace = database.raceWeighIns && allEntryIds.some(id => database.raceWeighIns[`${race.id}:${id}`]);
     const weighedCount = allEntryIds.filter(id => {
-      if (!database.raceWeighIns) return false;
-      return !!database.raceWeighIns[`${race.id}:${id}`];
+      if (hasPerRace) return !!(database.raceWeighIns && database.raceWeighIns[`${race.id}:${id}`]);
+      return !!(database.weighIns && database.weighIns[id]);
     }).length;
     const required = Math.min(3, allEntryIds.length);
     if (weighedCount >= required) race.resultsConfirmed = true;
