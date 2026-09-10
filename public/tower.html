@@ -127,7 +127,13 @@ function buildDayTabs(races){
 function switchDay(d){ selectedDay=d; refresh(); }
 
 // ── Main refresh ──────────────────────────────────────────────────
-async function refresh(){
+async function refresh(force){
+  // Don't re-render while the user is typing a lane number — the periodic
+  // poll would destroy the input element and wipe what they've typed.
+  if(!force){
+    const active = document.activeElement;
+    if(active && active.classList && active.classList.contains('lane-input')) return;
+  }
   const meetId=getMeetId(); if(!meetId)return;
   let races;
   try{ races=await(await fetch(`/api/races/active?meetId=${encodeURIComponent(meetId)}`)).json(); }
@@ -378,17 +384,16 @@ async function assignCrossing(raceId,position,laneVal){
   });
   const data=await res.json();
   if(!res.ok){alert(data.error);return;}
-  // Update local state directly without full refresh to avoid jump
   racesById[raceId]=data;
   const scrollY=window.scrollY;
   renderRunning([data]);
   startTick(data);
   window.scrollTo(0,scrollY);
-  // Focus next unassigned input
+  // Focus the next unassigned input so you can keep typing
   setTimeout(()=>{
     const next=document.querySelector(`#race-${raceId} .lane-input`);
     if(next) next.focus();
-  },50);
+  },30);
 }
 async function clearCrossing(raceId,position){
   const res=await fetch(`/api/races/${raceId}/delete-crossing`,{
