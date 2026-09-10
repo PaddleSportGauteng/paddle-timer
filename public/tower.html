@@ -109,7 +109,10 @@ function phaseLabel(r){
   const m={heat:`Heat ${r.heatNumber}`,semi:`Semi ${r.heatNumber}`,final:'Final A',finalB:'Final B',finalC:'Final C'};
   return m[r.phase]||r.phase;
 }
-function raceLabel(r){ return `R${r.raceNumber} · ${r.combinedLabel||(r.event?r.event.label:'')} — ${phaseLabel(r)}`; }
+function raceLabel(r){
+  const lbl = r.combinedLabel || (r.event && r.event.label) || '';
+  return `R${r.raceNumber} · ${lbl} — ${phaseLabel(r)}`;
+}
 function raceSub(r){ const p=[]; if(r.scheduledLabel)p.push(r.scheduledLabel); if(r.isMassStart)p.push(`Mass start · ${r.totalLaps} laps`); return p.join(' · '); }
 function fmtTime(ms){
   if(ms==null||ms===undefined) return '—';
@@ -345,32 +348,20 @@ async function startRace(id){
   setTimeout(()=>{ const b=document.querySelector(`#race-${id} .tap-btn`); if(b)b.focus(); },100);
 }
 async function tap(raceId){
-  // Record the tap time INSTANTLY for display — don't wait for server
   const race = racesById[raceId];
   if(!race || !race.startTimeMs) return;
+  // Optimistic local update so the time shows instantly
   const timeMs = Date.now() - race.startTimeMs;
-  // Optimistically add to local state
   if(!race.blindCrossings) race.blindCrossings = [];
-  const pos = race.blindCrossings.length + 1;
-  race.blindCrossings.push({position: pos, timeMs, assignedLane: null});
-  // Re-render immediately with the new crossing
+  race.blindCrossings.push({position: race.blindCrossings.length + 1, timeMs, assignedLane: null});
   renderRunning([race]);
   startTick(race);
-  // Focus the new input
-  const inp = document.getElementById(`inp-${raceId}-${pos}`);
-  if(inp) inp.focus();
-  // Sync to server in background
-  fetch(`/api/races/${raceId}/capture-crossing`, {method:'POST'})
-    .then(r => r.json())
-    .then(data => {
-      // Correct the time with server's authoritative value
-      if(data.blindCrossings) {
-        racesById[raceId] = data;
-        renderRunning([data]);
-        startTick(data);
-      }
-    })
-    .catch(()=>{});
+  // Sync to server, then do a full refresh to get authoritative data
+  try {
+    const res = await fetch(`/api/races/${raceId}/capture-crossing`, {method:'POST'});
+    if(!res.ok){ const d = await res.json(); alert(d.error); }
+  } catch(e){}
+  await refresh(true);
 }
 async function undoTap(raceId){
   const res=await fetch(`/api/races/${raceId}/undo-crossing`,{method:'POST'});
@@ -384,11 +375,9 @@ async function assignCrossing(raceId,position,laneVal){
   });
   const data=await res.json();
   if(!res.ok){alert(data.error);return;}
-  racesById[raceId]=data;
-  const scrollY=window.scrollY;
-  renderRunning([data]);
-  startTick(data);
-  window.scrollTo(0,scrollY);
+  // Full refresh — the assign endpoint doesn't return the event field the
+  // renderer needs, so re-fetch the complete race list instead.
+  await refresh(true);
   // Focus the next unassigned input so you can keep typing
   setTimeout(()=>{
     const next=document.querySelector(`#race-${raceId} .lane-input`);
