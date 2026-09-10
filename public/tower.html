@@ -155,14 +155,12 @@ async function refresh(force){
   let races;
   try{ races=await(await fetch(`/api/races/active?meetId=${encodeURIComponent(meetId)}`)).json(); }
   catch(e){ return; }
-  const scrollY = window.scrollY;
   buildDayTabs(races);
   races.forEach(r=>{ racesById[r.id]=r; });
   const day=races.filter(r=>(r.day||1)===selectedDay);
   renderRunning(day.filter(r=>r.status==='running'));
   renderUpcoming(day.filter(r=>r.status==='pending'));
   renderFinished(day.filter(r=>r.status==='finished'));
-  window.scrollTo(0, scrollY);
 }
 
 // ── Tick ──────────────────────────────────────────────────────────
@@ -178,7 +176,19 @@ function startTick(race){
 }
 
 // ── Running races ─────────────────────────────────────────────────
+let lastRunningHash = '';
+let lastUpcomingHash = '';
+let lastFinishedHash = '';
+
 function renderRunning(races){
+  const hash = JSON.stringify(races.map(r => ({
+    id:r.id, status:r.status, stop:r.stopTimeMs,
+    cross:(r.blindCrossings||[]).map(c=>[c.position,c.assignedLane]),
+    res:Object.entries(r.results||{}).map(([k,v])=>[k,v.status,v.position]),
+    laps:Object.entries(r.laneEntries||{}).map(([l,i])=>i&&i.laps?i.laps.length:0)
+  })));
+  if(hash === lastRunningHash) return; // nothing changed — don't destroy the DOM
+  lastRunningHash = hash;
   const el=document.getElementById('runningSection');
   el.innerHTML=races.map(r=>r.isMassStart?massCardHtml(r):laneCardHtml(r)).join('');
   races.forEach(r=>startTick(r));
@@ -341,6 +351,9 @@ function massCardHtml(race){
 
 // ── Upcoming / Finished ───────────────────────────────────────────
 function renderUpcoming(races){
+  const hash = JSON.stringify(races.map(r=>[r.id,r.raceNumber,r.scheduledLabel]));
+  if(hash === lastUpcomingHash) return;
+  lastUpcomingHash = hash;
   const el=document.getElementById('upcomingSection');
   if(!races.length){el.innerHTML='';return;}
   el.innerHTML=`<div class="section-label">UP NEXT</div>`+races.map((r,i)=>`
@@ -362,6 +375,9 @@ function lanesPreview(r){
   return lanes.map(([l,i])=>`L${l}: ${i.names[0]}`).join(' · ')+(Object.values(r.laneEntries||{}).filter(Boolean).length>4?' …':'');
 }
 function renderFinished(races){
+  const hash = JSON.stringify(races.map(r=>r.id));
+  if(hash === lastFinishedHash) return;
+  lastFinishedHash = hash;
   const el=document.getElementById('finishedSection');
   if(!races.length){el.innerHTML='';return;}
   el.innerHTML=`<div class="section-label">FINISHED</div>`+races.map(r=>`
@@ -419,7 +435,7 @@ async function assignCrossing(raceId,position,laneVal){
   // Focus the next unassigned input so you can keep typing
   setTimeout(()=>{
     const next=document.querySelector(`#race-${raceId} .lane-input`);
-    if(next) next.focus();
+    if(next) next.focus({preventScroll:true});
   },30);
 }
 async function unassignCrossing(raceId,position){
@@ -431,7 +447,7 @@ async function unassignCrossing(raceId,position){
   // Focus the now-empty input so you can retype straight away
   setTimeout(()=>{
     const inp=document.querySelector(`#race-${raceId} .lane-input[data-pos="${position}"]`);
-    if(inp) inp.focus();
+    if(inp) inp.focus({preventScroll:true});
   },30);
 }
 
