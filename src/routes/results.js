@@ -81,12 +81,14 @@ function buildResultBlocks(database, meetId, dayFilter) {
     const weighInStatus = enrichRace(database, race).weighInStatus;
 
     if (race.isMassStart || !isCombined) {
-      const label = race.combinedLabel || (database.events[race.eventId] && database.events[race.eventId].label) || '';
+      const ev = database.events[race.eventId] || {};
+      const label = race.combinedLabel || ev.label || '';
       const ranked = buildRanked(database, results);
       const others = buildOthers(database, results);
       const hasBoats = Object.values(race.lanes).some(Boolean);
       blocks.push({
         raceId: race.id, raceNumber: race.raceNumber, day: race.day || 1, phase: race.phase, phaseLabel, isFinal,
+        distance: ev.distance || '', boatClass: ev.boatClass || '', ageCategory: ev.ageCategory || '', gender: ev.gender || '',
         label, ranked, others, resultsConfirmed: !!race.resultsConfirmed, weighInStatus,
         noResultsRecorded: hasBoats && ranked.length === 0 && others.length === 0,
         medalEligibility: isFinal ? rules.computeMedalEligibility(ranked.length) : null,
@@ -102,6 +104,7 @@ function buildResultBlocks(database, meetId, dayFilter) {
         if (!hasSeatedBoats) return; // nobody from this category was ever in this race
         blocks.push({
           raceId: race.id, raceNumber: race.raceNumber, day: race.day || 1, phase: race.phase, phaseLabel, isFinal, weighInStatus,
+          distance: memberEvent.distance || '', boatClass: memberEvent.boatClass || '', ageCategory: memberEvent.ageCategory || '', gender: memberEvent.gender || '',
           label: memberEvent.label, combinedWith: race.combinedLabel, ranked, others, resultsConfirmed: !!race.resultsConfirmed,
           noResultsRecorded: ranked.length === 0 && others.length === 0,
           medalEligibility: isFinal ? rules.computeMedalEligibility(ranked.length) : null,

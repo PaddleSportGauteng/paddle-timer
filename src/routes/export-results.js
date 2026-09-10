@@ -231,4 +231,125 @@ router.get('/results.pdf', (req, res) => {
   doc.end();
 });
 
+
+// ── Prize-giving sheet ────────────────────────────────────────────
+// Only medal winners from finals, grouped the way they're read out:
+// distance → boat class → age group → gender. Within each group:
+// Gold, Silver, Bronze. Honours PSA 9.4 minimums (a 4-boat race lists
+// gold only). Skips any category with no medals.
+
+const AGE_ORDER = ['Guppy','U8','U10','U12','U14','U16','U18','U21','U23','Senior','Open','SubVet','Sub-Vet','Vet','Master','Grand Master','Great Grand Master'];
+function ageRank(a){ const i = AGE_ORDER.findIndex(x => (a||'').toLowerCase().startsWith(x.toLowerCase())); return i === -1 ? 99 : i; }
+function distRank(d){ const n = parseInt(String(d||'').replace(/\D/g,''), 10); return isNaN(n) ? 99999 : n; }
+function genderRank(g){ const s=(g||'').toLowerCase(); return s.startsWith('f')?0 : s.startsWith('m')?1 : 2; }
+function genderLabel(g){ const s=(g||'').toLowerCase(); return s.startsWith('f')?'Female' : s.startsWith('m')?'Male' : (g||''); }
+
+function buildPrizeGroups(blocks) {
+  const groups = [];
+  blocks.filter(b => b.isFinal && b.medalEligibility).forEach(b => {
+    const winners = [];
+    b.ranked.forEach(r => {
+      const m = medalFor(b, r.place);
+      if (m) winners.push({ medal: m, ...r });
+    });
+    if (!winners.length) return;
+    // Dead heats: two golds means both listed as GOLD; drop silver if ICF/PSA
+    // position skipping means it doesn't exist.
+    groups.push({
+      title: `${b.distance} ${b.boatClass} ${b.ageCategory} ${genderLabel(b.gender)}`.replace(/\s+/g,' ').trim(),
+      distance: b.distance, boatClass: b.boatClass, ageCategory: b.ageCategory, gender: b.gender,
+      raceNumber: b.raceNumber, official: b.resultsConfirmed, winners,
+    });
+  });
+  groups.sort((a, b) =>
+    distRank(a.distance) - distRank(b.distance) ||
+    String(a.boatClass).localeCompare(String(b.boatClass)) ||
+    ageRank(a.ageCategory) - ageRank(b.ageCategory) ||
+    genderRank(a.gender) - genderRank(b.gender));
+  return groups;
+}
+
+router.get('/prizes.json', (req, res) => {
+  const { blocks } = loadBlocks(req);
+  res.json(buildPrizeGroups(blocks));
+});
+
+router.get('/prizes.xlsx', async (req, res) => {
+  const { meet, blocks, dayFilter } = loadBlocks(req);
+  const groups = buildPrizeGroups(blocks);
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet('Prize Giving');
+  ws.columns = [{ width: 9 }, { width: 30 }, { width: 9 }, { width: 8 }, { width: 8 }, { width: 11 }, { width: 11 }];
+  const arial = (extra) => ({ name: 'Arial', size: 10, ...extra });
+  let r = 1;
+  const put = (values, font, fill) => {
+    const row = ws.getRow(r++);
+    values.forEach((v, i) => { row.getCell(i + 1).value = v; });
+    row.eachCell((cell) => { cell.font = arial(font || {}); if (fill) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF' + fill } }; });
+    return row;
+  };
+  put([meet ? meet.name : 'Prize Giving'], { bold: true, size: 14, color: { argb: 'FF' + NAVY } });
+  put([`PaddleSport Gauteng — Prize Giving${dayFilter ? ` — Day ${dayFilter}` : ''}`], { color: { argb: 'FF' + GRAY } });
+  put([`Generated ${new Date().toLocaleString('en-GB')} — snapshot. Provisional results marked *.`], { italic: true, color: { argb: 'FF999999' } });
+  r++;
+  if (!groups.length) put(['No medals awarded yet.'], { color: { argb: 'FF' + GRAY } });
+  groups.forEach(g => {
+    put([g.title + (g.official ? '' : '  *PROVISIONAL')], { bold: true, size: 11, color: { argb: 'FF' + NAVY } });
+    const hdr = put(['MEDAL', 'NAME', 'CLUB', 'AGE', 'M/F', 'PSA #', 'TIME'], { bold: true, color: { argb: 'FFFFFFFF' } }, NAVY);
+    hdr.eachCell(c => { c.alignment = { horizontal: 'center' }; });
+    g.winners.forEach((w, i) => {
+      const row = put([w.medal, (w.names||[]).join(' / ').toUpperCase(), w.clubCode||'', w.ageCategory||'', gl(w.gender), (w.psaIds||[])[0]||'', fmtMs(w.timeMs)], {}, i % 2 ? 'F3F6FA' : null);
+      const col = w.medal==='GOLD' ? 'C9A227' : w.medal==='SILVER' ? '8A8A8A' : 'A0522D';
+      row.getCell(1).font = arial({ bold: true, color: { argb: 'FF' + col } });
+      row.getCell(2).font = arial({ bold: true });
+      [1,3,4,5,6,7].forEach(ci => { row.getCell(ci).alignment = { horizontal: 'center' }; });
+    });
+    r++;
+  });
+  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  res.setHeader('Content-Disposition', `attachment; filename="prize-giving${dayFilter ? '-day' + dayFilter : ''}.xlsx"`);
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+  await wb.xlsx.write(res);
+  res.end();
+});
+
+router.get('/prizes.pdf', (req, res) => {
+  const { meet, blocks, dayFilter } = loadBlocks(req);
+  const groups = buildPrizeGroups(blocks);
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', `attachment; filename="prize-giving${dayFilter ? '-day' + dayFilter : ''}.pdf"`);
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+  const doc = new PDFDocument({ margin: 40, size: 'A4' });
+  doc.pipe(res);
+  const left = doc.page.margins.left, right = doc.page.width - doc.page.margins.right, pageW = right - left;
+  doc.fontSize(18).font('Helvetica-Bold').fillColor('#' + NAVY).text(meet ? meet.name : 'Prize Giving', { align: 'center' });
+  doc.fontSize(11).font('Helvetica').fillColor('#' + GRAY).text(`PaddleSport Gauteng — Prize Giving${dayFilter ? ` — Day ${dayFilter}` : ''}`, { align: 'center' });
+  doc.fontSize(8.5).text(`Generated ${new Date().toLocaleString('en-GB')} — provisional results marked *`, { align: 'center' });
+  doc.moveDown(1);
+  if (!groups.length) { doc.fontSize(11).fillColor('#' + GRAY).text('No medals awarded yet.'); doc.end(); return; }
+  const medalColour = { GOLD: '#C9A227', SILVER: '#8A8A8A', BRONZE: '#A0522D' };
+  const rowH = 18;
+  groups.forEach(g => {
+    const need = 22 + g.winners.length * rowH + 10;
+    if (doc.y + need > doc.page.height - doc.page.margins.bottom) doc.addPage();
+    doc.rect(left, doc.y, pageW, 18).fill('#' + NAVY);
+    doc.fontSize(11).font('Helvetica-Bold').fillColor('#fff').text(g.title + (g.official ? '' : '   *PROVISIONAL'), left + 8, doc.y + 4, { lineBreak: false });
+    doc.y += 22;
+    g.winners.forEach((w, i) => {
+      const y = doc.y;
+      if (i % 2 === 1) doc.rect(left, y - 3, pageW, rowH).fill('#F3F6FA');
+      doc.fontSize(10).font('Helvetica-Bold').fillColor(medalColour[w.medal] || '#000');
+      doc.text(w.medal, left + 8, y, { width: 60, lineBreak: false });
+      doc.fillColor('#000').text((w.names||[]).join(' / ').toUpperCase(), left + 72, y, { width: pageW - 72 - 200, lineBreak: false, ellipsis: true });
+      doc.font('Helvetica').fillColor('#' + GRAY);
+      doc.text(w.clubCode || '', right - 200, y, { width: 60, lineBreak: false });
+      doc.text((w.psaIds||[])[0] || '', right - 136, y, { width: 60, lineBreak: false });
+      doc.font('Helvetica-Bold').fillColor('#' + GREEN).text(fmtMs(w.timeMs), right - 70, y, { width: 70, align: 'right', lineBreak: false });
+      doc.y = y + rowH;
+    });
+    doc.y += 12;
+  });
+  doc.end();
+});
+
 module.exports = router;

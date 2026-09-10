@@ -34,6 +34,7 @@
   <p style="color:var(--gray);font-size:14px">Every finished race, in running order, ranked by finish position. 🥇🥈🥉 only apply to finals — combined age groups (except 2000m/5000m, which stay grouped by design) are split back into their own category here for medals.</p>
   <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px" class="no-print">
     <input type="text" id="filterBox" placeholder="Filter by event or paddler name…" style="flex:1;margin:0" oninput="render()">
+    <button id="viewToggle" onclick="togglePrizeView()" style="white-space:nowrap;padding:8px 14px;font-weight:700;background:#C9A227;color:#fff;border:none;border-radius:6px;cursor:pointer">🏅 Prize giving</button>
     <button onclick="exportResults('xlsx')" style="white-space:nowrap;padding:8px 14px;font-weight:600;background:var(--green);color:#fff;border:none;border-radius:6px;cursor:pointer">📊 Excel</button>
     <button onclick="exportResults('pdf')" style="white-space:nowrap;padding:8px 14px;font-weight:600;background:var(--navy);color:#fff;border:none;border-radius:6px;cursor:pointer">📄 PDF</button>
     <button onclick="window.print()" style="white-space:nowrap;padding:8px 14px;font-weight:600">🖨 Print</button>
@@ -68,7 +69,52 @@ async function loadResults(){
   }
 }
 
+function renderPrizes(){
+  const el = document.getElementById('resultsList');
+  const q = document.getElementById('filterBox').value.trim().toLowerCase();
+  const gl = g => g ? (g.toLowerCase().startsWith('f')?'F':g.toLowerCase().startsWith('m')?'M':g) : '';
+  const genderLabel = g => { const s=(g||'').toLowerCase(); return s.startsWith('f')?'Female':s.startsWith('m')?'Male':(g||''); };
+  const AGE = ['guppy','u8','u10','u12','u14','u16','u18','u21','u23','senior','open','subvet','sub-vet','vet','master','grand master'];
+  const ageRank = a => { const i = AGE.findIndex(x => (a||'').toLowerCase().startsWith(x)); return i===-1?99:i; };
+  const distRank = d => { const n=parseInt(String(d||'').replace(/\D/g,''),10); return isNaN(n)?99999:n; };
+  const genderRank = g => { const s=(g||'').toLowerCase(); return s.startsWith('f')?0:s.startsWith('m')?1:2; };
+
+  const groups = [];
+  allBlocks.filter(b => b.isFinal && b.medalEligibility && (!selectedDay || (b.day||1)===selectedDay)).forEach(b => {
+    const winners = [];
+    b.ranked.forEach(r => {
+      const m = r.place===1&&b.medalEligibility.gold ? 'GOLD' : r.place===2&&b.medalEligibility.silver ? 'SILVER' : r.place===3&&b.medalEligibility.bronze ? 'BRONZE' : '';
+      if(m) winners.push({medal:m, ...r});
+    });
+    if(!winners.length) return;
+    groups.push({ title:`${b.distance||''} ${b.boatClass||''} ${b.ageCategory||''} ${genderLabel(b.gender)}`.replace(/\s+/g,' ').trim(),
+      distance:b.distance, boatClass:b.boatClass, ageCategory:b.ageCategory, gender:b.gender, official:b.resultsConfirmed, winners });
+  });
+  groups.sort((a,b)=> distRank(a.distance)-distRank(b.distance) || String(a.boatClass).localeCompare(String(b.boatClass)) || ageRank(a.ageCategory)-ageRank(b.ageCategory) || genderRank(a.gender)-genderRank(b.gender));
+
+  const shown = q ? groups.filter(g => g.title.toLowerCase().includes(q) || g.winners.some(w => (w.names||[]).join(' ').toLowerCase().includes(q) || (w.clubCode||'').toLowerCase().includes(q))) : groups;
+  if(!shown.length){ el.innerHTML = '<p style="color:var(--gray)">No medals awarded yet.</p>'; return; }
+  const medalIcon = { GOLD:'🥇', SILVER:'🥈', BRONZE:'🥉' };
+  el.innerHTML = shown.map(g => `<div class="rcard final">
+    <div class="rlabel">${g.title} ${g.official ? '<span class="pill ok">Official</span>' : '<span class="pill warn">Provisional</span>'}</div>
+    <div class="table-scroll"><table class="review-table">
+      <tr><th>MEDAL</th><th>NAME</th><th>AGE</th><th>CLUB</th><th>M/F</th><th>UNION</th><th>PSA #</th><th>TIME</th></tr>
+      ${g.winners.map(w => `<tr>
+        <td class="cpos" style="white-space:nowrap">${medalIcon[w.medal]} ${w.medal}</td>
+        <td class="pname">${w.names.length>1?`${w.names[0]}<br>${w.names[1]}`:w.names[0]}</td>
+        <td class="pmeta cage">${w.ageCategory||''}</td>
+        <td class="pmeta cclub">${w.clubCode||''}</td>
+        <td class="pmeta csex">${gl(w.gender)}</td>
+        <td class="pmeta cunion">${w.union||''}</td>
+        <td class="pmeta cpsa">${(w.psaIds||[])[0]||''}</td>
+        <td class="ctime">${fmtMs(w.timeMs)}</td>
+      </tr>`).join('')}
+    </table></div>
+  </div>`).join('');
+}
+
 function render(){
+  if(prizeView){ renderPrizes(); return; }
   const el = document.getElementById('resultsList');
   const q = document.getElementById('filterBox').value.trim().toLowerCase();
   let blocks = allBlocks;
@@ -163,10 +209,21 @@ async function reopenRace(raceId){
   loadResults();
 }
 
+let prizeView = false;
+function togglePrizeView(){
+  prizeView = !prizeView;
+  const b = document.getElementById('viewToggle');
+  b.textContent = prizeView ? '📋 All results' : '🏅 Prize giving';
+  b.style.background = prizeView ? 'var(--navy)' : '#C9A227';
+  document.getElementById('filterBox').placeholder = prizeView ? 'Filter by category or paddler…' : 'Filter by event or paddler name…';
+  render();
+}
+
 function exportResults(kind){
   const meetId = getMeetId(); if(!meetId){ alert('Pick a meet first.'); return; }
   const dayQS = selectedDay ? `&day=${selectedDay}` : '';
-  window.location.href = `/api/export/results.${kind}?meetId=${encodeURIComponent(meetId)}${dayQS}`;
+  const what = prizeView ? 'prizes' : 'results';
+  window.location.href = `/api/export/${what}.${kind}?meetId=${encodeURIComponent(meetId)}${dayQS}`;
 }
 
 function setPrintHeader(){
