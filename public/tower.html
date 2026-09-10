@@ -31,7 +31,7 @@
   .btn-lock  { background:var(--orange); color:#fff; }
   .btn-lock:disabled { background:#f0b48a; cursor:not-allowed; color:#fff; }
 
-  .tap-btn { width:100%; padding:44px 20px; font-size:30px; font-weight:800; background:var(--orange); color:#fff; border:none; border-radius:14px; cursor:pointer; margin:10px 0; transition:transform 0.05s, background 0.05s; }
+  .tap-btn { flex:2; padding:14px 12px; font-size:16px; font-weight:800; background:var(--orange); color:#fff; border:none; border-radius:10px; cursor:pointer; transition:transform 0.05s, background 0.05s; white-space:nowrap; }
   .tap-btn:active { transform:scale(0.97); background:#d4420a; }
 
   /* Assignment table */
@@ -253,10 +253,9 @@ function laneCardHtml(race){
       <span class="race-title" style="margin:0">${raceLabel(race)}</span>
       <span class="race-sub" style="margin:0">${raceSub(race)}</span>
     </div>
-    ${!stopped?`<button class="tap-btn" onclick="tap('${race.id}')">TAP — BOAT CROSSED ⚡</button>`:''}
     <div class="ctrl-row">
       <div class="clock-block ${stopped?'stopped':''}" id="clock-${race.id}">00:00.00</div>
-      <button class="btn-start" disabled>▶ Started</button>
+      ${!stopped?`<button class="tap-btn" onclick="tap('${race.id}')">⚡ TAP (or Space)</button>`:''}
       <button class="btn-stop" ${stopped?'disabled':''} onclick="stopClock('${race.id}')">⏹ Stop</button>
       <button class="btn-undo" onclick="undoTap('${race.id}')">↩ Undo</button>
       <button class="btn-lock" ${allDone?'':'disabled'} onclick="lockRace('${race.id}')">🔒 Lock</button>
@@ -385,7 +384,6 @@ async function startRace(id){
   const res=await fetch(`/api/races/${id}/start`,{method:'POST'});
   if(!res.ok){const d=await res.json();alert(d.error);return;}
   await refresh();
-  setTimeout(()=>{ const b=document.querySelector(`#race-${id} .tap-btn`); if(b)b.focus(); },100);
 }
 async function tap(raceId){
   const race = racesById[raceId];
