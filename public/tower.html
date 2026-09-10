@@ -176,9 +176,10 @@ function laneCardHtml(race){
       <td class="name-cell">${info?info.names[0]:''}</td>
       <td>${assigned
         ? `<button onclick="clearCrossing('${race.id}',${c.position})" style="font-size:11px;padding:3px 8px;background:#C93B3B;color:#fff;border:none;border-radius:5px;cursor:pointer">✕</button>`
-        : `<input class="lane-input" type="text" inputmode="numeric" placeholder="L#" id="inp-${race.id}-${c.position}"
-            onkeydown="if(event.key==='Enter'&&this.value.trim()){assignCrossing('${race.id}',${c.position},this.value.trim());this.value='';}
-                       if(event.key===' '){event.stopPropagation();}">`
+        : `<input class="lane-input" type="text" inputmode="numeric" placeholder="L#" 
+            data-race="${race.id}" data-pos="${c.position}"
+            onkeydown="if(event.key==='Enter'){var v=this.value.trim();if(v){assignCrossing(this.dataset.race,this.dataset.pos,v);this.value=String.fromCharCode(0).slice(1);}}"
+            onfocus="this.select()">`
       }</td>
     </tr>`;
   }).join('');
@@ -443,8 +444,25 @@ async function undoLap(raceId,bib){
   await refresh();
 }
 
-// Spacebar / Enter = instant tap
-document.addEventListener('keydown',e=>{
+// Event delegation for lane inputs — more reliable than inline handlers
+document.addEventListener('keydown', e => {
+  if(e.target.classList.contains('lane-input')){
+    // Stop spacebar from triggering TAP
+    if(e.key === ' ') { e.stopPropagation(); return; }
+    if(e.key === 'Enter'){
+      e.preventDefault();
+      e.stopPropagation();
+      const val = e.target.value.trim();
+      if(val){
+        const raceId = e.target.dataset.race;
+        const pos = e.target.dataset.pos;
+        e.target.value = '';
+        assignCrossing(raceId, pos, val);
+      }
+    }
+    return;
+  }
+  // Global spacebar/Enter = TAP
   if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT'||e.target.tagName==='TEXTAREA')return;
   if(e.key===' '||e.key==='Enter'){
     e.preventDefault();
@@ -452,7 +470,7 @@ document.addEventListener('keydown',e=>{
     const btn=document.querySelector('.tap-btn');
     if(btn){ btn.click(); }
   }
-},true); // capture phase for maximum speed
+},true);
 
 async function init(){
   await initMeetBar('meetBar',{allowCreate:false});
