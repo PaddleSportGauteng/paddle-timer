@@ -241,6 +241,18 @@ router.post('/:id/mark/:entryId', (req, res) => {
   res.json(enrichRace(database, race));
 });
 
+// Stop the clock — freezes the elapsed time display without locking results.
+// The race stays 'running' so crossings can still be assigned afterward.
+router.post('/:id/stop-clock', (req, res) => {
+  const database = db.load();
+  const race = database.races[req.params.id];
+  if (!race) return res.status(404).json({ error: 'Race not found.' });
+  if (race.status !== 'running') return res.status(400).json({ error: 'Race is not running.' });
+  race.stopTimeMs = Date.now();
+  db.save();
+  res.json({ ok: true, stopTimeMs: race.stopTimeMs });
+});
+
 router.post('/:id/finish-race', (req, res) => {
   const database = db.load();
   const race = database.races[req.params.id];

@@ -246,11 +246,12 @@ function runningCardHtml(race){
     <div class="badge">🔴 Now Racing</div>
     <div class="race-title">${raceLabel(race)}</div>
     <div class="race-sub">${raceSub(race)}</div>
-    <div class="big-clock running" id="clock-${race.id}">00:00.00</div>
-    <button class="tap-btn" onclick="captureCrossing('${race.id}')">TAP — BOAT CROSSED ⚡</button>
+    <div class="big-clock ${race.stopTimeMs?'':'running'}" id="clock-${race.id}" style="${race.stopTimeMs?'color:var(--green)':''}">00:00.00</div>
+    <button class="tap-btn" ${race.stopTimeMs?'disabled':''} onclick="captureCrossing('${race.id}')">TAP — BOAT CROSSED ⚡</button>
     <div class="ctrl-row">
       <button class="btn-start" disabled>▶ Started</button>
-      <button class="btn-stop" onclick="undoCrossing('${race.id}')">↩ Undo last</button>
+      <button class="btn-stop" ${race.stopTimeMs?'disabled':''} onclick="stopClock('${race.id}')">⏹ Stop Clock</button>
+      <button class="btn-stop" style="background:#888" onclick="undoCrossing('${race.id}')">↩ Undo tap</button>
       <button class="btn-lock" ${allDone?'':'disabled'} onclick="finishRace('${race.id}')">🔒 Lock results</button>
     </div>
     ${crossings ? `<div class="crossings"><b style="font-size:12px;color:var(--gray)">CROSSINGS</b>${crossings}</div>` : ''}
@@ -299,7 +300,8 @@ function massCardHtml(race){
     </form>
     <div class="ctrl-row">
       <button class="btn-start" disabled>▶ Started</button>
-      <button class="btn-stop" onclick="undoLap('${race.id}', null)">↩ Undo last</button>
+      <button class="btn-stop" ${race.stopTimeMs?'disabled':''} onclick="stopClock('${race.id}')">⏹ Stop Clock</button>
+      <button class="btn-stop" style="background:#888" onclick="undoLap('${race.id}', null)">↩ Undo last</button>
       <button class="btn-lock" ${allDone?'':'disabled'} onclick="finishRace('${race.id}')">🔒 Lock results</button>
     </div>
     <table class="lapsheet">
@@ -348,13 +350,24 @@ function startTick(race){
   const tick = () => {
     const el = document.getElementById('clock-'+race.id);
     if(!el){ delete tickHandles[race.id]; return; }
-    el.textContent = fmtTime(Date.now() - race.startTimeMs);
-    tickHandles[race.id] = requestAnimationFrame(tick);
+    const elapsed = race.stopTimeMs
+      ? race.stopTimeMs - race.startTimeMs
+      : Date.now() - race.startTimeMs;
+    el.textContent = fmtTime(elapsed);
+    if(!race.stopTimeMs){
+      tickHandles[race.id] = requestAnimationFrame(tick);
+    }
   };
   tick();
 }
 
 // ── Actions ───────────────────────────────────────────────────────
+async function stopClock(raceId){
+  const res = await fetch(`/api/races/${raceId}/stop-clock`, {method:'POST'});
+  if(!res.ok){ const d=await res.json(); alert(d.error); return; }
+  await refresh();
+}
+
 async function startRace(id){
   const res = await fetch(`/api/races/${id}/start`, {method:'POST'});
   if(!res.ok){ const d=await res.json(); alert(d.error); return; }
