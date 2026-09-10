@@ -45,14 +45,9 @@
   <h1>Race Program</h1>
   <div class="flag" id="meetWarning" style="display:none">No meet selected — pick or create one at the top-right first.</div>
   <div id="progressStrip"></div>
-  <div class="card" style="background:#EAF1FA;border-color:#B8D0EA">
-    <p style="margin:0;color:#1a3a5c">Need to draw or combine events first? <a href="/race-sort.html">Race Sort</a> → <a href="/draw.html"><b>Draw →</b></a> Do that before setting times/finalising below.</p>
-  </div>
-
   <div class="card">
-    <h2 style="margin-top:0">1. Start times</h2>
-    <p style="color:var(--gray);font-size:14px">Set the first start time and interval for each day. Each day restarts from its own time independently.</p>
-    <div id="startTimesRows"></div>
+    <h2 style="margin-top:0">Start times</h2>
+        <div id="startTimesRows"></div>
     <div style="margin-top:8px">
       <label style="font-size:13px;color:var(--gray)"><input type="checkbox" id="overwriteTimes"> overwrite existing times</label>
     </div>
@@ -60,43 +55,41 @@
   </div>
 
   <div class="card">
-    <div class="toolbar" style="justify-content:space-between;align-items:center;flex-wrap:nowrap">
-      <h2 style="margin:0;white-space:nowrap">2. Race Program</h2>
-      <div style="display:flex;gap:6px;align-items:center;flex-shrink:0">
-        <div style="display:flex;flex-direction:column;gap:3px">
-          <button class="sm" onclick="expandAll()">Expand all</button>
-          <button class="sm" onclick="collapseAll()">Collapse all</button>
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+      <h2 style="margin:0">Race Program</h2>
+      <div class="btn-row">
+        <button onclick="autoSequence()" title="Heats first, then semis, then finals">Auto-sequence</button>
+        <button onclick="toggleGapForm()">Add gap</button>
+        <div class="menu-wrap">
+          <button class="navy" onclick="toggleMenu('exportMenu')">Export</button>
+          <div class="menu" id="exportMenu">
+            <button onclick="downloadSchedule()">Planning sheet (PDF)</button>
+            <button onclick="downloadPdf()">Programme (PDF)</button>
+            <button onclick="downloadDraws()">Draws (Excel)</button>
+          </div>
         </div>
-        <button class="navy" onclick="downloadSchedule()">Planning Sheet (PDF)</button>
-        <button class="navy" onclick="downloadDraws()">Draws (Excel)</button>
-        <button class="navy" onclick="downloadPdf()">Programme (PDF)</button>
         <button class="green" onclick="finalise()">Finalise to Tower</button>
         <button onclick="unfinalise()">Unfinalise</button>
       </div>
     </div>
-    <p style="color:var(--gray);font-size:13px">Order races and set times, then Finalise to send them to the Tower.</p>
-    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:8px 0">
-      <button onclick="autoSequence()">Auto-sequence</button>
-      <small style="color:var(--gray)">Heats first, then semis, then finals. Use Up / Down or type a race number to adjust.</small>
-    </div>
-    <div class="flag" style="background:#FFFBF2;border-color:#F3C98B;color:#8A5A12">
-      <b>Space keeper</b> <small style="color:var(--gray)">— lunch, jetty move, any non-race gap</small>
-      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px">
-        <input type="text" id="newBreakLabel" placeholder="e.g. Jetty move to 200m course" style="flex:1;min-width:220px;padding:7px">
+    <div id="gapForm" class="flag" style="display:none;background:#FFFBF2;border-color:#F3C98B;color:#8A5A12">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <input type="text" id="newBreakLabel" placeholder="Label, e.g. Lunch or Jetty move" style="flex:1;min-width:200px;padding:7px">
         <input type="number" id="newBreakDuration" placeholder="Minutes" min="1" style="width:90px;padding:7px">
-        <select id="newBreakAfter" style="min-width:200px;padding:7px"><option value="0">— start of the day —</option></select>
-        <button onclick="addBreak()">Add space keeper</button>
+        <select id="newBreakAfter" style="min-width:180px;padding:7px"><option value="0">at start of day</option></select>
+        <button class="green" onclick="addBreak()">Add</button>
+        <button onclick="toggleGapForm()">Cancel</button>
       </div>
+    </div>
+    <div style="display:flex;gap:6px;margin-bottom:8px">
+      <button class="sm" onclick="expandAll()">Expand all</button>
+      <button class="sm" onclick="collapseAll()">Collapse all</button>
     </div>
     <div id="mergeBar"></div>
     <div id="raceList">Loading…</div>
   </div>
 
-  <div class="card">
-    <h2 style="margin-top:0">3. Round advancement</h2>
-    <p style="color:var(--gray);font-size:13px">Automatic — semis and finals are created when heats finish.</p>
-    <div id="advanceTable">Loading…</div>
-  </div>
+  <div id="advanceTable" style="display:none"></div>
 </main>
 <script src="common.js"></script>
 <script>
@@ -277,6 +270,17 @@ async function generateStartTimes(day){
   if(!res.ok){ el.innerHTML = `<div class="flag">${data.error}</div>`; return; }
   el.innerHTML = `<div class="flag" style="background:#E4F5EC;border-color:#9ED8B8;color:#1E8E5A">${meetNumDays > 1 ? 'Day '+d+': ' : ''}${data.updated} race times set.</div>`;
   loadRaceList();
+}
+
+function toggleMenu(id){
+  const m = document.getElementById(id);
+  const open = m.classList.toggle('open');
+  if(open){ setTimeout(()=>document.addEventListener('click', function h(e){ if(!m.contains(e.target)){ m.classList.remove('open'); document.removeEventListener('click', h); } }), 0); }
+}
+function toggleGapForm(){
+  const f = document.getElementById('gapForm');
+  f.style.display = f.style.display === 'none' ? 'block' : 'none';
+  if(f.style.display === 'block') document.getElementById('newBreakLabel').focus();
 }
 
 async function unfinalise(){

@@ -29,21 +29,17 @@
 
   <div class="card">
     <h2 style="margin-top:0">Combine events for a shared start</h2>
-    
-    <div id="currentGroupBox" class="flag" style="background:#EAF1FA;border-color:#B8D0EA;color:#1a3a5c">
-      <b>Current group:</b> <span id="currentGroupChips" style="color:var(--gray)">empty — click "+ Add" below on the first event</span>
-      <div id="currentGroupActions" style="margin-top:8px;display:none">
-        <input type="text" id="combineLabel" placeholder="Custom label (optional)" style="width:220px;padding:6px" onkeydown="if(event.key==='Enter')saveCurrentGroup()">
-        <input type="number" id="combineLaps" placeholder="Laps (mass-start only)" style="width:160px;padding:6px;display:none" onkeydown="if(event.key==='Enter')saveCurrentGroup()">
-        <input type="number" id="combineStartSlide" placeholder="Starting slide #" style="width:150px;padding:6px;display:none" onkeydown="if(event.key==='Enter')saveCurrentGroup()">
-        <button class="green" onclick="saveCurrentGroup()">Save this group</button>
-        <button class="red" onclick="clearCurrentGroup()">Clear</button>
+    <div id="combineList">Loading…</div>
+    <div id="combineBar" style="display:none;margin-top:12px;padding:12px;background:#EAF1FA;border:1px solid #B8D0EA;border-radius:8px">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <span id="combineSummary" style="font-weight:600;font-size:13px"></span>
+        <input type="text" id="combineLabel" placeholder="Label (optional), e.g. 200m U10–U12" style="flex:1;min-width:200px;padding:7px" onkeydown="if(event.key==='Enter')combineSelected()">
+        <input type="number" id="combineLaps" placeholder="Laps" style="width:80px;padding:7px;display:none" onkeydown="if(event.key==='Enter')combineSelected()">
+        <input type="number" id="combineStartSlide" placeholder="First slide #" style="width:110px;padding:7px;display:none" onkeydown="if(event.key==='Enter')combineSelected()">
+        <button class="green" onclick="combineSelected()">Combine</button>
+        <button onclick="clearSelection()">Clear</button>
       </div>
-    </div>
-    <div id="combineList" style="margin-top:12px">Loading…</div>
-    <div id="stagedGroups" style="margin-top:16px"></div>
-    <div id="stagedActions" style="margin-top:10px;display:none">
-      <button class="green" onclick="createAllStagedGroups()">Create all staged combined races</button>
+      <div id="combineWarn" style="font-size:12px;color:var(--red);margin-top:6px"></div>
     </div>
   </div>
 
@@ -70,178 +66,99 @@
 <script src="common.js"></script>
 <script>
 let allEvents = [];
-let stagedGroups = [];
-let stagedEventIds = new Set();
-let currentGroup = { eventIds: [], distance: null, isMassStart: null };
+let selected = new Set();   // event ids ticked for combining
 let meetLanes = 9;
-
 let selectedDay = null;
 
 async function loadMeetLanes(){
-  const meetId = getMeetId();
+  const meetId = getMeetId(); if(!meetId) return;
   try {
     const meets = await (await fetch('/api/meets')).json();
-    const meet = meets.find(m => m.id === meetId);
-    meetLanes = (meet && meet.lanes) || 9;
-  } catch (err) { meetLanes = 9; }
+    const m = meets.find(x => x.id === meetId);
+    meetLanes = (m && m.lanes) || 9;
+  } catch(e){}
 }
 
 async function loadEvents(){
-  const meetId = getMeetId();
-  if(!meetId) return;
-  try {
-    const dayQS = selectedDay ? `&day=${selectedDay}` : '';
-    const res = await fetch(`/api/programme/events?meetId=${encodeURIComponent(meetId)}${dayQS}`);
-    if(!res.ok) throw new Error(`Server returned ${res.status}`);
-    allEvents = await res.json();
-  } catch (err) {
-    console.error(err);
-    document.getElementById('combineList').innerHTML = `<div class="flag">Couldn't load events: ${err.message}</div>`;
-  }
+  const meetId = getMeetId(); if(!meetId) return;
+  const dayQS = selectedDay ? `&day=${selectedDay}` : '';
+  const res = await fetch(`/api/programme/events?meetId=${encodeURIComponent(meetId)}${dayQS}`);
+  allEvents = await res.json();
+  renderCombineList();
   renderProgressStrip('progressStrip');
 }
 
-
-
-async function loadCombineList(){
-  renderCurrentGroupBox();
+function renderCombineList(){
   const el = document.getElementById('combineList');
-  const allUndrawn = allEvents.filter(e => !e.hasRaces && !stagedEventIds.has(e.id) && !currentGroup.eventIds.includes(e.id));
-  const emptyOnes = allUndrawn.filter(e => e.entryCount === 0);
-  const undrawn = allUndrawn.filter(e => e.entryCount > 0);
-  const emptyNote = emptyOnes.length ? `<p style="color:var(--gray);font-size:13px;margin:6px 0">${emptyOnes.length} categor${emptyOnes.length===1?'y has':'ies have'} 0 entries (nothing to combine — probably fixed already via "Fix entries here" elsewhere): ${emptyOnes.map(e=>e.label).join(', ')}</p>` : '';
-  if(undrawn.length === 0 && currentGroup.eventIds.length === 0){
-    el.innerHTML = (stagedGroups.length ? '<p style="color:var(--gray)">No more undrawn events left to combine.</p>' : '<p style="color:var(--gray)">Need at least 2 undrawn events to combine.</p>') + emptyNote;
+  const undrawn = allEvents.filter(e => !e.hasRaces && e.entryCount > 0);
+  if(undrawn.length === 0){
+    el.innerHTML = '<p style="color:var(--gray)">Nothing left to combine — every event with entries is already drawn or combined.</p>';
+    document.getElementById('combineBar').style.display = 'none';
     return;
   }
-  const currentGroupBoats = currentGroup.eventIds.reduce((sum, id) => sum + ((allEvents.find(e => e.id === id) || {}).entryCount || 0), 0);
-  const byDistance = {};
-  undrawn.forEach(ev => { (byDistance[ev.distance] = byDistance[ev.distance] || []).push(ev); });
-  el.innerHTML = Object.entries(byDistance).sort((a,b) => a[0].localeCompare(b[0])).map(([dist, evs]) => `
-    <div style="margin-bottom:10px">
-      <div style="font-weight:700;font-size:13px;color:var(--navy);margin-bottom:4px">${dist}</div>
+  // Group by distance + type
+  const groups = {};
+  undrawn.forEach(ev => {
+    const key = `${ev.distance}${ev.isMassStart ? ' (mass start)' : ''}`;
+    (groups[key] = groups[key] || []).push(ev);
+  });
+  const selDist = selected.size ? (allEvents.find(e => selected.has(e.id)) || {}) : null;
+  el.innerHTML = Object.entries(groups).sort((a,b)=>a[0].localeCompare(b[0], undefined, {numeric:true})).map(([key, evs]) => `
+    <div style="margin-bottom:12px">
+      <div style="font-weight:700;font-size:13px;color:var(--navy);margin-bottom:4px">${key}</div>
       ${evs.map(ev => {
-        const matches = !currentGroup.distance || (currentGroup.distance === ev.distance && currentGroup.isMassStart === ev.isMassStart);
-        const wouldNeedHeats = matches && !ev.isMassStart && (currentGroupBoats + ev.entryCount) > meetLanes;
-        return `
-        <div class="lane-row">
-          <span style="flex:1;${matches?'':'opacity:.4'}">${ev.label} <small style="color:var(--gray)">${ev.entryCount} entries${ev.isMassStart?' (mass start)':''}${ev.entryCount<3?' — below min 3 alone':''}</small></span>
-          ${matches
-            ? `<button onclick="addToCurrentGroup('${ev.id}')">+ Add</button>${wouldNeedHeats ? ` <small style="color:var(--gray)">(would be ${currentGroupBoats + ev.entryCount} boats — over ${meetLanes} lanes, will split into heats)</small>` : ''} <button onclick="jumpToFixEntry('${ev.id}','${ev.label.replace(/'/g,"\\'")}')">Fix entries here</button>`
-            : `<small style="color:var(--gray)">different ${currentGroup.isMassStart!==ev.isMassStart?'type':'distance'}</small>`}
-        </div>`;
+        const compatible = !selDist || (selDist.distance === ev.distance && !!selDist.isMassStart === !!ev.isMassStart);
+        const low = ev.entryCount < 3;
+        return `<label class="lane-row" style="cursor:${compatible?'pointer':'default'};${compatible?'':'opacity:.4'}">
+          <input type="checkbox" ${selected.has(ev.id)?'checked':''} ${compatible?'':'disabled'} onchange="toggleSelect('${ev.id}', this.checked)" style="width:18px;height:18px">
+          <span style="flex:1">${ev.label} <small style="color:${low?'var(--red)':'var(--gray)'}">${ev.entryCount} entr${ev.entryCount===1?'y':'ies'}${low?' — below minimum of 3':''}</small></span>
+          <button class="sm" onclick="event.preventDefault();jumpToFixEntry('${ev.id}','${ev.label.replace(/'/g,"\\'")}')">Fix entries</button>
+        </label>`;
       }).join('')}
-    </div>`).join('') + emptyNote;
-}
-
-function renderCurrentGroupBox(){
-  const chipsEl = document.getElementById('currentGroupChips');
-  const actionsEl = document.getElementById('currentGroupActions');
-  const lapsEl = document.getElementById('combineLaps');
-  if(currentGroup.eventIds.length === 0){
-    chipsEl.innerHTML = '<span style="color:var(--gray)">empty — click "+ Add" below on the first event</span>';
-    actionsEl.style.display = 'none';
-    return;
-  }
-  const labels = currentGroup.eventIds.map(id => (allEvents.find(e => e.id === id) || {}).label || id);
-  const totalBoats = currentGroup.eventIds.reduce((sum, id) => sum + ((allEvents.find(e => e.id === id) || {}).entryCount || 0), 0);
-  const overCapacity = totalBoats > meetLanes;
-  chipsEl.innerHTML = labels.map((l,i) => `<span class="pill ok" style="margin-right:6px">${l} <a href="#" onclick="removeFromCurrentGroup('${currentGroup.eventIds[i]}');return false" style="color:inherit;text-decoration:none;font-weight:900">&nbsp;✕</a></span>`).join('')
-    + (currentGroup.isMassStart ? '' : ` <span style="font-size:12px;color:var(--gray)">— ${totalBoats} boat(s) of ${meetLanes} lanes${overCapacity ? ' (will draw as heats → semis → finals, same as any big event)' : ''}</span>`);
-  actionsEl.style.display = 'block';
-  lapsEl.style.display = currentGroup.isMassStart ? 'inline-block' : 'none';
-  document.getElementById('combineStartSlide').style.display = currentGroup.isMassStart ? 'inline-block' : 'none';
-  document.querySelector('#currentGroupActions .green').disabled = currentGroup.eventIds.length < 2;
-}
-
-function addToCurrentGroup(eventId){
-  const ev = allEvents.find(e => e.id === eventId);
-  if(!ev) return;
-  if(currentGroup.eventIds.length === 0){
-    currentGroup.distance = ev.distance;
-    currentGroup.isMassStart = ev.isMassStart;
-  }
-  currentGroup.eventIds.push(eventId);
-  loadCombineList();
-}
-
-function removeFromCurrentGroup(eventId){
-  currentGroup.eventIds = currentGroup.eventIds.filter(id => id !== eventId);
-  if(currentGroup.eventIds.length === 0){ currentGroup.distance = null; currentGroup.isMassStart = null; }
-  loadCombineList();
-}
-
-function clearCurrentGroup(){
-  currentGroup = { eventIds: [], distance: null, isMassStart: null };
-  document.getElementById('combineLaps').value = '';
-  document.getElementById('combineLabel').value = '';
-  document.getElementById('combineStartSlide').value = '';
-  loadCombineList();
-}
-
-function saveCurrentGroup(){
-  if(currentGroup.eventIds.length < 2){ alert('Add at least 2 events to this group first.'); return; }
-  let laps = null, startSlide = null;
-  if(currentGroup.isMassStart){
-    laps = document.getElementById('combineLaps').value;
-    if(!laps){ alert('Enter the lap count for this mass-start group.'); return; }
-    startSlide = document.getElementById('combineStartSlide').value;
-    if(!startSlide){ alert('Enter a starting slide number for this group.'); return; }
-  }
-  const label = document.getElementById('combineLabel').value.trim() || null;
-  const labels = currentGroup.eventIds.map(id => (allEvents.find(e => e.id === id) || {}).label || id);
-  stagedGroups.push({ tempId: 'g'+Date.now()+Math.random(), eventIds: [...currentGroup.eventIds], isMassStart: currentGroup.isMassStart, laps: laps?Number(laps):null, startSlide: startSlide?Number(startSlide):null, labels, customLabel: label });
-  currentGroup.eventIds.forEach(id => stagedEventIds.add(id));
-  clearCurrentGroup();
-  renderStagedGroups();
-}
-
-function removeStagedGroup(tempId){
-  const g = stagedGroups.find(g => g.tempId === tempId);
-  if(g) g.eventIds.forEach(id => stagedEventIds.delete(id));
-  stagedGroups = stagedGroups.filter(g => g.tempId !== tempId);
-  loadCombineList();
-  renderStagedGroups();
-}
-
-function renderStagedGroups(){
-  const el = document.getElementById('stagedGroups');
-  const actions = document.getElementById('stagedActions');
-  if(stagedGroups.length === 0){ el.innerHTML = ''; actions.style.display = 'none'; return; }
-  actions.style.display = 'block';
-  el.innerHTML = `<h3 style="font-size:14px;margin:0 0 8px">Staged groups (not created yet)</h3>` + stagedGroups.map(g => `
-    <div class="race-block">
-      <h4>
-        <span>${g.isMassStart ? 'Mass start' : 'Combined final'}${g.laps ? ', '+g.laps+' laps' : ''}${g.startSlide ? ', slides from '+g.startSlide : ''} — ${g.customLabel ? '<b>'+g.customLabel+'</b> (' : ''}${g.labels.join(' + ')}${g.customLabel ? ')' : ''}</span>
-        <button class="red" onclick="removeStagedGroup('${g.tempId}')">Remove</button>
-      </h4>
     </div>`).join('');
+  renderCombineBar();
 }
 
-async function createAllStagedGroups(){
-  if(stagedGroups.length === 0) return;
-  const results = [];
-  for(const g of stagedGroups){
-    const url = g.isMassStart ? '/api/programme/combine/generate-mass-race' : '/api/programme/combine/generate-final';
-    const body = g.isMassStart ? {eventIds: g.eventIds, totalLaps: g.laps, label: g.customLabel, startSlide: g.startSlide} : {eventIds: g.eventIds, label: g.customLabel};
-    const res = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
-    const data = await res.json();
-    results.push({ group: g, ok: res.ok, error: data.error });
-  }
-  const failed = results.filter(r => !r.ok);
-  if(failed.length){
-    alert(`${results.length - failed.length} of ${results.length} groups created.\n\nFailed:\n` + failed.map(f => `- ${f.group.labels.join(' + ')}: ${f.error}`).join('\n'));
-    const failedIds = new Set(failed.map(f => f.group.tempId));
-    stagedGroups.filter(g => !failedIds.has(g.tempId)).forEach(g => g.eventIds.forEach(id => stagedEventIds.delete(id)));
-    stagedGroups = stagedGroups.filter(g => failedIds.has(g.tempId));
-  } else {
-    alert(`All ${results.length} combined race(s) created. Head to Race Program to draw the rest.`);
-    stagedGroups = [];
-    stagedEventIds = new Set();
-  }
+function toggleSelect(id, on){
+  if(on) selected.add(id); else selected.delete(id);
+  renderCombineList();
+}
+function clearSelection(){ selected.clear(); renderCombineList(); }
+
+function renderCombineBar(){
+  const bar = document.getElementById('combineBar');
+  if(selected.size === 0){ bar.style.display = 'none'; return; }
+  bar.style.display = 'block';
+  const evs = allEvents.filter(e => selected.has(e.id));
+  const boats = evs.reduce((s,e)=>s+e.entryCount,0);
+  const isMass = !!evs[0].isMassStart;
+  document.getElementById('combineSummary').textContent = `${evs.length} selected · ${boats} boats`;
+  document.getElementById('combineLaps').style.display = isMass ? '' : 'none';
+  document.getElementById('combineStartSlide').style.display = isMass ? '' : 'none';
+  const warn = document.getElementById('combineWarn');
+  if(evs.length < 2) warn.textContent = 'Tick at least two events to combine.';
+  else if(!isMass && boats > meetLanes) warn.textContent = `${boats} boats is over ${meetLanes} lanes — this will be drawn as heats.`;
+  else warn.textContent = '';
+}
+
+async function combineSelected(){
+  const evs = allEvents.filter(e => selected.has(e.id));
+  if(evs.length < 2){ alert('Tick at least two events.'); return; }
+  const isMass = !!evs[0].isMassStart;
+  const label = document.getElementById('combineLabel').value.trim() || null;
+  const laps = Number(document.getElementById('combineLaps').value) || null;
+  const startSlide = Number(document.getElementById('combineStartSlide').value) || null;
+  if(isMass && !laps){ alert('Mass-start groups need a lap count.'); return; }
+  const url = isMass ? '/api/programme/combine/generate-mass-race' : '/api/programme/combine/generate-final';
+  const body = isMass ? {eventIds:[...selected], totalLaps:laps, label, startSlide} : {eventIds:[...selected], label};
+  const res = await fetch(url, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+  const data = await res.json();
+  if(!res.ok){ alert(data.error || 'Could not combine.'); return; }
+  selected.clear();
+  document.getElementById('combineLabel').value = '';
+  document.getElementById('combineLaps').value = '';
+  document.getElementById('combineStartSlide').value = '';
   await loadEvents();
-  await loadCombineList();
-  renderStagedGroups();
   await loadSummary();
 }
 
@@ -319,7 +236,7 @@ async function doMoveDistance(entryId){
     alert(`Draw undone: ${data.undoneDraws.join(', ')} — go to Draw page to redraw.`);
   }
   await loadEvents();
-  await loadCombineList();
+  renderCombineList();
   await loadSummary();
   doMoveSearch();
 }
@@ -336,7 +253,7 @@ async function doMove(entryId){
     alert(`Draw undone: ${data.undoneDraws.join(', ')} — go to Draw page to redraw.`);
   }
   await loadEvents();
-  await loadCombineList();
+  renderCombineList();
   await loadSummary();
   doMoveSearch();
 }
@@ -351,7 +268,7 @@ async function doDelete(entryId){
     alert(`Draw undone: ${data.undoneDraws.join(', ')} — go to Draw page to redraw.`);
   }
   await loadEvents();
-  await loadCombineList();
+  renderCombineList();
   await loadSummary();
   doMoveSearch();
 }
@@ -398,7 +315,7 @@ async function init(){
   if(!getMeetId()){ document.getElementById('meetWarning').style.display = 'block'; return; }
   await loadMeetLanes();
   await loadEvents();
-  await loadCombineList();
+  renderCombineList();
   await loadSummary();
 }
 init();

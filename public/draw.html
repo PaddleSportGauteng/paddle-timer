@@ -18,7 +18,6 @@
 <main>
   <h1>Draw</h1>
   <div class="flag" id="meetWarning" style="display:none">No meet selected — pick or create one at the top-right first.</div>
-  <div id="progressStrip"></div>
   <div id="dayBar" style="margin-bottom:12px"></div>
   <div id="venueInfo" style="margin-bottom:14px"></div>
 
@@ -28,8 +27,7 @@
 
   <div class="card">
     <h2 style="margin-top:0">Draw events</h2>
-    <p style="color:var(--gray);font-size:13px">Generate, check, Confirm. Progression follows ICF Appendix 1.</p>
-    <div id="eventsTable">Loading…</div>
+        <div id="eventsTable">Loading…</div>
   </div>
 
   <div class="card">
@@ -44,123 +42,93 @@ let selectedDay = null;
 async function loadEvents(){
   const meetId = getMeetId();
   const el = document.getElementById('eventsTable');
-  if(!meetId){ el.innerHTML = ''; return; }
+  if(!meetId) return;
   try {
-    const dayQS = selectedDay ? `&day=${selectedDay}` : '';
-    const res = await fetch(`/api/programme/events?meetId=${encodeURIComponent(meetId)}${dayQS}`);
-    if(!res.ok) throw new Error(`Server returned ${res.status}`);
+    const res = await fetch(`/api/programme/events?meetId=${encodeURIComponent(meetId)}`);
     const events = await res.json();
     allEvents = events;
-    const drawableEvents = events.filter(ev => ev.entryCount > 0);
-    if(drawableEvents.length===0){ el.innerHTML = '<p style="color:var(--gray)">No events with entries yet — import entries in Race Office.</p>'; return; }
-    const rows = drawableEvents.map(ev => {
-      let fmtLabel, fmtClass;
-      if(!ev.format.runnable){ fmtLabel = ev.format.reason; fmtClass='bad'; }
-      else { fmtLabel = ev.format.rounds.join(' → '); fmtClass = ev.format.rounds.length>1 ? 'warn':'ok'; }
+    const drawable = events.filter(ev => ev.entryCount > 0);
+    if(drawable.length===0){ el.innerHTML = '<p style="color:var(--gray)">No events with entries yet — import entries in Race Office.</p>'; return; }
 
-      const hasHeats = ev.format.runnable && ev.format.rounds && ev.format.rounds.includes('heats');
-      const planBtn = hasHeats
-        ? `<span style="font-size:11px;padding:3px 7px;background:#0B2540;color:#fff;border-radius:4px;margin-right:4px;letter-spacing:0.03em" title="ICF Appendix 1 Plan — automatically selected based on entry count">ICF AUTO</span>`
-        : '';
+    // Status per event
+    const statusOf = ev => {
+      if(ev.hasRaces && ev.drawConfirmed) return 'confirmed';
+      if(ev.hasRaces) return 'drawn';
+      if(ev.isMassStart) return ev.bibsAssigned ? 'ready' : 'todo';
+      if(!ev.format.runnable) return 'blocked';
+      return 'todo';
+    };
+    const order = { todo:0, blocked:1, ready:2, drawn:3, confirmed:4 };
+    drawable.forEach(ev => ev._status = statusOf(ev));
+    drawable.sort((a,b) => order[a._status]-order[b._status] || a.label.localeCompare(b.label));
 
-      let action;
-      if(ev.hasRaces){
-        action = planBtn
-          + (ev.drawConfirmed
-          ? `<span class="pill ok">Confirmed</span> <button class="sm" onclick="changeEvent('${ev.id}')">Change</button>`
-          : `<button class="sm green" onclick="confirmDraw('${ev.id}')">Confirm</button> <button class="sm" onclick="changeEvent('${ev.id}')">Change</button>`)
-          + ` <button class="sm" onclick="toggleDrawView('${ev.id}')">View draw</button>`;
-      } else if(ev.isMassStart){
-        action = massStartActionHtml(ev);
-      } else if(ev.format.runnable){
-        action = planBtn + `<button class="sm primary" onclick="generate('${ev.id}')">Generate</button>`;
-      } else {
-        action = `<span class="pill bad">Below min 3</span> <button class="sm orange" onclick="forceFinal('${ev.id}')">Race anyway</button> <small style="color:var(--gray)">or go to <a href="/race-sort.html">Race Sort</a> to combine it</small>`;
-      }
+    const counts = { confirmed:0, drawn:0, todo:0, blocked:0, ready:0 };
+    drawable.forEach(ev => counts[ev._status]++);
+    const canGenerateAll = drawable.some(ev => ev._status==='todo' && !ev.isMassStart);
+    const canConfirmAll  = drawable.some(ev => ev._status==='drawn');
 
-      const displayLabel = ev.isCombined ? `<b>${ev.combinedLabel}</b> <small style="color:var(--gray)">(combined)</small>` : ev.label;
-      return `<tr><td>${displayLabel}${ev.isMassStart?' <small style="color:var(--gray)">(mass start)</small>':''}</td><td>${ev.entryCount}</td><td><span class="pill ${fmtClass}">${fmtLabel}</span></td><td>${action}</td></tr>`;
-YPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Draw — PaddleSport Gauteng</title>
-<link rel="stylesheet" href="style.css">
-<style>
-  .events-table td, .events-table th{font-size:13px}
-</style>
-</head>
-<body>
-<header class="topbar">
-  <a href="/" class="title"><img src="/psg-logo.jpg" alt="PSG" class="psg-logo"> PaddleSport Gauteng</a>
-  <nav><a href="/admin.html">Race Office</a><a href="/race-sort.html">Race Sort</a><a href="/draw.html">Draw</a><a href="/program.html">Race Program</a><a href="/tower.html">Tower</a><a href="/weigh.html">Weigh</a><a href="/results.html">Results</a><a href="/board.html">Board</a><a href="/live.html" id="liveNavLink">Live</a></nav>
-  <div id="meetBar"></div>
-</header>
-<main>
-  <h1>Draw</h1>
-  <div class="flag" id="meetWarning" style="display:none">No meet selected — pick or create one at the top-right first.</div>
-  <div id="dayBar" style="margin-bottom:12px"></div>
-  <div id="venueInfo" style="margin-bottom:14px"></div>
+    const summary = `<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+      <div style="font-size:14px"><b>${counts.confirmed} of ${drawable.length}</b> confirmed
+        ${counts.drawn?` · <span style="color:var(--orange)">${counts.drawn} to check</span>`:''}
+        ${counts.todo?` · <span style="color:var(--gray)">${counts.todo} not drawn</span>`:''}
+        ${counts.blocked?` · <span style="color:var(--red)">${counts.blocked} below minimum</span>`:''}</div>
+      <div class="btn-row">
+        <button class="primary" onclick="generateAll()" ${canGenerateAll?'':'disabled'}>Generate all</button>
+        <button class="green" onclick="confirmAll()" ${canConfirmAll?'':'disabled'}>Confirm all</button>
+      </div>
+    </div>`;
 
-  <div class="card" style="background:#EAF1FA;border-color:#B8D0EA">
-    <p style="margin:0;color:#1a3a5c">Need to combine age groups first? <a href="/race-sort.html"><b>Go to Race Sort →</b></a> Do that before drawing below, so combined groups show as one row here instead of separate undersized categories.</p>
-  </div>
-
-  <div class="card">
-    <h2 style="margin-top:0">Draw events</h2>
-    <p style="color:var(--gray);font-size:13px">Generate, check, Confirm. Progression follows ICF Appendix 1.</p>
-    <div id="eventsTable">Loading…</div>
-  </div>
-
-  <div class="card">
-    <p style="margin:0">Done drawing? <a href="/program.html"><b>Continue to Race Program →</b></a> to set start times, sequence the day, and finalise to the Tower.</p>
-  </div>
-</main>
-<script src="common.js"></script>
-<script>
-let allEvents = [];
-let selectedDay = null;
-
-async function loadEvents(){
-  const meetId = getMeetId();
-  const el = document.getElementById('eventsTable');
-  if(!meetId){ el.innerHTML = ''; return; }
-  try {
-    const dayQS = selectedDay ? `&day=${selectedDay}` : '';
-    const res = await fetch(`/api/programme/events?meetId=${encodeURIComponent(meetId)}${dayQS}`);
-    if(!res.ok) throw new Error(`Server returned ${res.status}`);
-    const events = await res.json();
-    allEvents = events;
-    const drawableEvents = events.filter(ev => ev.entryCount > 0);
-    if(drawableEvents.length===0){ el.innerHTML = '<p style="color:var(--gray)">No events with entries yet — import entries in Race Office.</p>'; return; }
-    const rows = drawableEvents.map(ev => {
-      let fmtLabel, fmtClass;
-      if(!ev.format.runnable){ fmtLabel = ev.format.reason; fmtClass='bad'; }
-      else { fmtLabel = ev.format.rounds.join(' → '); fmtClass = ev.format.rounds.length>1 ? 'warn':'ok'; }
+    const rows = drawable.map(ev => {
+      let fmtLabel = ev.format.runnable ? ev.format.rounds.join(' → ') : ev.format.reason;
+      const pill = {
+        confirmed:'<span class="pill ok">Confirmed</span>',
+        drawn:'<span class="pill warn">Drawn — check it</span>',
+        ready:'<span class="pill warn">Slides assigned</span>',
+        todo:'<span class="pill" style="background:#f0f0f0;color:var(--gray)">Not drawn</span>',
+        blocked:'<span class="pill bad">Below min 3</span>',
+      }[ev._status];
 
       let action;
-      if(ev.hasRaces){
-        action = (ev.drawConfirmed
-          ? `<span class="pill ok">Confirmed</span> <button class="sm" onclick="changeEvent('${ev.id}')">Change</button>`
-          : `<button class="sm green" onclick="confirmDraw('${ev.id}')">Confirm</button> <button class="sm" onclick="changeEvent('${ev.id}')">Change</button>`)
-          + ` <button class="sm" onclick="toggleDrawView('${ev.id}')">View draw</button>`;
+      if(ev._status==='confirmed'){
+        action = `<button class="sm" onclick="toggleDrawView('${ev.id}')">View</button> <button class="sm" onclick="changeEvent('${ev.id}')">Change</button>`;
+      } else if(ev._status==='drawn'){
+        action = `<button class="sm" onclick="toggleDrawView('${ev.id}')">View</button> <button class="sm green" onclick="confirmDraw('${ev.id}')">Confirm</button> <button class="sm" onclick="changeEvent('${ev.id}')">Redraw</button>`;
       } else if(ev.isMassStart){
         action = massStartActionHtml(ev);
-      } else if(ev.format.runnable){
+      } else if(ev._status==='todo'){
         action = `<button class="sm primary" onclick="generate('${ev.id}')">Generate</button>`;
       } else {
-        action = `<span class="pill bad">Below min 3</span> <button class="sm orange" onclick="forceFinal('${ev.id}')">Race anyway</button> <small style="color:var(--gray)">or go to <a href="/race-sort.html">Race Sort</a> to combine it</small>`;
+        action = `<button class="sm orange" onclick="forceFinal('${ev.id}')">Race anyway</button> <small style="color:var(--gray)">or combine it in <a href="/race-sort.html">Race Sort</a></small>`;
       }
-
-      const displayLabel = ev.isCombined ? `<b>${ev.combinedLabel}</b> <small style="color:var(--gray)">(combined)</small>` : ev.label;
-      return `<tr><td>${displayLabel}${ev.isMassStart?' <small style="color:var(--gray)">(mass start)</small>':''}</td><td>${ev.entryCount}</td><td><span class="pill ${fmtClass}">${fmtLabel}</span></td><td>${action}</td></tr>
-        <tr id="drawView-${ev.id}" style="display:none"><td colspan="4"><div id="drawViewInner-${ev.id}" style="padding:8px 0"></div></td></tr>`;
+      const label = ev.isCombined ? `<b>${ev.combinedLabel}</b> <small style="color:var(--gray)">(combined)</small>` : ev.label;
+      return `<tr><td>${pill}</td><td>${label}${ev.isMassStart?' <small style="color:var(--gray)">(mass start)</small>':''}</td><td>${ev.entryCount}</td><td><small style="color:var(--gray)">${fmtLabel}</small></td><td style="white-space:nowrap">${action}</td></tr>
+        <tr id="drawrow-${ev.id}" style="display:none"><td colspan="5" id="drawview-${ev.id}" style="padding:0 0 12px 0"></td></tr>`;
     }).join('');
-    el.innerHTML = `<table class="events-table"><tr><th>Event</th><th>Entries</th><th>Format</th><th></th></tr>${rows}</table>`;
+
+    el.innerHTML = summary + `<div class="table-scroll"><table class="events-table"><tr><th style="width:130px">Status</th><th>Event</th><th>Entries</th><th>Format</th><th></th></tr>${rows}</table></div>`;
   } catch (err) {
-    el.innerHTML = `<div class="flag">Couldn't load events: ${err.message}</div>`;
+    el.innerHTML = `<div class="flag">Couldn't load: ${err.message}</div>`;
   }
+}
+
+async function generateAll(){
+  const todo = allEvents.filter(ev => ev.entryCount>0 && !ev.hasRaces && !ev.isMassStart && ev.format.runnable);
+  if(!todo.length) return;
+  if(!(await customConfirm(`Generate draws for ${todo.length} event(s)?`))) return;
+  for(const ev of todo){
+    await fetch(`/api/programme/events/${ev.id}/generate`, {method:'POST'});
+  }
+  loadEvents(); renderProgressStrip('progressStrip');
+}
+
+async function confirmAll(){
+  const drawn = allEvents.filter(ev => ev.hasRaces && !ev.drawConfirmed);
+  if(!drawn.length) return;
+  if(!(await customConfirm(`Confirm ${drawn.length} draw(s)? Check them first if you haven't.`))) return;
+  for(const ev of drawn){
+    await fetch(`/api/programme/events/${ev.id}/confirm-draw`, {method:'POST'});
+  }
+  loadEvents(); renderProgressStrip('progressStrip');
 }
 
 function massStartActionHtml(ev){
@@ -225,8 +193,8 @@ async function confirmDraw(eventId){
 }
 
 async function toggleDrawView(eventId){
-  const row = document.getElementById(`drawView-${eventId}`);
-  const inner = document.getElementById(`drawViewInner-${eventId}`);
+  const row = document.getElementById(`drawrow-${eventId}`);
+  const inner = document.getElementById(`drawview-${eventId}`);
   const isOpen = row.style.display !== 'none';
   if(isOpen){ row.style.display = 'none'; return; }
   row.style.display = 'table-row';

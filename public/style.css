@@ -225,3 +225,10 @@ body.race-day .nav-group:first-child:hover a { display: inline; }
 /* ── Medal badge (replaces emoji) ── */
 .medal { display:inline-block; min-width:16px; height:16px; line-height:16px; border-radius:50%; text-align:center; font-size:9px; font-weight:800; color:#fff; margin-right:5px; vertical-align:middle; font-family:Arial,sans-serif; }
 .medal.g { background:#C9A227; } .medal.s { background:#8A8A8A; } .medal.b { background:#A0522D; }
+
+/* ── Dropdown menu (Export) ── */
+.menu-wrap { position: relative; display: inline-block; }
+.menu { display: none; position: absolute; right: 0; top: calc(100% + 4px); background: #fff; border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 6px 20px rgba(0,0,0,.12); min-width: 200px; z-index: 50; padding: 4px; }
+.menu.open { display: block; }
+.menu button { display: block; width: 100%; text-align: left; border: none; background: #fff; border-radius: 5px; padding: 9px 12px; }
+.menu button:hover { background: #F3F6FA; }
