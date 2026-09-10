@@ -238,22 +238,25 @@ async function renderProgressStrip(containerId){
   try { s = await (await fetch(`/api/meets/${encodeURIComponent(meetId)}/setup-status`)).json(); }
   catch(e){ el.innerHTML=''; return; }
   const steps = [
-    { key:'imported',  label:'1 · Entries imported', href:'/admin.html' },
-    { key:'sorted',    label:'2 · Race Sort checked', href:'/race-sort.html' },
-    { key:'drawn',     label:'3 · Draws confirmed',   href:'/draw.html' },
-    { key:'programmed',label:'4 · Programme set',     href:'/program.html' },
-    { key:'finalised', label:'5 · Finalised → Tower', href:'/program.html' },
+    { key:'imported',  label:'Entries imported', href:'/admin.html' },
+    { key:'sorted',    label:'Race Sort', href:'/race-sort.html' },
+    { key:'drawn',     label:'Draws confirmed',   href:'/draw.html' },
+    { key:'programmed',label:'Programme set',     href:'/program.html' },
+    { key:'finalised', label:'Finalised → Tower', href:'/program.html' },
   ];
   const here = window.location.pathname;
   let nextFound = false;
-  el.innerHTML = `<div class="progress-strip">` + steps.map(st => {
+  const parts = [];
+  steps.forEach((st, i) => {
     const done = !!s[st.key];
     const isNext = !done && !nextFound;
     if(isNext) nextFound = true;
     const cls = done ? 'done' : isNext ? 'next' : 'todo';
     const active = st.href === here ? ' here' : '';
-    return `<a class="ps-step ${cls}${active}" href="${st.href}">${done?'✓ ':''}${st.label}</a>`;
-  }).join('<span class="ps-arrow">›</span>') + `</div>`;
+    if(i > 0) parts.push(`<span class="ps-line ${done ? 'done' : ''}"></span>`);
+    parts.push(`<a class="ps-step ${cls}${active}" href="${st.href}"><span class="ps-dot">${done ? '✓' : i + 1}</span><span class="ps-label">${st.label}</span></a>`);
+  });
+  el.innerHTML = `<div class="progress-strip">${parts.join('')}</div>`;
 }
 
 // ── Race-day mode ─────────────────────────────────────────────────

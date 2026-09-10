@@ -22,7 +22,10 @@
   <h1>Race Sort</h1>
   <div class="flag" id="meetWarning" style="display:none">No meet selected — pick or create one at the top-right first.</div>
   <div id="progressStrip"></div>
-  <p style="color:var(--gray);font-size:13px">Combine small age groups into a shared start, or fix a wrong entry. Skip if nothing needs combining.</p>
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+    <p style="color:var(--gray);font-size:13px;margin:0">Combine small age groups into a shared start, or fix a wrong entry.</p>
+    <button onclick="markSortChecked()" style="font-size:12px;padding:6px 12px;white-space:nowrap">✓ Nothing to combine — mark as checked</button>
+  </div>
 
   <div class="card">
     <h2 style="margin-top:0">Combine events for a shared start</h2>
@@ -95,6 +98,7 @@ async function loadEvents(){
     console.error(err);
     document.getElementById('combineList').innerHTML = `<div class="flag">Couldn't load events: ${err.message}</div>`;
   }
+  renderProgressStrip('progressStrip');
 }
 
 
@@ -379,6 +383,13 @@ async function loadSummary(){
     console.error(err);
     el.innerHTML = `<div class="flag">Couldn't load summary: ${err.message}</div>`;
   }
+}
+
+async function markSortChecked(){
+  const meetId = getMeetId(); if(!meetId) return;
+  const res = await fetch(`/api/meets/${encodeURIComponent(meetId)}/race-sort-checked`, {method:'POST'});
+  if(!res.ok){ const d=await res.json(); alert(d.error); return; }
+  renderProgressStrip('progressStrip');
 }
 
 async function init(){

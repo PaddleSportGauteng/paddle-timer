@@ -121,13 +121,24 @@ router.get('/:id/setup-status', (req, res) => {
   const daysMissing = (meet.numDays || 1) > 1 && races.some((r) => !r.day);
   res.json({
     imported: entries.length > 0,
-    sorted: !!meet.raceSortChecked || drawnConfirmed, // sort is implicit once draws are confirmed
+    sorted: races.some((r) => r.combinedEventIds && r.combinedEventIds.length > 1) || !!meet.raceSortChecked,
     drawn: drawnConfirmed,
     programmed: anyScheduled,
     finalised: anyPublished,
     daysMissing,
     numDays: meet.numDays || 1,
   });
+});
+
+// Race Sort has no mandatory action — the office confirms it's been
+// reviewed (either combining groups, or explicitly saying nothing needs it).
+router.post('/:id/race-sort-checked', (req, res) => {
+  const database = db.load();
+  const meet = database.meets[req.params.id];
+  if (!meet) return res.status(404).json({ error: 'Meet not found.' });
+  meet.raceSortChecked = true;
+  db.save();
+  res.json({ ok: true });
 });
 
 module.exports = router;
