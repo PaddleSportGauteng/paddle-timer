@@ -30,7 +30,7 @@ function buildRanked(database, results, filterEntryId) {
     .map(([entryId, r], i) => {
       const meta = namesFor(database, entryId);
       const weighIn = database.weighIns[entryId] || null;
-      return { place: i + 1, entryId, ...meta, timeMs: r.finishTimeMs, weighIn };
+      return { place: r.position || (i + 1), deadHeat: !!r.deadHeat, entryId, ...meta, timeMs: r.finishTimeMs, weighIn };
     });
 }
 

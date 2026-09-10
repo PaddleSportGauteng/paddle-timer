@@ -99,27 +99,35 @@ function decideFormat(entryCount, lanes = DEFAULT_LANES) {
     return { runnable: true, rounds: ['final'], heatsNeeded: 1, note: 'Entries fit in one final — no heats needed (ICF 5.1.1).' };
   }
   const numHeats = Math.ceil(entryCount / lanes);
-  const plan = lanes === 9 ? PROGRESSION_PLANS[numHeats] : null;
-  if (!plan) {
-    const why = lanes !== 9
-      ? `this venue has ${lanes} lanes — ICF Appendix 1's published tables only cover the standard 9-lane course`
-      : `${entryCount} entries needs ${numHeats} heats — beyond ICF Appendix 1's largest published plan (Plan G, 8 heats / 72 boats)`;
+
+  // 9-lane: use the exact published ICF Appendix 1 plan
+  if (lanes === 9) {
+    const plan = PROGRESSION_PLANS[numHeats];
+    if (!plan) {
+      return {
+        runnable: true, rounds: ['heat', 'semi', 'final'], heatsNeeded: numHeats, unsupported: true,
+        note: `${entryCount} entries needs ${numHeats} heats — beyond ICF Appendix 1's largest published plan (Plan G, 8 heats / 72 boats). Heats drawn; advance manually in Race Program.`,
+      };
+    }
     return {
-      // rounds still lists the full heat->semi->final sequence (just
-      // without automatic quotas) so the manual "advance next round" tool
-      // in Race Program knows semi/final are valid rounds to create.
-      runnable: true, rounds: ['heat', 'semi', 'final'], heatsNeeded: numHeats, unsupported: true,
-      note: `${why}. Heats will be drawn, but semi/final advancement isn't automated — advance manually in Race Program.`,
+      runnable: true, rounds: ['heat', 'semi', 'final'], heatsNeeded: numHeats,
+      directPerHeat: plan.directPerHeat, numSemis: plan.numSemis, finalsNeeded: finalsNeeded(entryCount),
+      icfExact: true,
+      note: `ICF Appendix 1 Plan for ${numHeats} heats: ${plan.directPerHeat > 0 ? `top ${plan.directPerHeat} per heat go direct to Final A, rest` : 'everyone'} advance through ${plan.numSemis} semifinal(s) into ${finalsNeeded(entryCount)} final(s).`,
     };
   }
+
+  // Non-9-lane: apply ICF principles generalised to this course.
+  // Semis needed = enough to hold everyone who isn't a direct qualifier.
+  // Direct qualifiers: same ratio as ICF (3/heat for 2 heats, 1/heat for 3 heats, 0 for 4+).
+  const directPerHeat = numHeats === 2 ? Math.max(1, Math.floor(lanes / 3)) : numHeats === 3 ? 1 : 0;
+  const nonDirect = entryCount - directPerHeat * numHeats;
+  const numSemis = Math.max(1, Math.ceil(nonDirect / lanes));
   return {
-    runnable: true,
-    rounds: ['heat', 'semi', 'final'],
-    heatsNeeded: numHeats,
-    directPerHeat: plan.directPerHeat,
-    numSemis: plan.numSemis,
-    finalsNeeded: finalsNeeded(entryCount),
-    note: `ICF Appendix 1 Plan for ${numHeats} heats: ${plan.directPerHeat > 0 ? `top ${plan.directPerHeat} per heat go direct to Final A, rest` : 'everyone'} advance through ${plan.numSemis} semifinal(s) into ${finalsNeeded(entryCount)} final(s).`,
+    runnable: true, rounds: ['heat', 'semi', 'final'], heatsNeeded: numHeats,
+    directPerHeat, numSemis, finalsNeeded: finalsNeeded(entryCount),
+    icfExact: false, generalised: true,
+    note: `${lanes}-lane course — ICF principles applied (no rematches, centre lanes to better finishers): ${directPerHeat > 0 ? `top ${directPerHeat} per heat direct to Final A, rest` : 'everyone'} through ${numSemis} semi(s) into ${finalsNeeded(entryCount)} final(s).`,
   };
 }
 

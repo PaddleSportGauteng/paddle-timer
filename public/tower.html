@@ -233,7 +233,10 @@ function laneCardHtml(race){
     const r=race.results[info.entryId];
     let timeCell='<span style="color:var(--gray)">—</span>';
     let posCell='';
-    if(r&&r.status==='OK'){ timeCell=fmtTime(r.finishTimeMs); posCell=r.position; }
+    if(r&&r.status==='OK'){
+      timeCell=fmtTime(r.finishTimeMs) + (r.manualTime?' <span title="Manually edited" style="color:var(--orange);font-size:10px">✎</span>':'');
+      posCell=r.position + (r.deadHeat?'<span title="Dead heat" style="color:var(--orange);font-size:10px">=</span>':'');
+    }
     else if(r){ timeCell=`<span class="bad">${r.status}</span>`; }
     const g=info.gender?(info.gender.toLowerCase().startsWith('f')?'F':info.gender.toLowerCase().startsWith('m')?'M':info.gender):'';
     const isK2 = info.names.length>1;
@@ -251,6 +254,7 @@ function laneCardHtml(race){
       <td class="pmeta cpsa">${(info.psaIds||[])[0]||''}</td>
       <td class="ctime">${timeCell}</td>
       <td class="cact">
+        <button onclick="editTime('${race.id}','${info.entryId}',${r&&r.status==='OK'?r.finishTimeMs:'null'})" title="Edit time (photo finish)">⏱</button>
         <button onclick="markLane('${race.id}','${info.entryId}','DNS')">DNS</button>
         <button onclick="markLane('${race.id}','${info.entryId}','DNF')">DNF</button>
         <button onclick="markDQ('${race.id}','${info.entryId}')">DQ</button>
@@ -495,6 +499,29 @@ async function lockRace(raceId){
   lastRunningHash='';
   await refresh();
 }
+async function editTime(raceId,entryId,currentMs){
+  const current = currentMs!=null ? fmtTime(currentMs) : '';
+  const input = prompt('Enter finish time (mm:ss.cc or ss.cc):', current);
+  if(input===null) return;
+  const t = input.trim();
+  let ms = null;
+  // mm:ss.cc
+  let m = /^(\d{1,2}):(\d{1,2})(?:\.(\d{1,2}))?$/.exec(t);
+  if(m){ ms = (parseInt(m[1])*60 + parseInt(m[2]))*1000 + (m[3]?parseInt(m[3].padEnd(2,'0'))*10:0); }
+  else {
+    // ss.cc
+    m = /^(\d{1,3})(?:\.(\d{1,2}))?$/.exec(t);
+    if(m){ ms = parseInt(m[1])*1000 + (m[2]?parseInt(m[2].padEnd(2,'0'))*10:0); }
+  }
+  if(ms===null){ alert('Invalid time. Use mm:ss.cc (e.g. 01:23.45) or ss.cc (e.g. 43.21)'); return; }
+  const res=await fetch(`/api/races/${raceId}/set-time/${entryId}`,{
+    method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({timeMs:ms})
+  });
+  if(!res.ok){const d=await res.json();alert(d.error);return;}
+  lastRunningHash='';
+  await refresh(true);
+}
+
 async function markLane(raceId,entryId,status,dqReason){
   const res=await fetch(`/api/races/${raceId}/mark/${entryId}`,{
     method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({status,dqReason})

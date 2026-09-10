@@ -132,7 +132,7 @@ function resultBlockHtml(b){
   const gl = g => g ? (g.toLowerCase().startsWith('f')?'F':g.toLowerCase().startsWith('m')?'M':g) : '';
   const rankedRows = b.ranked.map(r => `
     <tr>
-      <td class="cpos">${medalFor(r.place)}${r.place}</td>
+      <td class="cpos">${medalFor(r.place)}${r.place}${r.deadHeat?'<span title="Dead heat" style="color:var(--orange);font-size:10px">=</span>':''}</td>
       <td class="pname">${r.names.length>1?`${r.names[0]}<br>${r.names[1]}`:r.names[0]}</td>
       <td class="pmeta cage">${r.ageCategory||''}</td>
       <td class="pmeta cclub">${r.clubCode||''}</td>

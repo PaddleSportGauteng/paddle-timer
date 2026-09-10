@@ -6,7 +6,7 @@
 
 const db = require('./db');
 const rules = require('./rules');
-const { applyICFSemiDraw, applyICFFinalDraw } = require('./icf-lane-draw');
+const { applyICFSemiDraw, applyICFFinalDraw, applyGeneralisedSemiDraw, applyGeneralisedFinalDraw } = require('./icf-lane-draw');
 
 function assignLanes(entryIds, numLanes) {
   const laneOrder = rules.centerOutLaneOrder(numLanes);
@@ -122,9 +122,12 @@ function createFinals(database, event, directIds, rankedPoolIds, sourceRaces, ex
       .map(([entryId,r]) => ({ entryId, position: r.position, finishTimeMs: r.finishTimeMs, status: r.status })),
   }));
 
-  const icfFinals = (semiRaces.length > 0 || numHeats > 0)
+  let icfFinals = (meetLanes === 9 && (semiRaces.length > 0 || numHeats > 0))
     ? applyICFFinalDraw(semiResultsForDraw, numHeats, heatResultsForDraw, directIds)
     : null;
+  if (!icfFinals || !icfFinals.finalA) {
+    icfFinals = applyGeneralisedFinalDraw(semiResultsForDraw, meetLanes, directIds, finalsCount);
+  }
 
   if (icfFinals && icfFinals.finalA) {
     const phaseMap = { finalA: 'final', finalB: 'finalB', finalC: 'finalC' };
@@ -224,7 +227,19 @@ function autoAdvance(database, eventId) {
           })),
       }));
 
-      const icfDraw = applyICFSemiDraw(heatResultsForDraw, heatRaces.length, event.icfPlanVariant || 'P1');
+      let icfDraw = meetLanes === 9
+        ? applyICFSemiDraw(heatResultsForDraw, heatRaces.length, event.icfPlanVariant || 'P1')
+        : null;
+      // Non-9-lane or plan not covered: generalised ICF-principle draw
+      if (!icfDraw) {
+        const g = applyGeneralisedSemiDraw(heatResultsForDraw, plan.numSemis, meetLanes, plan.directPerHeat || 0);
+        if (g && Object.keys(g.semis).length > 0) {
+          icfDraw = { semis: g.semis, directToFinalLanes: {} };
+          // Override directIds with what the generalised draw computed
+          directIds.length = 0;
+          g.directToFinalIds.forEach(id => directIds.push(id));
+        }
+      }
 
       if (icfDraw) {
         // ICF exact draw available — use pre-determined lane assignments

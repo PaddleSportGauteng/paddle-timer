@@ -4,6 +4,27 @@ const rules = require('../rules');
 const { enrichRace, sortByScheduleThenNumber } = require('../present');
 const progression = require('../progression');
 
+// Recompute finishing positions for a race's results, handling dead heats
+// per ICF 10.6.3 / 10.6.4: boats with identical finish times (to 1/100s)
+// share the same position, and the next boat takes the position after
+// that group (e.g. 1, 1, 3, 4). Only OK results are ranked.
+function recomputePositions(results) {
+  const ok = Object.entries(results)
+    .filter(([, r]) => r.status === 'OK')
+    .sort((a, b) => a[1].finishTimeMs - b[1].finishTimeMs);
+  let pos = 1;
+  for (let i = 0; i < ok.length; i++) {
+    // Compare at 1/100s (centisecond) resolution — ICF publishes at 1/100
+    const t = Math.floor(ok[i][1].finishTimeMs / 10);
+    const tPrev = i > 0 ? Math.floor(ok[i - 1][1].finishTimeMs / 10) : null;
+    if (i > 0 && t !== tPrev) pos = i + 1;
+    ok[i][1].position = pos;
+    ok[i][1].deadHeat = i > 0 && t === tPrev
+      || (i < ok.length - 1 && Math.floor(ok[i + 1][1].finishTimeMs / 10) === t);
+  }
+}
+
+
 const router = express.Router();
 
 // A semi/final race isn't ready to run on Tower until the round that fed
@@ -140,10 +161,7 @@ router.post('/:id/unassign-crossing', (req, res) => {
   }
   // Recompute positions for remaining OK results
   if (database.raceResults[race.id]) {
-    const remaining = Object.entries(database.raceResults[race.id])
-      .filter(([, r]) => r.status === 'OK')
-      .sort((a, b) => a[1].finishTimeMs - b[1].finishTimeMs);
-    remaining.forEach(([, r], i) => { r.position = i + 1; });
+    recomputePositions(database.raceResults[race.id]);
   }
   db.save();
   res.json({ ok: true });
@@ -170,10 +188,7 @@ router.post('/:id/delete-crossing', (req, res) => {
   list.forEach((c, i) => { c.position = i + 1; });
   // Recompute positions for remaining OK results
   if (database.raceResults[race.id]) {
-    const remaining = Object.entries(database.raceResults[race.id])
-      .filter(([, r]) => r.status === 'OK')
-      .sort((a, b) => a[1].finishTimeMs - b[1].finishTimeMs);
-    remaining.forEach(([, r], i) => { r.position = i + 1; });
+    recomputePositions(database.raceResults[race.id]);
   }
   db.save();
   res.json(enrichRace(database, race));
@@ -189,9 +204,7 @@ router.post('/:id/undo-crossing', (req, res) => {
     const entryId = race.lanes[String(last.assignedLane)];
     if (entryId && database.raceResults[race.id]) {
       delete database.raceResults[race.id][entryId];
-      const remaining = Object.entries(database.raceResults[race.id]).filter(([, r]) => r.status === 'OK')
-        .sort((a, b) => a[1].finishTimeMs - b[1].finishTimeMs);
-      remaining.forEach(([, r], i) => { r.position = i + 1; });
+      recomputePositions(database.raceResults[race.id]);
     }
   }
   db.save();
@@ -237,10 +250,7 @@ router.post('/:id/assign-crossing', (req, res) => {
   autoAssignLastRemaining(database, race, list, results);
 
   // Recompute positions by finish time
-  const sorted = Object.entries(results)
-    .filter(([, r]) => r.status === 'OK')
-    .sort((a, b) => a[1].finishTimeMs - b[1].finishTimeMs);
-  sorted.forEach(([, r], i) => { r.position = i + 1; });
+  recomputePositions(results);
 
   db.save();
   res.json(enrichRace(database, race));
@@ -267,10 +277,7 @@ router.post('/:id/undo/:entryId', (req, res) => {
   if (!race) return res.status(404).json({ error: 'Race not found' });
   const results = database.raceResults[race.id] || {};
   delete results[req.params.entryId];
-  // Renumber remaining positions by finish time so undo never leaves gaps.
-  const remaining = Object.entries(results).filter(([, r]) => r.status === 'OK')
-    .sort((a, b) => a[1].finishTimeMs - b[1].finishTimeMs);
-  remaining.forEach(([, r], i) => { r.position = i + 1; });
+  recomputePositions(results);
   db.save();
   res.json(enrichRace(database, race));
 });
@@ -302,10 +309,7 @@ router.post('/:id/mark/:entryId', (req, res) => {
     dqReason: status === 'DQ' ? (dqReason || null) : null,
     crossedAt: keepTiming ? existing.crossedAt : Date.now(),
   };
-  // Close the gap left in the ranked order if this entry was previously OK.
-  const remaining = Object.entries(database.raceResults[race.id]).filter(([, r]) => r.status === 'OK')
-    .sort((a, b) => a[1].finishTimeMs - b[1].finishTimeMs);
-  remaining.forEach(([, r], i) => { r.position = i + 1; });
+  recomputePositions(database.raceResults[race.id]);
   if (race.resultsConfirmed) race.resultsConfirmed = false;
   db.save();
   res.json(enrichRace(database, race));
@@ -327,6 +331,32 @@ router.post('/:id/restart-clock', (req, res) => {
   database.raceResults[race.id] = {};
   db.save();
   res.json({ ok: true });
+});
+
+// Manual time override — for photo finish corrections. Sets the finish
+// time for a lane directly (mm:ss.cc or seconds), then recomputes all
+// positions including dead heats. Un-confirms an already-official race.
+router.post('/:id/set-time/:entryId', (req, res) => {
+  const database = db.load();
+  const race = database.races[req.params.id];
+  if (!race) return res.status(404).json({ error: 'Race not found' });
+  const { timeMs } = req.body;
+  if (typeof timeMs !== 'number' || timeMs < 0) return res.status(400).json({ error: 'timeMs (number) required' });
+  database.raceResults[race.id] = database.raceResults[race.id] || {};
+  const results = database.raceResults[race.id];
+  const existing = results[req.params.entryId];
+  results[req.params.entryId] = {
+    finishTimeMs: timeMs,
+    position: existing ? existing.position : 0,
+    status: 'OK',
+    dqReason: null,
+    crossedAt: existing ? existing.crossedAt : Date.now(),
+    manualTime: true,
+  };
+  recomputePositions(results);
+  if (race.resultsConfirmed) race.resultsConfirmed = false;
+  db.save();
+  res.json(enrichRace(database, race));
 });
 
 router.post('/:id/stop-clock', (req, res) => {
