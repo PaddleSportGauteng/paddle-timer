@@ -295,14 +295,16 @@ function massCardHtml(race){
 function renderUpcoming(races){
   const el=document.getElementById('upcomingSection');
   if(!races.length){el.innerHTML='';return;}
-  el.innerHTML=`<div class="section-label">UP NEXT</div>`+races.map(r=>`
+  el.innerHTML=`<div class="section-label">UP NEXT</div>`+races.map((r,i)=>`
     <div class="upcoming-card">
       <div>
         <div class="u-title">${raceLabel(r)}</div>
         <div class="u-sub">${lanesPreview(r)}</div>
       </div>
-      <div style="display:flex;align-items:center;gap:8px">
+      <div style="display:flex;align-items:center;gap:6px">
         ${r.scheduledLabel?`<span class="u-time">${r.scheduledLabel}</span>`:''}
+        <button onclick="reorderRace('${r.id}','up')" ${i===0?'disabled':''} style="padding:6px 10px;border-radius:6px;border:1px solid var(--line);background:#fff;cursor:pointer;font-size:14px" title="Move up">▲</button>
+        <button onclick="reorderRace('${r.id}','down')" ${i===races.length-1?'disabled':''} style="padding:6px 10px;border-radius:6px;border:1px solid var(--line);background:#fff;cursor:pointer;font-size:14px" title="Move down">▼</button>
         <button class="btn-start" style="padding:10px 18px;border-radius:8px;border:none;cursor:pointer;font-weight:700;font-size:14px;white-space:nowrap" onclick="startRace('${r.id}')">▶ Start</button>
       </div>
     </div>`).join('');
@@ -322,6 +324,14 @@ function renderFinished(races){
 }
 
 // ── Actions ───────────────────────────────────────────────────────
+async function reorderRace(id, direction){
+  const res = await fetch(`/api/races/${id}/reorder`, {
+    method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({direction})
+  });
+  if(!res.ok){ const d=await res.json(); alert(d.error); return; }
+  await refresh();
+}
+
 async function startRace(id){
   const res=await fetch(`/api/races/${id}/start`,{method:'POST'});
   if(!res.ok){const d=await res.json();alert(d.error);return;}

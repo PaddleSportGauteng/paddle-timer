@@ -760,4 +760,29 @@ router.post('/:id/move-to-race', (req, res) => {
   res.json({ ok: true });
 });
 
+// Reorder a race up or down in the running order (Tower use).
+// Swaps raceNumbers with the adjacent race.
+router.post('/:id/reorder', (req, res) => {
+  const database = db.load();
+  const race = database.races[req.params.id];
+  if (!race) return res.status(404).json({ error: 'Race not found.' });
+  if (race.status !== 'pending') return res.status(400).json({ error: 'Can only reorder pending races.' });
+  const direction = req.body.direction; // 'up' or 'down'
+  const event = database.events[race.eventId];
+  if (!event) return res.status(404).json({ error: 'Event not found.' });
+  const eventIds = new Set(Object.values(database.events).filter((e) => e.meetId === event.meetId).map((e) => e.id));
+  const pending = Object.values(database.races)
+    .filter((r) => eventIds.has(r.eventId) && r.status === 'pending')
+    .sort((a, b) => a.raceNumber - b.raceNumber);
+  const idx = pending.findIndex((r) => r.id === race.id);
+  const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
+  if (swapIdx < 0 || swapIdx >= pending.length) return res.status(400).json({ error: 'Already at the limit.' });
+  const other = pending[swapIdx];
+  const tmp = race.raceNumber;
+  race.raceNumber = other.raceNumber;
+  other.raceNumber = tmp;
+  db.save();
+  res.json({ ok: true });
+});
+
 module.exports = router;

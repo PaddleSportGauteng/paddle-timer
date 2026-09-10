@@ -68,6 +68,7 @@
         <button class="orange" style="font-size:12px;padding:7px 12px;white-space:nowrap" onclick="downloadDraws()">Draws (Excel)</button>
         <button class="orange" style="font-size:12px;padding:7px 12px;white-space:nowrap" onclick="downloadPdf()">Programme (PDF)</button>
         <button class="green" style="font-size:12px;padding:7px 12px;white-space:nowrap;font-weight:700" onclick="finalise()">Finalise → Tower</button>
+        <button style="font-size:12px;padding:7px 12px;white-space:nowrap;background:#888;color:#fff;border:none;border-radius:6px;cursor:pointer" onclick="unfinalise()">↩ Unfinalise</button>
       </div>
     </div>
     <p style="color:var(--gray);font-size:14px">Every race for this meet, in order, <b>once it's been drawn or combined above</b>. This is where you fine-tune what's already been created — swap a lane, scratch someone, delete a race, set its time. Edit freely until you hit Finalise — only finalised races show up on the Tower. <b>The PDF is generated fresh every time you click download</b> — it always matches exactly what's below, never cached; if it ever looks different, it's because it was downloaded before a later change, not because it's out of sync.</p>
@@ -272,6 +273,20 @@ async function generateStartTimes(day){
   const el = document.getElementById('startTimesResult');
   if(!res.ok){ el.innerHTML = `<div class="flag">${data.error}</div>`; return; }
   el.innerHTML = `<div class="flag" style="background:#E4F5EC;border-color:#9ED8B8;color:#1E8E5A">${meetNumDays > 1 ? 'Day '+d+': ' : ''}${data.updated} race times set.</div>`;
+  loadRaceList();
+}
+
+async function unfinalise(){
+  const meetId = getMeetId();
+  if(!meetId){ alert('Pick a meet first.'); return; }
+  const ok = await customConfirm('Unfinalise? This removes all pending races from the Tower so you can reorder them. Races already started or finished are not affected.');
+  if(!ok) return;
+  const res = await fetch('/api/programme/unfinalise', {
+    method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({meetId})
+  });
+  const data = await res.json();
+  if(!res.ok){ alert(data.error); return; }
+  alert(`Done — ${data.unpublished} pending races removed from Tower. Make your changes then Finalise again.`);
   loadRaceList();
 }
 

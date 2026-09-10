@@ -1108,4 +1108,15 @@ router.post('/finalise', (req, res) => {
   res.json({ published: newlyPublished, alreadyPublished, totalDrawn: allMeetRaces.length });
 });
 
+router.post('/unfinalise', (req, res) => {
+  const database = db.load();
+  const { meetId } = req.body;
+  if (!database.meets[meetId]) return res.status(400).json({ error: 'Meet not found.' });
+  const eventIds = new Set(Object.values(database.events).filter((e) => e.meetId === meetId).map((e) => e.id));
+  const pendingRaces = Object.values(database.races).filter((r) => eventIds.has(r.eventId) && r.status === 'pending');
+  pendingRaces.forEach((r) => { r.published = false; });
+  db.save();
+  res.json({ unpublished: pendingRaces.length });
+});
+
 module.exports = router;
