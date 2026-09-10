@@ -697,9 +697,6 @@ router.post('/entries/:entryId/weigh', (req, res) => {
   database.weighIns[entry.id] = { weightKg, timestamp: Date.now(), ...check };
 
   if (check.checked && !check.passed) {
-    // Find any race result for this entry and flip it to DQ. If that
-    // race had already been marked "official," a late DQ un-confirms it
-    // back to provisional — the office needs to review and re-confirm.
     Object.entries(database.raceResults).forEach(([raceId, raceResultMap]) => {
       if (raceResultMap[entry.id]) {
         raceResultMap[entry.id].status = 'DQ';
@@ -709,6 +706,16 @@ router.post('/entries/:entryId/weigh', (req, res) => {
       }
     });
   }
+
+  // Auto-confirm results when minimum 3 weigh-ins are done for the race
+  Object.values(database.races).forEach(race => {
+    if (race.status !== 'finished' || race.resultsConfirmed) return;
+    const allEntryIds = Object.values(race.lanes || {}).filter(Boolean);
+    const weighedCount = allEntryIds.filter(id => database.weighIns && database.weighIns[id]).length;
+    const required = Math.min(3, allEntryIds.length);
+    if (weighedCount >= required) race.resultsConfirmed = true;
+  });
+
   db.save();
   res.json({ entry, weighIn: database.weighIns[entry.id] });
 });

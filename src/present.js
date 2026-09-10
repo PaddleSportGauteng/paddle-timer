@@ -64,23 +64,19 @@ function enrichRace(database, race) {
   // rules.computeWeighInRequirement for the top-3 rule.
   let weighInStatus = null;
   if (race.status === 'finished') {
-    const ranked = Object.entries(results)
-      .filter(([, r]) => r.status === 'OK')
-      .sort((a, b) => a[1].finishTimeMs - b[1].finishTimeMs)
-      .map(([entryId], i) => ({ entryId, place: i + 1 }));
-    // Count weigh-ins from ALL boats in this race (finishers + DQ'd by weight)
-    // A race-DQ (lane crossing etc.) doesn't need weighing, but a weight-DQ counts
+    // Get all entry IDs in this race
     const allEntryIds = Object.values(race.lanes || {}).filter(Boolean);
+    // Count how many have been weighed (any boat in the race counts)
     const weighedInThisRace = allEntryIds.filter(entryId => database.weighIns && database.weighIns[entryId]);
-    // Build a combined list: ranked finishers + weight-DQ'd boats
-    const allRankedForWeigh = [...ranked];
-    weighedInThisRace.forEach(entryId => {
-      if (!allRankedForWeigh.find(r => r.entryId === entryId)) {
-        allRankedForWeigh.push({ entryId, place: 999 });
-      }
-    });
-    const weighedIds = new Set(weighedInThisRace);
-    weighInStatus = rules.computeWeighInRequirement(allRankedForWeigh, weighedIds);
+    const required = Math.min(3, allEntryIds.length);
+    const weighedCount = weighedInThisRace.length;
+    const complete = weighedCount >= required;
+    weighInStatus = {
+      complete,
+      requiredCount: required,
+      weighedCount,
+      flag: complete ? null : `${weighedCount} of ${required} required weigh-ins done — ${required - weighedCount} more needed before results are official.`,
+    };
   }
 
   return { ...race, laneEntries, results, blindCrossings, weighInStatus };
