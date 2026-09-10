@@ -177,20 +177,15 @@ function checkWeight(boatClass, measuredWeightKg) {
  */
 function computeWeighInRequirement(ranked, weighedEntryIds) {
   const weighed = weighedEntryIds instanceof Set ? weighedEntryIds : new Set(weighedEntryIds);
-  const podium = ranked.slice(0, 3);
-
-  const podiumWeighed = podium.filter((r) => weighed.has(r.entryId));
-  const podiumComplete = podiumWeighed.length === podium.length;
-
-  const missingPodium = podium.filter((r) => !weighed.has(r.entryId));
-  const flag = podiumComplete ? null
-    : `Weigh-in needed for position${missingPodium.length > 1 ? 's' : ''} ${missingPodium.map((r) => r.place).join(', ')} before this can be final.`;
-
+  const required = Math.min(3, ranked.length); // min 3, or all if fewer than 3 finished
+  const weighedCount = ranked.filter((r) => weighed.has(r.entryId)).length;
+  const complete = weighedCount >= required;
+  const flag = complete ? null
+    : `${weighedCount} of ${required} required weigh-ins done — ${required - weighedCount} more needed before results are official.`;
   return {
-    complete: podiumComplete,
-    podiumComplete,
-    requiredCount: podium.length,
-    weighedCount: podiumWeighed.length,
+    complete,
+    requiredCount: required,
+    weighedCount,
     flag,
   };
 }
