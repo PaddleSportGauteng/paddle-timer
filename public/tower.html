@@ -329,13 +329,32 @@ async function startRace(id){
   setTimeout(()=>{ const b=document.querySelector(`#race-${id} .tap-btn`); if(b)b.focus(); },100);
 }
 async function tap(raceId){
-  const res=await fetch(`/api/races/${raceId}/capture-crossing`,{method:'POST'});
-  if(!res.ok){const d=await res.json();alert(d.error);return;}
-  // Update local state and re-render without losing focus
-  await refresh();
-  // Focus first unassigned input
-  const inp=document.querySelector(`#race-${raceId} .lane-input`);
+  // Record the tap time INSTANTLY for display — don't wait for server
+  const race = racesById[raceId];
+  if(!race || !race.startTimeMs) return;
+  const timeMs = Date.now() - race.startTimeMs;
+  // Optimistically add to local state
+  if(!race.blindCrossings) race.blindCrossings = [];
+  const pos = race.blindCrossings.length + 1;
+  race.blindCrossings.push({position: pos, timeMs, assignedLane: null});
+  // Re-render immediately with the new crossing
+  renderRunning([race]);
+  startTick(race);
+  // Focus the new input
+  const inp = document.getElementById(`inp-${raceId}-${pos}`);
   if(inp) inp.focus();
+  // Sync to server in background
+  fetch(`/api/races/${raceId}/capture-crossing`, {method:'POST'})
+    .then(r => r.json())
+    .then(data => {
+      // Correct the time with server's authoritative value
+      if(data.blindCrossings) {
+        racesById[raceId] = data;
+        renderRunning([data]);
+        startTick(data);
+      }
+    })
+    .catch(()=>{});
 }
 async function undoTap(raceId){
   const res=await fetch(`/api/races/${raceId}/undo-crossing`,{method:'POST'});
@@ -424,15 +443,16 @@ async function undoLap(raceId,bib){
   await refresh();
 }
 
-// Spacebar / Enter = tap
+// Spacebar / Enter = instant tap
 document.addEventListener('keydown',e=>{
   if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT'||e.target.tagName==='TEXTAREA')return;
   if(e.key===' '||e.key==='Enter'){
     e.preventDefault();
+    e.stopPropagation();
     const btn=document.querySelector('.tap-btn');
-    if(btn)btn.click();
+    if(btn){ btn.click(); }
   }
-});
+},true); // capture phase for maximum speed
 
 async function init(){
   await initMeetBar('meetBar',{allowCreate:false});
