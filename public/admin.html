@@ -15,7 +15,10 @@
   .event-name-input:focus { outline:none; border-color:var(--orange); }
 
   /* Discipline cards */
-  .discipline-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:18px; }
+  .discipline-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:18px; }
+  .venue-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-bottom:18px; }
+  .disc-card.soon { opacity:.55; }
+  .disc-card.soon h3::after { content:' · soon'; font-size:11px; color:var(--gray); font-weight:400; }
   .disc-card { border:2px solid var(--line); border-radius:10px; padding:16px 12px; cursor:pointer; text-align:center; transition:border-color 0.15s, background 0.15s; }
   .disc-card.active { border-color:var(--orange); background:#FFF3E0; }
   .disc-card h3 { margin:0 0 4px; font-size:16px; color:var(--navy); }
@@ -123,7 +126,14 @@
         <h3>River</h3>
         <p>Batch starts · Wild water</p>
       </div>
+      <div class="disc-card soon" id="disc-trilogy" onclick="pickDisc('trilogy')">
+        <h3>Trilogy</h3>
+        <p>Series · Points across events</p>
+      </div>
     </div>
+
+    <div class="lane-label">Venue</div>
+    <div class="venue-grid" id="venueGrid"></div>
 
     <div class="lane-label">Number of lanes at this venue</div>
     <div class="lane-btns" id="laneBtns"></div>
@@ -164,6 +174,30 @@
 let selectedLanes = 9;
 let selectedDisc = 'sprint';
 let selectedDays = 1;
+let selectedVenue = null;
+
+(async function buildVenueCards(){
+  const el = document.getElementById('venueGrid');
+  let venues = [];
+  try { venues = await (await fetch('/api/meets/venues')).json(); } catch(e){}
+  el.innerHTML = venues.map(v => `
+    <div class="disc-card" id="venue-${v.id}" onclick="pickVenue('${v.id}')">
+      <h3>${v.name.split(',')[0]}</h3>
+      <p>${v.name.split(',').slice(1).join(',').trim()} · course ${String(v.bearing).padStart(3,'0')}° ${v.direction}</p>
+    </div>`).join('') + `
+    <div class="disc-card" id="venue-none" onclick="pickVenue(null)">
+      <h3>Other</h3>
+      <p>No venue set · no weather capture</p>
+    </div>`;
+  pickVenue(venues[0] ? venues[0].id : null);
+})();
+
+function pickVenue(id){
+  selectedVenue = id;
+  document.querySelectorAll('#venueGrid .disc-card').forEach(x => x.classList.remove('active'));
+  const el = document.getElementById('venue-' + (id || 'none'));
+  if(el) el.classList.add('active');
+}
 
 (function buildLaneBtns(){
   const el = document.getElementById('laneBtns');
@@ -197,7 +231,7 @@ let selectedDays = 1;
 
 function pickDisc(d) {
   selectedDisc = d;
-  ['sprint','marathon','river'].forEach(x =>
+  ['sprint','marathon','river','trilogy'].forEach(x =>
     document.getElementById('disc-'+x).classList.toggle('active', x === d)
   );
 }
@@ -224,7 +258,7 @@ async function createAndImport(btn) {
     const mRes = await fetch('/api/meets', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, raceType: selectedDisc, lanes: selectedLanes, numDays: selectedDays })
+      body: JSON.stringify({ name, raceType: selectedDisc, lanes: selectedLanes, numDays: selectedDays, venueId: selectedVenue })
     });
     const meet = await mRes.json();
     if (!mRes.ok) { el.innerHTML = `<div class="flag">${meet.error}</div>`; return; }

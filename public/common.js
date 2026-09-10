@@ -125,11 +125,6 @@ function newMeetSettingsDialog(){
           <option value="river" disabled>River (coming soon)</option>
         </select>
         <p style="margin:0 0 14px;font-size:12px;color:#6B7480">Sprints is what this app runs today. The others are on the roadmap.</p>
-        <label style="display:block;font-size:13px;color:#6B7480;margin-bottom:4px">Venue</label>
-        <select id="newMeetVenue" style="width:100%;padding:10px;font-size:15px;border-radius:6px;border:1px solid #D8DCE0;margin-bottom:4px">
-          <option value="">Loading venues…</option>
-        </select>
-        <p style="margin:0 0 14px;font-size:12px;color:#6B7480">Sets the weather location and course direction for wind readings on results.</p>
         <label style="display:block;font-size:13px;color:#6B7480;margin-bottom:4px">How many lanes?</label>
         <select id="newMeetLanes" style="width:100%;padding:10px;font-size:15px;border-radius:6px;border:1px solid #D8DCE0;margin-bottom:14px">
           ${[6,7,8,9,10].map(n => `<option value="${n}" ${n===9?'selected':''}>${n} lanes${n===9?' (ICF standard)':''}</option>`).join('')}
@@ -143,17 +138,12 @@ function newMeetSettingsDialog(){
         </div>
       </div>`;
     document.body.appendChild(overlay);
-    fetch('/api/meets/venues').then(r=>r.json()).then(vs => {
-      const sel = document.getElementById('newMeetVenue');
-      if(sel) sel.innerHTML = '<option value="">No venue (no weather)</option>' + vs.map(v => `<option value="${v.id}">${v.name}</option>`).join('');
-    }).catch(()=>{});
     document.getElementById('newMeetOk').onclick = () => {
       const raceType = document.getElementById('newMeetRaceType').value;
       const lanes = Number(document.getElementById('newMeetLanes').value);
       const numDays = Number(document.getElementById('newMeetDays').value);
-      const venueId = document.getElementById('newMeetVenue').value || null;
       document.body.removeChild(overlay);
-      resolve({ raceType, lanes, numDays, venueId });
+      resolve({ raceType, lanes, numDays });
     };
     document.getElementById('newMeetCancel').onclick = () => { document.body.removeChild(overlay); resolve(null); };
   });
@@ -189,7 +179,7 @@ async function initMeetBar(containerId, opts){
     if(!name) return;
     const settings = await newMeetSettingsDialog();
     if(settings === null) return;
-    const res = await fetch('/api/meets', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({name, raceType: settings.raceType, lanes: settings.lanes, numDays: settings.numDays, venueId: settings.venueId}) });
+    const res = await fetch('/api/meets', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({name, raceType: settings.raceType, lanes: settings.lanes, numDays: settings.numDays}) });
     const meet = await res.json();
     if(!res.ok){ alert(meet.error); return; }
     setMeetId(meet.id);
