@@ -181,8 +181,12 @@ function laneCardHtml(race){
     </tr>`;
   }).join('');
 
-  // Review rows — one per lane showing final result
-  const reviewRows=realLanes.map(([lane,info])=>{
+  // Review rows — sorted by finish position
+  const reviewRows=realLanes.slice().sort((a,b)=>{
+    const ra=race.results[(a[1]||{}).entryId], rb=race.results[(b[1]||{}).entryId];
+    const pa=ra&&ra.status==='OK'?ra.position:999, pb=rb&&rb.status==='OK'?rb.position:999;
+    return pa-pb;
+  }).map(([lane,info])=>{
     const r=race.results[info.entryId];
     let timeCell='<span style="color:var(--gray)">—</span>';
     let posCell='';
