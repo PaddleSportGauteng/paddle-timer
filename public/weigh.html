@@ -76,9 +76,9 @@ async function loadRaces(){
 function render(){
   const el = document.getElementById('raceList');
   const q = document.getElementById('filterBox').value.trim().toLowerCase();
-  let races = allRaces.filter(r => Object.values(r.laneEntries).some(Boolean));
+  let races = allRaces.filter(r => Object.values(r.laneEntries).some(Boolean) && !r.resultsConfirmed);
   if(q) races = races.filter(r => (r.event && r.event.label || '').toLowerCase().includes(q));
-  if(races.length === 0){ el.innerHTML = '<p style="color:var(--gray)">No races yet.</p>'; return; }
+  if(races.length === 0){ el.innerHTML = '<p style="color:var(--gray)">No races awaiting weigh-in — either no races finished yet, or all completed races have their 3 weigh-ins done and results are official.</p>'; return; }
 
   // The page rebuilds this whole list every 5s (see loadRaces' setInterval)
   // and every time a weight gets logged — remember which kg box had focus
