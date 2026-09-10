@@ -76,14 +76,13 @@ async function fetchConditions(venue, bearingOverride) {
   }
 }
 
-function formatConditions(w, waterTempC) {
-  if (!w && waterTempC == null) return '';
+function formatConditions(w) {
+  if (!w) return '';
   const parts = [];
-  if (w && w.airTempC != null) parts.push(`Air ${w.airTempC}°C`);
-  if (waterTempC != null) parts.push(`Water ${waterTempC}°C`);
-  if (w && w.humidityPct != null) parts.push(`Humidity ${w.humidityPct}%`);
-  if (w && w.condition) parts.push(w.condition);
-  if (w && w.windMs != null) {
+  if (w.airTempC != null) parts.push(`Air ${w.airTempC}°C`);
+  if (w.humidityPct != null) parts.push(`Humidity ${w.humidityPct}%`);
+  if (w.condition) parts.push(w.condition);
+  if (w.windMs != null) {
     let s = `Wind ${w.windMs} m/s`;
     if (w.windCompass) s += ` ${w.windCompass}`;
     if (w.windRelative) s += ` (${w.windRelative})`;

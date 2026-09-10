@@ -38,7 +38,7 @@ router.post('/', (req, res) => {
     return res.status(400).json({ error: `${raceType} isn't supported yet — this app only runs Sprints for now.` });
   }
   const id = db.nextId();
-  database.meets[id] = { id, name, raceType, lanes, restMinutes, numDays, venueId, courseBearing: venueId ? VENUES[venueId].bearing : null, waterTempC: null, createdAt: Date.now(), nextRaceNumber: 1 };
+  database.meets[id] = { id, name, raceType, lanes, restMinutes, numDays, venueId, courseBearing: venueId ? VENUES[venueId].bearing : null, createdAt: Date.now(), nextRaceNumber: 1 };
   db.save();
   res.json(database.meets[id]);
 });
@@ -97,8 +97,7 @@ router.get('/venues', (req, res) => {
   res.json(Object.values(VENUES));
 });
 
-// Set venue and/or water temperature for a meet. Water temp is manual
-// (no API has dam water temp) and carries forward until changed.
+// Set venue and/or course bearing for a meet.
 router.patch('/:id/conditions', (req, res) => {
   const database = db.load();
   const meet = database.meets[req.params.id];
@@ -113,13 +112,8 @@ router.patch('/:id/conditions', (req, res) => {
     if (b !== null && (isNaN(b) || b < 0 || b >= 360)) return res.status(400).json({ error: 'Bearing must be 0–359.' });
     meet.courseBearing = b;
   }
-  if (req.body.waterTempC !== undefined) {
-    const t = req.body.waterTempC === null || req.body.waterTempC === '' ? null : Number(req.body.waterTempC);
-    if (t !== null && (isNaN(t) || t < -5 || t > 50)) return res.status(400).json({ error: 'Water temp must be a number between -5 and 50.' });
-    meet.waterTempC = t;
-  }
   db.save();
-  res.json({ ok: true, venueId: meet.venueId, courseBearing: meet.courseBearing, waterTempC: meet.waterTempC });
+  res.json({ ok: true, venueId: meet.venueId, courseBearing: meet.courseBearing });
 });
 
 router.get('/:id/conditions-now', async (req, res) => {
@@ -129,7 +123,7 @@ router.get('/:id/conditions-now', async (req, res) => {
   const venue = meet.venueId ? VENUES[meet.venueId] : null;
   if (!venue) return res.json({ text: '' });
   const w = await fetchConditions(venue, meet.courseBearing);
-  res.json({ text: formatConditions(w, meet.waterTempC), raw: w });
+  res.json({ text: formatConditions(w), raw: w });
 });
 
 router.get('/:id', (req, res) => {

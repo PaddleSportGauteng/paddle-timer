@@ -376,7 +376,7 @@ router.post('/:id/finish-race', async (req, res) => {
     const venue = meet && meet.venueId ? VENUES[meet.venueId] : null;
     if (venue) {
       const w = await fetchConditions(venue, meet.courseBearing);
-      race.conditions = w ? { ...w, waterTempC: meet.waterTempC ?? null } : { waterTempC: meet.waterTempC ?? null };
+      if (w) race.conditions = w;
     }
   }
   const advanced = progression.autoAdvance(database, race.eventId);

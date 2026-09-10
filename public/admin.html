@@ -96,13 +96,9 @@
           <button type="button" class="sm" onclick="reverseCourse()" title="Add 180° — use when the course is run the other way">Reverse</button>
         </div>
       </div>
-      <div>
-        <label style="display:block;font-size:12px;color:var(--gray);margin-bottom:4px">Water temp °C</label>
-        <input type="number" step="0.1" id="condWater" placeholder="e.g. 20.8" style="width:110px;padding:8px" onchange="saveConditions()">
-      </div>
       <div id="condPreview" style="font-size:13px;color:var(--gray);flex:1;min-width:240px"></div>
     </div>
-    <p style="font-size:12px;color:var(--gray);margin:8px 0 0">Weather is captured automatically at each lock. Bearing is the direction boats travel start to finish; the venue default is a best estimate, confirm it on the water. Water temp is manual.</p>
+    <p style="font-size:12px;color:var(--gray);margin:8px 0 0">Weather is captured automatically at each lock. Bearing is the direction boats travel start to finish; the venue default is a best estimate, confirm it on the water.</p>
   </div>
 
   <!-- Step 1: Create event + import -->
@@ -328,7 +324,6 @@ async function loadConditions(meet){
   sel.innerHTML = '<option value="">No venue (no weather)</option>' + vs.map(v => `<option value="${v.id}" ${meet.venueId===v.id?'selected':''}>${v.short} — ${v.name}</option>`).join('');
   window._condVenueLoaded = meet.venueId ?? null;
   document.getElementById('condBearing').value = meet.courseBearing ?? '';
-  document.getElementById('condWater').value = meet.waterTempC ?? '';
   previewConditions();
 }
 async function previewConditions(){
@@ -344,9 +339,8 @@ async function previewConditions(){
 async function saveConditions(){
   const meetId = getMeetId(); if(!meetId) return;
   const venueId = document.getElementById('condVenue').value || null;
-  const w = document.getElementById('condWater').value;
   const b = document.getElementById('condBearing').value;
-  const body = { waterTempC: w===''?null:Number(w), courseBearing: b===''?null:Number(b) };
+  const body = { courseBearing: b===''?null:Number(b) };
   // Only send venueId if it actually changed — sending it resets bearing to the venue default
   if(venueId !== (window._condVenueLoaded ?? null)){ body.venueId = venueId; window._condVenueLoaded = venueId; }
   const res = await fetch(`/api/meets/${encodeURIComponent(meetId)}/conditions`, {method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)});
