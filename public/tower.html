@@ -216,9 +216,9 @@ function runningCardHtml(race){
     return `<div class="crossing-row">
       <span class="pos">${c.position}</span>
       <span class="t">${fmtTime(c.timeMs)}</span>
-      <input type="number" placeholder="Lane #" min="1" max="9" style="width:70px;font-size:16px;padding:6px;text-align:center;border-radius:6px;border:2px solid var(--orange);font-family:monospace;font-weight:700"
-        onkeydown="if(event.key==='Enter'&&this.value){assignCrossing('${race.id}',${c.position},this.value);this.value='';}"
-        onblur="if(this.value){assignCrossing('${race.id}',${c.position},this.value);this.value='';}">
+      <input type="text" inputmode="numeric" placeholder="Lane #" style="width:70px;font-size:16px;padding:6px;text-align:center;border-radius:6px;border:2px solid var(--orange);font-family:monospace;font-weight:700"
+        onkeydown="if(event.key==='Enter'&&this.value.trim()){assignCrossing('${race.id}',${c.position},this.value.trim());this.value='';}"
+        onblur="if(this.value.trim()){assignCrossing('${race.id}',${c.position},this.value.trim());this.value='';}">
       <button onclick="deleteCrossing('${race.id}',${c.position})" style="font-size:11px;padding:3px 8px;background:#C93B3B;color:#fff;border:none;border-radius:5px;cursor:pointer" title="Delete this crossing">✕</button>
     </div>`;
   }).join('');
@@ -235,8 +235,8 @@ function runningCardHtml(race){
       <td style="font-family:Arial;font-size:12px">${info.names.join(' / ')}<br><small style="color:var(--gray)">${[info.clubCode,info.ageCategory].filter(Boolean).join(' · ')}</small></td>
       <td>${res}</td>
       <td style="white-space:nowrap">
-        ${crossing ? `<input type="number" placeholder="Fix→" min="1" max="9" title="Reassign crossing ${crossing.position} to a different lane" style="width:58px;font-size:13px;padding:4px;text-align:center;border-radius:5px;border:1px solid var(--line)"
-          onkeydown="if(event.key==='Enter'&&this.value){assignCrossing('${race.id}',${crossing.position},this.value);this.value='';}">` : ''}
+        ${crossing ? `<input type="text" inputmode="numeric" placeholder="Fix lane" title="Type correct lane number and press Enter" style="width:65px;font-size:13px;padding:4px;text-align:center;border-radius:5px;border:1px solid var(--line)"
+          onkeydown="if(event.key==='Enter'&&this.value.trim()){assignCrossing('${race.id}',${crossing.position},this.value.trim());this.value='';}">` : ''}
         <button style="font-size:11px;padding:3px 6px" onclick="markLane('${race.id}','${info.entryId}','DNS')">DNS</button>
         <button style="font-size:11px;padding:3px 6px" onclick="markLane('${race.id}','${info.entryId}','DNF')">DNF</button>
         <button style="font-size:11px;padding:3px 6px" onclick="markDQ('${race.id}','${info.entryId}')">DQ</button>
