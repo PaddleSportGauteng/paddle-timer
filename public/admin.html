@@ -25,9 +25,6 @@
 
   /* Lane buttons */
   .lane-label { font-size:13px; color:var(--gray); margin-bottom:8px; }
-  .lane-btns { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:18px; }
-  .lane-btn-num { width:44px; height:44px; border-radius:8px; border:2px solid var(--line); background:#fff; font-size:15px; font-weight:700; cursor:pointer; transition:border-color 0.15s, background 0.15s; }
-  .lane-btn-num.active { border-color:var(--orange); background:#FFF3E0; color:var(--orange); }
 
   /* Days */
   .days-row { display:flex; align-items:center; gap:12px; margin-bottom:18px; }
@@ -142,10 +139,10 @@
     <div class="btn-row" id="venueGrid" style="margin-bottom:18px"></div>
 
     <div class="lane-label">Number of lanes at this venue</div>
-    <div class="lane-btns" id="laneBtns"></div>
+    <div class="btn-row" id="laneBtns" style="margin-bottom:18px"></div>
 
     <div class="lane-label">Number of days this event runs</div>
-    <div class="lane-btns" id="dayBtns"></div>
+    <div class="btn-row" id="dayBtns" style="margin-bottom:18px"></div>
 
     <div class="lane-label">Entries spreadsheet (the "System Race data" tab)</div>
     <div class="file-row">
@@ -202,12 +199,14 @@ function pickVenue(id){
   const el = document.getElementById('laneBtns');
   [2,3,4,5,6,7,8,9].forEach(n => {
     const b = document.createElement('button');
-    b.className = 'lane-btn-num' + (n === 9 ? ' active' : '');
+    b.type = 'button';
+    b.className = n === 9 ? 'orange' : '';
     b.textContent = n;
+    b.style.minWidth = '44px';
     b.onclick = () => {
       selectedLanes = n;
-      document.querySelectorAll('.lane-btn-num').forEach(x => x.classList.remove('active'));
-      b.classList.add('active');
+      document.querySelectorAll('#laneBtns button').forEach(x => x.classList.remove('orange'));
+      b.classList.add('orange');
     };
     el.appendChild(b);
   });
@@ -217,12 +216,14 @@ function pickVenue(id){
   const el = document.getElementById('dayBtns');
   [1,2,3,4,5].forEach(n => {
     const b = document.createElement('button');
-    b.className = 'lane-btn-num' + (n === 1 ? ' active' : '');
+    b.type = 'button';
+    b.className = n === 1 ? 'orange' : '';
     b.textContent = n;
+    b.style.minWidth = '44px';
     b.onclick = () => {
       selectedDays = n;
-      document.querySelectorAll('#dayBtns .lane-btn-num').forEach(x => x.classList.remove('active'));
-      b.classList.add('active');
+      document.querySelectorAll('#dayBtns button').forEach(x => x.classList.remove('orange'));
+      b.classList.add('orange');
     };
     el.appendChild(b);
   });
