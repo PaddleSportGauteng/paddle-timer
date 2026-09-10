@@ -175,3 +175,29 @@ header.topbar nav { gap: 22px; align-items: center; }
 .ps-step.todo { background: #f0f0f0; color: var(--gray); }
 .ps-step.here { outline: 2px solid var(--navy); outline-offset: 1px; }
 .ps-arrow { color: var(--line); font-weight: 700; }
+
+/* ── Race-day mode ── */
+#raceDayToggle { background: transparent; color: #fff; border: 1px solid rgba(255,255,255,0.35); font-size: 12px; padding: 6px 10px; border-radius: 6px; cursor: pointer; white-space: nowrap; }
+#raceDayToggle.active { background: var(--orange); border-color: var(--orange); font-weight: 700; }
+body.race-day .nav-group:first-child { padding: 4px 8px; }
+body.race-day .nav-group:first-child a { display: none; }
+body.race-day .nav-group:first-child .nav-group-label::after { content: ' ▸'; }
+body.race-day .nav-group:first-child .nav-group-label { opacity: 0.8; cursor: pointer; }
+body.race-day .nav-group:first-child:hover a { display: inline; }
+
+/* ── Print ── */
+.print-only { display: none; }
+@media print {
+  @page { margin: 12mm; }
+  body { background: #fff; font-size: 11px; }
+  header.topbar, nav, #meetBar, #dayBar, .no-print, .flag, #progressStrip, button { display: none !important; }
+  .print-only { display: block; }
+  main { max-width: none; padding: 0; }
+  .rcard { border: 1px solid #999 !important; border-left-width: 1px !important; box-shadow: none; page-break-inside: avoid; margin-bottom: 12px; background: #fff; }
+  .rlabel { font-size: 13px; }
+  .review-table th { background: #eee !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .review-table td, .review-table th { padding: 3px 6px; font-size: 10px; }
+  td.ctime { color: #000 !important; }
+  .pill { border: 1px solid #999; background: #fff !important; color: #000 !important; }
+  .table-scroll { overflow: visible; }
+}

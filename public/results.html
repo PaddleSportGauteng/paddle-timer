@@ -27,11 +27,15 @@
   <div id="meetBar"></div>
 </header>
 <main>
-  <h1>Results</h1>
+  <h1 class="no-print">Results</h1>
+  <div id="printHeader" class="print-only"></div>
   <div class="flag" id="meetWarning" style="display:none">No meet selected — pick one at the top-right first.</div>
   <div id="dayBar" style="margin-bottom:12px"></div>
   <p style="color:var(--gray);font-size:14px">Every finished race, in running order, ranked by finish position. 🥇🥈🥉 only apply to finals — combined age groups (except 2000m/5000m, which stay grouped by design) are split back into their own category here for medals.</p>
-  <input type="text" id="filterBox" placeholder="Filter by event or paddler name…" style="margin-bottom:12px" oninput="render()">
+  <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px" class="no-print">
+    <input type="text" id="filterBox" placeholder="Filter by event or paddler name…" style="flex:1;margin:0" oninput="render()">
+    <button onclick="window.print()" style="white-space:nowrap;padding:8px 14px;font-weight:600">🖨 Print results</button>
+  </div>
   <div id="resultsList">Loading…</div>
 </main>
 <script src="common.js"></script>
@@ -157,11 +161,27 @@ async function reopenRace(raceId){
   loadResults();
 }
 
+function setPrintHeader(){
+  const sel = document.querySelector('#meetBar select');
+  const meetName = sel && sel.options[sel.selectedIndex] ? sel.options[sel.selectedIndex].text : '';
+  const d = new Date();
+  const dateStr = d.toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+  const el = document.getElementById('printHeader');
+  if(el) el.innerHTML = `<div style="display:flex;align-items:center;gap:14px;border-bottom:3px solid #0B2540;padding-bottom:10px;margin-bottom:16px">
+    <img src="/psg-logo.jpg" alt="" style="height:48px">
+    <div>
+      <div style="font-size:20px;font-weight:700;color:#0B2540">PaddleSport Gauteng — Results</div>
+      <div style="font-size:13px;color:#555">${meetName}${meetName?' · ':''}Printed ${dateStr}</div>
+    </div>
+  </div>`;
+}
+
 async function init(){
   await initMeetBar('meetBar', {allowCreate:false});
   if(!getMeetId()){ document.getElementById('meetWarning').style.display = 'block'; return; }
   selectedDay = await initDayBar('dayBar');
   await loadResults();
+  setPrintHeader();
   setInterval(loadResults, 5000);
 }
 init();

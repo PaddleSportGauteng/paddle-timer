@@ -255,3 +255,33 @@ async function renderProgressStrip(containerId){
     return `<a class="ps-step ${cls}${active}" href="${st.href}">${done?'✓ ':''}${st.label}</a>`;
   }).join('<span class="ps-arrow">›</span>') + `</div>`;
 }
+
+// ── Race-day mode ─────────────────────────────────────────────────
+// Toggle in the meet bar. When on, the SETUP nav group collapses to a
+// single small "Setup ▸" link so race-day operators only see Tower /
+// Weigh / Results / Board. Stored per browser in localStorage.
+function isRaceDayMode(){ return localStorage.getItem('paddleTimerRaceDay') === '1'; }
+function setRaceDayMode(on){ localStorage.setItem('paddleTimerRaceDay', on ? '1' : '0'); applyRaceDayMode(); }
+
+function applyRaceDayMode(){
+  const on = isRaceDayMode();
+  document.body.classList.toggle('race-day', on);
+  const btn = document.getElementById('raceDayToggle');
+  if(btn){
+    btn.textContent = on ? '🏁 Race day: ON' : '🏁 Race day';
+    btn.classList.toggle('active', on);
+    btn.title = on ? 'Race-day mode is on — setup pages are collapsed. Click to show them.' : 'Hide setup pages for race-day operators.';
+  }
+}
+
+(function initRaceDayToggle(){
+  document.addEventListener('DOMContentLoaded', () => {
+    const bar = document.getElementById('meetBar');
+    if(!bar) return;
+    const btn = document.createElement('button');
+    btn.id = 'raceDayToggle';
+    btn.onclick = () => setRaceDayMode(!isRaceDayMode());
+    bar.appendChild(btn);
+    applyRaceDayMode();
+  });
+})();
