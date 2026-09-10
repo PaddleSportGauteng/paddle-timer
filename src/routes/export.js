@@ -273,7 +273,12 @@ router.get('/schedule.pdf', (req, res) => {
     const y = doc.y;
     doc.rect(left, y, pageWidth, rowH).fill('#1a3a5c');
     doc.fontSize(10).font('Helvetica-Bold').fillColor('#fff');
-    doc.text(`DAY ${day}`, left + 6, y + 4, { width: pageWidth });
+    doc.text(`DAY ${day}`, left + 6, y + 4, { width: pageWidth, lineBreak: false });
+    const dayRaces = races.filter((r) => (r.day || 1) === day && r.type !== 'break');
+    const times = dayRaces.map((r) => r.scheduledLabel).filter(Boolean).sort();
+    const summary = `${dayRaces.length} race${dayRaces.length === 1 ? '' : 's'}${times.length ? ` · ${times[0]} – ${times[times.length - 1]}` : ''}`;
+    doc.fontSize(8).font('Helvetica').fillColor('#fff');
+    doc.text(summary, left, y + 5, { width: pageWidth - 6, align: 'right', lineBreak: false });
     doc.fillColor('#000');
     doc.y = y + rowH + 2;
   }

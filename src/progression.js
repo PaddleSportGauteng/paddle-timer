@@ -8,33 +8,6 @@ const db = require('./db');
 const rules = require('./rules');
 const { applyICFSemiDraw, applyICFFinalDraw, applyGeneralisedSemiDraw, applyGeneralisedFinalDraw } = require('./icf-lane-draw');
 
-function assignLanes(entryIds, numLanes) {
-  const laneOrder = rules.centerOutLaneOrder(numLanes);
-  const lanes = {};
-  entryIds.forEach((id, i) => { lanes[laneOrder[i]] = id; });
-  return lanes;
-}
-
-// Snake/boustrophedon distribution across N groups, so strength is spread
-// evenly rather than stacking the fastest qualifiers into one semifinal.
-function snakeGroupIndices(count, numGroups) {
-  const seq = [];
-  let g = 0, dir = 1;
-  for (let i = 0; i < count; i++) {
-    seq.push(g);
-    if (numGroups <= 1) continue;
-    if (g + dir >= numGroups || g + dir < 0) dir *= -1;
-    g += dir;
-  }
-  return seq;
-}
-
-function distributeSnake(rankedIds, numGroups) {
-  const groups = Array.from({ length: numGroups }, () => []);
-  const seq = snakeGroupIndices(rankedIds.length, numGroups);
-  rankedIds.forEach((id, i) => groups[seq[i]].push(id));
-  return groups;
-}
 
 function nextRaceNumber(database, meetId) {
   const meet = database.meets[meetId];
@@ -152,19 +125,8 @@ function createFinals(database, event, directIds, rankedPoolIds, sourceRaces, ex
     return { action: 'created-finals-icf', count: filled, plan: 'ICF-Appendix1' };
   }
 
-  // Fallback: center-out for events not covered by ICF plans
-  const phases = ['final', 'finalB', 'finalC'].slice(0, finalsCount);
-  const pool = [...rankedPoolIds];
-  let filled = 0;
-  phases.forEach((phase, i) => {
-    const capacity = i === 0 ? meetLanes - directIds.length : meetLanes;
-    const group = (i === 0 ? directIds : []).concat(pool.splice(0, Math.max(0, capacity)));
-    if (group.length === 0) return;
-    fillOrCreateRace(database, existingFinalRaces || [], event, phase, 1, group, meetLanes, scheduledLabel);
-    filled++;
-  });
   event.pendingDirectQualifiers = [];
-  return { action: 'created-finals', count: filled, leftOver: pool.length };
+  return null; // no semi results to draw from
 }
 
 /**
@@ -264,16 +226,7 @@ function autoAdvance(database, eventId) {
         return { action: 'created-semis-icf', count: filled, directCount: directIds.length, plan: 'ICF-Appendix1' };
       }
 
-      // Fallback: snake distribution for Plans C-G (4+ heats)
-      nonDirect.sort((a, b) => (a.position - b.position) || (a.finishTimeMs - b.finishTimeMs));
-      const groups = distributeSnake(nonDirect.map((x) => x.entryId), plan.numSemis);
-      let filled = 0;
-      groups.forEach((group, i) => {
-        if (group.length === 0) return;
-        fillOrCreateRace(database, semiRaces, event, 'semi', i + 1, group, meetLanes, scheduledLabel);
-        filled++;
-      });
-      return { action: 'created-semis', count: filled, directCount: directIds.length };
+      return null; // no heat results to draw from
     }
 
     // No semi round needed (rare: e.g. entire field qualifies direct) —
@@ -290,32 +243,4 @@ function autoAdvance(database, eventId) {
   return null;
 }
 
-// Fill an existing placeholder race in place (keeping its raceNumber and
-// any pre-set scheduledLabel history) if one exists for this phase/heat
-// number; otherwise fall back to creating a fresh race (e.g. for meets
-// drawn before this feature existed).
-//
-// Either way, this round was reached automatically — no human decision
-// in the loop — from an event the office already finalised once. Making
-// it wait for a SECOND manual "Finalise" click before it can appear on
-// Tower is exactly what caused a completed, weighed heat's semi to be
-// genuinely nowhere to be found: not blocked by weigh-in (that had
-// passed), just sitting unpublished. Auto-publishing it here doesn't
-// skip the weigh-in gate — /active still holds it back until that's
-// done — it just removes the redundant extra publish step for a round
-// nobody explicitly reviewed to begin with.
-function fillOrCreateRace(database, existingRaces, event, phase, heatNumber, entryIds, meetLanes, scheduledLabel) {
-  const placeholder = existingRaces.find((r) => r.phase === phase && r.heatNumber === heatNumber && r.placeholder);
-  if (placeholder) {
-    placeholder.lanes = assignLanes(entryIds, meetLanes);
-    placeholder.placeholder = false;
-    placeholder.published = true;
-    if (scheduledLabel) placeholder.scheduledLabel = scheduledLabel;
-    return placeholder;
-  }
-  const race = newRace(database, event.id, phase, heatNumber, assignLanes(entryIds, meetLanes), scheduledLabel);
-  race.published = true;
-  return race;
-}
-
-module.exports = { autoAdvance, distributeSnake, rankedFinishers };
+module.exports = { autoAdvance, rankedFinishers };

@@ -38,7 +38,7 @@
 <body>
 <header class="topbar">
   <a href="/" class="title"><img src="/psg-logo.jpg" alt="PSG" class="psg-logo"> PaddleSport Gauteng</a>
-  <nav><a href="/admin.html">Race Office</a><a href="/race-sort.html">Race Sort</a><a href="/draw.html">Draw</a><a href="/program.html">Race Program</a><a href="/tower.html">Tower</a><a href="/weigh.html">Weigh</a><a href="/results.html">Results</a><a href="/board.html">Board</a><a href="/live.html" id="liveNavLink">Live</a></nav>
+  <nav><a href="/admin.html">Race Office</a><a href="/race-sort.html">Race Sort</a><a href="/draw.html">Draw</a><a href="/program.html">Race Program</a><a href="/tower.html">Tower</a><a href="/weigh.html">Weigh</a><a href="/results.html">Results</a><a href="/live.html" id="liveNavLink">Live</a></nav>
   <div id="meetBar"></div>
 </header>
 <main>
@@ -397,7 +397,11 @@ async function loadRaceList(keepOpen){
           const nextDay = sorted[i+1] ? (sorted[i+1].day || 1) : null;
           if(rDay !== currentDay){
             currentDay = rDay;
-            html += `<div style="background:var(--navy);color:#fff;font-weight:700;font-size:14px;padding:8px 14px;border-radius:6px;margin:12px 0 6px">DAY ${currentDay}</div>`;
+            const dayRaces = sorted.filter(x => (x.day||1) === rDay);
+            const times = dayRaces.map(x => x.scheduledLabel).filter(Boolean).sort();
+            const span = times.length ? `${times[0]} – ${times[times.length-1]}` : 'no times set';
+            const summary = `${dayRaces.length} race${dayRaces.length===1?'':'s'} · ${span}`;
+            html += `<div style="background:var(--navy);color:#fff;font-weight:700;font-size:14px;padding:8px 14px;border-radius:6px;margin:12px 0 6px;display:flex;justify-content:space-between;align-items:center"><span>DAY ${currentDay}</span><span style="font-weight:500;font-size:12px;opacity:.85">${summary}</span></div>`;
           }
           html += raceBlockHtml(r);
           // End of day marker when day changes or at the very end
