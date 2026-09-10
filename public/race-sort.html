@@ -22,13 +22,11 @@
   <h1>Race Sort</h1>
   <div class="flag" id="meetWarning" style="display:none">No meet selected — pick or create one at the top-right first.</div>
   <div id="progressStrip"></div>
-  <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
-    <p style="color:var(--gray);font-size:13px;margin:0">Combine small age groups into a shared start, or fix a wrong entry.</p>
-    <button class="green" onclick="markSortChecked()">Nothing to combine, mark as checked</button>
-  </div>
-
   <div class="card">
-    <h2 style="margin-top:0">Combine events for a shared start</h2>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+      <h2 style="margin:0">Combine events for a shared start</h2>
+      <button class="green" onclick="markSortChecked()">Nothing to combine</button>
+    </div>
     <div id="combineList">Loading…</div>
     <div id="combineBar" style="display:none;margin-top:12px;padding:12px;background:#EAF1FA;border:1px solid #B8D0EA;border-radius:8px">
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
