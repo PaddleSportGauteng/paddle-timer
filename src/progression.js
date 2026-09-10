@@ -6,6 +6,7 @@
 
 const db = require('./db');
 const rules = require('./rules');
+const { applyICFSemiDraw } = require('./icf-lane-draw');
 
 function assignLanes(entryIds, numLanes) {
   const laneOrder = rules.centerOutLaneOrder(numLanes);
@@ -163,9 +164,46 @@ function autoAdvance(database, eventId) {
     event.pendingDirectQualifiers = directIds; // consumed when Final A is created below
 
     if (plan.numSemis > 0 && nonDirect.length > 0) {
+      const scheduledLabel = computeRestScheduledLabel(database, heatRaces, event.meetId);
+
+      // Try ICF Appendix 1 exact lane draw first (Plans A & B, 2-3 heats)
+      const heatResultsForDraw = heatRaces.map(race => ({
+        heatNumber: race.heatNumber,
+        entries: Object.entries(database.raceResults[race.id] || {})
+          .filter(([, r]) => r.status === 'OK')
+          .map(([entryId, r]) => ({
+            entryId, position: r.position, finishTimeMs: r.finishTimeMs, status: r.status,
+          })),
+      }));
+
+      const icfDraw = applyICFSemiDraw(heatResultsForDraw, heatRaces.length, 'P1');
+
+      if (icfDraw) {
+        // ICF exact draw available — use pre-determined lane assignments
+        let filled = 0;
+        Object.entries(icfDraw.semis).forEach(([semiNum, lanes]) => {
+          const entryIds = Object.values(lanes).filter(Boolean);
+          if (entryIds.length === 0) return;
+          const placeholder = semiRaces.find(r => r.phase === 'semi' && r.heatNumber === Number(semiNum) && r.placeholder);
+          if (placeholder) {
+            placeholder.lanes = lanes;
+            placeholder.placeholder = false;
+            placeholder.published = true;
+            if (scheduledLabel) placeholder.scheduledLabel = scheduledLabel;
+          } else {
+            const race = newRace(database, event.id, 'semi', Number(semiNum), lanes, scheduledLabel);
+            race.published = true;
+          }
+          filled++;
+        });
+        // Store direct qualifiers for final creation
+        event.pendingDirectQualifiers = directIds;
+        return { action: 'created-semis-icf', count: filled, directCount: directIds.length, plan: 'ICF-Appendix1' };
+      }
+
+      // Fallback: snake distribution for Plans C-G (4+ heats)
       nonDirect.sort((a, b) => (a.position - b.position) || (a.finishTimeMs - b.finishTimeMs));
       const groups = distributeSnake(nonDirect.map((x) => x.entryId), plan.numSemis);
-      const scheduledLabel = computeRestScheduledLabel(database, heatRaces, event.meetId);
       let filled = 0;
       groups.forEach((group, i) => {
         if (group.length === 0) return;
