@@ -18,7 +18,7 @@
   .now-card .race-title { font-size:18px; font-weight:700; color:var(--navy); margin-bottom:2px; }
   .now-card .race-sub { font-size:13px; color:var(--gray); margin-bottom:14px; }
 
-  .big-clock { font-size:72px; font-weight:700; font-family:monospace; text-align:center; color:var(--orange); letter-spacing:2px; margin:10px 0; }
+  .big-clock { font-size:48px; font-weight:700; font-family:monospace; text-align:center; color:var(--orange); letter-spacing:2px; margin:6px 0; }
   .big-clock.stopped { color:var(--green); }
 
   .ctrl-row { display:flex; gap:8px; margin:12px 0; }
@@ -132,12 +132,14 @@ async function refresh(){
   let races;
   try{ races=await(await fetch(`/api/races/active?meetId=${encodeURIComponent(meetId)}`)).json(); }
   catch(e){ return; }
+  const scrollY = window.scrollY;
   buildDayTabs(races);
   races.forEach(r=>{ racesById[r.id]=r; });
   const day=races.filter(r=>(r.day||1)===selectedDay);
   renderRunning(day.filter(r=>r.status==='running'));
   renderUpcoming(day.filter(r=>r.status==='pending'));
   renderFinished(day.filter(r=>r.status==='finished'));
+  window.scrollTo(0, scrollY);
 }
 
 // ── Tick ──────────────────────────────────────────────────────────
@@ -363,16 +365,23 @@ async function undoTap(raceId){
   await refresh();
 }
 async function assignCrossing(raceId,position,laneVal){
-  const lane=Number(laneVal); if(!lane)return;
+  const lane=Number(laneVal); if(!lane){ return; }
   const res=await fetch(`/api/races/${raceId}/assign-crossing`,{
-    method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({position,lane})
+    method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({position:Number(position),lane})
   });
   const data=await res.json();
   if(!res.ok){alert(data.error);return;}
-  await refresh();
+  // Update local state directly without full refresh to avoid jump
+  racesById[raceId]=data;
+  const scrollY=window.scrollY;
+  renderRunning([data]);
+  startTick(data);
+  window.scrollTo(0,scrollY);
   // Focus next unassigned input
-  const next=document.querySelector(`#race-${raceId} .lane-input`);
-  if(next) next.focus();
+  setTimeout(()=>{
+    const next=document.querySelector(`#race-${raceId} .lane-input`);
+    if(next) next.focus();
+  },50);
 }
 async function clearCrossing(raceId,position){
   const res=await fetch(`/api/races/${raceId}/delete-crossing`,{
@@ -444,14 +453,14 @@ async function undoLap(raceId,bib){
   await refresh();
 }
 
-// Event delegation for lane inputs — more reliable than inline handlers
+// Keyboard handler - lane inputs get Enter for assignment, global space/Enter for TAP
 document.addEventListener('keydown', e => {
-  if(e.target.classList.contains('lane-input')){
-    // Stop spacebar from triggering TAP
-    if(e.key === ' ') { e.stopPropagation(); return; }
+  // If focus is on a lane input, Enter assigns - nothing else
+  if(e.target.classList && e.target.classList.contains('lane-input')){
+    e.stopImmediatePropagation();
+    e.stopPropagation();
     if(e.key === 'Enter'){
       e.preventDefault();
-      e.stopPropagation();
       const val = e.target.value.trim();
       if(val){
         const raceId = e.target.dataset.race;
@@ -462,15 +471,15 @@ document.addEventListener('keydown', e => {
     }
     return;
   }
-  // Global spacebar/Enter = TAP
-  if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT'||e.target.tagName==='TEXTAREA')return;
-  if(e.key===' '||e.key==='Enter'){
+  // Any other input field - do nothing special
+  if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT'||e.target.tagName==='TEXTAREA') return;
+  // Global: space or Enter = TAP (only when not in any input)
+  if(e.key===' ' || e.key==='Enter'){
     e.preventDefault();
-    e.stopPropagation();
-    const btn=document.querySelector('.tap-btn');
-    if(btn){ btn.click(); }
+    const btn = document.querySelector('.tap-btn');
+    if(btn) btn.click();
   }
-},true);
+});
 
 async function init(){
   await initMeetBar('meetBar',{allowCreate:false});
