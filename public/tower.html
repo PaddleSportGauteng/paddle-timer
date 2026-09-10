@@ -228,11 +228,15 @@ function runningCardHtml(race){
     let res = '<span style="color:var(--gray)">—</span>';
     if(r && r.status==='OK') res = `<span class="result-ok">${fmtTime(r.finishTimeMs)}</span>`;
     else if(r) res = `<span class="result-bad">${r.status}</span>`;
+    // Find which crossing is assigned to this lane
+    const crossing = race.blindCrossings.find(c => c.assignedLane === Number(lane));
     return `<tr>
       <td>L${lane}</td>
       <td style="font-family:Arial;font-size:12px">${info.names.join(' / ')}<br><small style="color:var(--gray)">${[info.clubCode,info.ageCategory].filter(Boolean).join(' · ')}</small></td>
       <td>${res}</td>
       <td style="white-space:nowrap">
+        ${crossing ? `<input type="number" placeholder="Fix→" min="1" max="9" title="Reassign crossing ${crossing.position} to a different lane" style="width:58px;font-size:13px;padding:4px;text-align:center;border-radius:5px;border:1px solid var(--line)"
+          onkeydown="if(event.key==='Enter'&&this.value){assignCrossing('${race.id}',${crossing.position},this.value);this.value='';}">` : ''}
         <button style="font-size:11px;padding:3px 6px" onclick="markLane('${race.id}','${info.entryId}','DNS')">DNS</button>
         <button style="font-size:11px;padding:3px 6px" onclick="markLane('${race.id}','${info.entryId}','DNF')">DNF</button>
         <button style="font-size:11px;padding:3px 6px" onclick="markDQ('${race.id}','${info.entryId}')">DQ</button>
@@ -243,21 +247,25 @@ function runningCardHtml(race){
 
   const allDone = realLanes.every(([,info]) => race.results[info.entryId]);
 
+  const allAssigned = race.blindCrossings.length > 0 && race.blindCrossings.every(c => c.assignedLane != null);
+
   return `<div class="now-card" id="race-${race.id}">
     <div class="badge">🔴 Now Racing</div>
     <div class="race-title">${raceLabel(race)}</div>
     <div class="race-sub">${raceSub(race)}</div>
     <div class="big-clock ${race.stopTimeMs?'':'running'}" id="clock-${race.id}" style="${race.stopTimeMs?'color:var(--green)':''}">00:00.00</div>
-    <button class="tap-btn" ${race.stopTimeMs?'disabled':''} onclick="captureCrossing('${race.id}')">TAP — BOAT CROSSED ⚡</button>
+    ${!race.stopTimeMs ? `<button class="tap-btn" onclick="captureCrossing('${race.id}')">TAP — BOAT CROSSED ⚡</button>` : ''}
     <div class="ctrl-row">
       <button class="btn-start" disabled>▶ Started</button>
       <button class="btn-stop" ${race.stopTimeMs?'disabled':''} onclick="stopClock('${race.id}')">⏹ Stop Clock</button>
       <button class="btn-stop" style="background:#888" onclick="undoCrossing('${race.id}')">↩ Undo tap</button>
       <button class="btn-lock" ${allDone?'':'disabled'} onclick="finishRace('${race.id}')">🔒 Lock results</button>
     </div>
-    ${crossings ? `<div class="crossings"><b style="font-size:12px;color:var(--gray)">CROSSINGS</b>${crossings}</div>` : ''}
+    ${!allAssigned && crossings ? `<div class="crossings"><b style="font-size:12px;color:var(--gray)">CROSSINGS</b>${crossings}</div>` : ''}
     <table class="lane-mini">
-      <tr><td colspan="4" style="font-size:11px;color:var(--gray);padding-bottom:4px">LANES</td></tr>
+      <tr><td colspan="4" style="font-size:11px;color:var(--gray);padding-bottom:4px">
+        LANES ${allAssigned ? '<span style="color:var(--green);font-weight:700">✓ All assigned — review then lock</span>' : ''}
+      </td></tr>
       ${laneRows}
     </table>
   </div>`;
