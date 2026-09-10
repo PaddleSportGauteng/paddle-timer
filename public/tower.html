@@ -215,10 +215,9 @@ function runningCardHtml(race){
     return `<div class="crossing-row">
       <span class="pos">${c.position}</span>
       <span class="t">${fmtTime(c.timeMs)}</span>
-      <select onchange="assignCrossing('${race.id}',${c.position},this.value)">
-        <option value="">Assign lane…</option>
-        ${laneOpts}
-      </select>
+      <input type="number" placeholder="Lane #" min="1" max="9" style="width:70px;font-size:16px;padding:6px;text-align:center;border-radius:6px;border:2px solid var(--orange);font-family:monospace;font-weight:700"
+        onkeydown="if(event.key==='Enter'&&this.value){assignCrossing('${race.id}',${c.position},this.value);this.value='';}"
+        onblur="if(this.value){assignCrossing('${race.id}',${c.position},this.value);this.value='';}">
     </div>`;
   }).join('');
 
@@ -401,7 +400,8 @@ async function assignCrossing(raceId, position, laneValue){
   const data = await res.json();
   if(!res.ok){ alert(data.error); return; }
   await refresh();
-  const next = document.querySelector(`#race-${raceId} .crossings select`);
+  // Focus the next unassigned crossing input
+  const next = document.querySelector(`#race-${raceId} .crossings input[type="number"]`);
   if(next) next.focus();
 }
 
