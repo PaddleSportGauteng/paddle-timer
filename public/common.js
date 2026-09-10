@@ -175,7 +175,7 @@ async function initMeetBar(containerId, opts){
   sel.onchange = () => { setMeetId(sel.value); location.reload(); };
   if(!btn) return;
   btn.onclick = async () => {
-    const name = prompt('Name this meet, e.g. "PSA Sprint 2026" or "Trilogy Series 2026 #1":');
+    const name = prompt('Name this meet, e.g. "PSG Sprint Champs 2026":');
     if(!name) return;
     const settings = await newMeetSettingsDialog();
     if(settings === null) return;
@@ -274,7 +274,7 @@ function applyRaceDayMode(){
   document.body.classList.toggle('race-day', on);
   const btn = document.getElementById('raceDayToggle');
   if(btn){
-    btn.textContent = on ? '🏁 Race day: ON' : '🏁 Race day';
+    btn.textContent = on ? 'Race day: ON' : 'Race day';
     btn.classList.toggle('active', on);
     btn.title = on ? 'Race-day mode is on — setup pages are collapsed. Click to show them.' : 'Hide setup pages for race-day operators.';
   }

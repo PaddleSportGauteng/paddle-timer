@@ -64,19 +64,19 @@
       <h2 style="margin:0;white-space:nowrap">2. Race Program</h2>
       <div style="display:flex;gap:6px;align-items:center;flex-shrink:0">
         <div style="display:flex;flex-direction:column;gap:3px">
-          <button style="font-size:11px;padding:3px 10px;white-space:nowrap" onclick="expandAll()">Expand all</button>
-          <button style="font-size:11px;padding:3px 10px;white-space:nowrap" onclick="collapseAll()">Collapse all</button>
+          <button class="sm" onclick="expandAll()">Expand all</button>
+          <button class="sm" onclick="collapseAll()">Collapse all</button>
         </div>
-        <button style="font-size:12px;padding:7px 12px;white-space:nowrap;background:#2980b9;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600" onclick="downloadSchedule()">Planning Sheet (PDF)</button>
-        <button class="orange" style="font-size:12px;padding:7px 12px;white-space:nowrap" onclick="downloadDraws()">Draws (Excel)</button>
-        <button class="orange" style="font-size:12px;padding:7px 12px;white-space:nowrap" onclick="downloadPdf()">Programme (PDF)</button>
-        <button class="green" style="font-size:12px;padding:7px 12px;white-space:nowrap;font-weight:700" onclick="finalise()">Finalise → Tower</button>
-        <button style="font-size:12px;padding:7px 12px;white-space:nowrap;background:#888;color:#fff;border:none;border-radius:6px;cursor:pointer" onclick="unfinalise()">↩ Unfinalise</button>
+        <button class="navy" onclick="downloadSchedule()">Planning Sheet (PDF)</button>
+        <button class="navy" onclick="downloadDraws()">Draws (Excel)</button>
+        <button class="navy" onclick="downloadPdf()">Programme (PDF)</button>
+        <button class="green" onclick="finalise()">Finalise to Tower</button>
+        <button onclick="unfinalise()">Unfinalise</button>
       </div>
     </div>
     <p style="color:var(--gray);font-size:13px">Order races, set days and times, then <b>Finalise → Tower</b>. Only finalised races appear on the Tower.</p>
     <div class="flag" style="background:#EAF1FA;border-color:#B8D0EA;color:#1a3a5c">
-      <b>Ordering:</b> <button onclick="autoSequence()">Auto-sequence (heats → semis → finals, by distance then age)</button>
+      <b>Ordering:</b> <button onclick="autoSequence()">Auto-sequence</button> <small style="color:var(--gray)">heats → semis → finals, by distance then age</small>
       — a starting-point heuristic, not a full optimiser: it front-loads heats from multi-round events (so their semis/finals can start sooner) and mixes in straight finals so results keep coming. Use the ▲▼ buttons to nudge a race one place, or type a race number into the box and click → (or hit Enter) to jump straight there — whichever's moved always anchors back to race 1's original time, with everything else automatically shifting to match and renumbering correctly; no separate step needed. Semis/finals get their own time automatically once created (based on real rest gaps), so you won't see them here to reorder until their heats finish. Reordering here always keeps race 1 pinned to whatever start time is set in section 1 above, re-flowing everyone else to match — so it doesn't matter whether you sort before or after setting that.
     </div>
     <div class="flag" style="background:#FFFBF2;border-color:#F3C98B;color:#8A5A12">
@@ -437,9 +437,9 @@ function phaseLabel(race){
 function resultsConfirmHtml(race){
   if(race.status !== 'finished') return '';
   const confirmPill = race.resultsConfirmed
-    ? `<span class="pill ok">Official</span> <button style="font-size:11px;padding:4px 8px" onclick="toggleConfirm('${race.id}', false)">Revert to provisional</button>`
-    : `<span class="pill warn">Provisional</span> <button class="green" style="font-size:11px;padding:4px 8px" onclick="toggleConfirm('${race.id}', true)">Mark official</button>`;
-  return `${confirmPill} <button class="red" style="font-size:11px;padding:4px 8px" onclick="reopenRace('${race.id}')" title="Went to 'finished' too early? Put it back to running.">Reopen race</button>`;
+    ? `<span class="pill ok">Official</span> <button onclick="toggleConfirm('${race.id}', false)">Revert to provisional</button>`
+    : `<span class="pill warn">Provisional</span> <button class="green" onclick="toggleConfirm('${race.id}', true)">Mark official</button>`;
+  return `${confirmPill} <button class="red" onclick="reopenRace('${race.id}')" title="Went to 'finished' too early? Put it back to running.">Reopen race</button>`;
 }
 async function toggleConfirm(raceId, confirm){
   const res = await fetch(`/api/races/${raceId}/${confirm?'confirm-results':'unconfirm-results'}`, {method:'POST'});
@@ -482,8 +482,8 @@ function massRaceBlockHtml(race){
       </tr></table>
       ${!locked ? `<div class="lane-actions">
         <input type="number" placeholder="new #" style="width:65px;padding:5px;font-size:12px" id="renumber-${race.id}-${bib}">
-        <button style="font-size:11px;padding:5px 8px" onclick="renumberSlide('${race.id}', ${bib})">Renumber</button>
-        <button class="red" onclick="scratchLane('${race.id}', ${bib})">Scratch</button>
+        <button class="sm" onclick="renumberSlide('${race.id}', ${bib})">Renumber</button>
+        <button class="sm red" onclick="scratchLane('${race.id}', ${bib})">Scratch</button>
       </div>` : ''}
     </div>`;
   }).join('');
@@ -503,18 +503,18 @@ function massRaceBlockHtml(race){
           ${Array.from({length:meetNumDays},(_,i)=>i+1).map(d=>`<option value="${d}" ${(race.day||1)===d?'selected':''}>Day ${d}</option>`).join('')}
         </select>` : ''}
         ${locked ? '' : `
-          <button style="font-size:12px;padding:5px 8px" onclick="moveRaceTo('${race.id}','up')" title="Move up one">▲</button>
-          <button style="font-size:12px;padding:5px 8px" onclick="moveRaceTo('${race.id}','down')" title="Move down one">▼</button>
+          <button class="sm" onclick="moveRaceTo('${race.id}','up')" title="Move up one">Up</button>
+          <button class="sm" onclick="moveRaceTo('${race.id}','down')" title="Move down one">Down</button>
           <span style="display:inline-flex;align-items:center;gap:3px">
             <input type="number" id="movePos-${race.id}" placeholder="Race #" style="width:64px;padding:5px;font-size:12px" onkeydown="if(event.key==='Enter'){moveRaceTo('${race.id}', this.value);}">
-            <button style="font-size:12px;padding:5px 8px" onclick="moveRaceTo('${race.id}', document.getElementById('movePos-${race.id}').value)">→</button>
+            <button class="sm" onclick="moveRaceTo('${race.id}', document.getElementById('movePos-${race.id}').value)">Go</button>
           </span>
           <input type="text" class="time-input" placeholder="Start time e.g. 08:00" value="${race.scheduledLabel||''}" onchange="setSchedule('${race.id}', this.value)">
           <span style="display:inline-flex;align-items:center;gap:3px">
             <input type="number" min="1" value="${race.gapAfterMinutes||''}" placeholder="std gap" style="width:64px;padding:5px;font-size:12px" onchange="setGap('${race.id}', this.value)">
             <small style="color:var(--gray);white-space:nowrap">min before next</small>
           </span>
-          <button class="red" onclick="deleteRace('${race.id}')">Change grouping (undo draw)</button>
+          <button class="sm red" onclick="deleteRace('${race.id}')">Change grouping (undo draw)</button>
         `}
       </span>
     </h4>
@@ -568,18 +568,18 @@ function breakBlockHtml(brk){
         <span class="pill warn">BREAK</span>
       </span>
       <span>
-        <button style="font-size:12px;padding:5px 8px" onclick="moveBreakTo('${brk.id}','up')" title="Move up one">▲</button>
-        <button style="font-size:12px;padding:5px 8px" onclick="moveBreakTo('${brk.id}','down')" title="Move down one">▼</button>
+        <button class="sm" onclick="moveBreakTo('${brk.id}','up')" title="Move up one">Up</button>
+        <button class="sm" onclick="moveBreakTo('${brk.id}','down')" title="Move down one">Down</button>
         <span style="display:inline-flex;align-items:center;gap:3px">
           <input type="number" id="breakPos-${brk.id}" placeholder="Race #" title="Type the position this should become, then press Enter or click →" style="width:64px;padding:5px;font-size:12px" onkeydown="if(event.key==='Enter'){moveBreakTo('${brk.id}', this.value);}">
-          <button style="font-size:12px;padding:5px 8px" onclick="moveBreakTo('${brk.id}', document.getElementById('breakPos-${brk.id}').value)" title="Move to this position — the rest shift and renumber to match">→</button>
+          <button class="sm" onclick="moveBreakTo('${brk.id}', document.getElementById('breakPos-${brk.id}').value)" title="Move to this position — the rest shift and renumber to match">Go</button>
         </span>
         <span style="display:inline-flex;align-items:center;gap:4px;padding:5px 8px;border:1px solid var(--line);border-radius:5px;background:#fff;font-size:13px;color:var(--gray)">${brk.scheduledLabel || 'TBC'}</span>
         <span style="display:inline-flex;align-items:center;gap:3px">
           <input type="number" min="1" value="${brk.durationMinutes||''}" title="How long this break takes — everything after it shifts to match" style="width:64px;padding:5px;font-size:12px" onchange="editBreakDuration('${brk.id}', this.value)">
           <small style="color:var(--gray);white-space:nowrap">min</small>
         </span>
-        <button class="red" onclick="deleteBreak('${brk.id}')">Delete</button>
+        <button class="sm red" onclick="deleteBreak('${brk.id}')">Delete</button>
       </span>
     </h4>
   </div>`;
@@ -654,7 +654,7 @@ function raceBlockHtml(race){
           <option value="">Move to…</option>
           ${moveOptions}
         </select>
-        ${info ? `<button class="red" onclick="scratchLane('${race.id}', ${lane})">Scratch</button>` : ''}
+        ${info ? `<button class="sm red" onclick="scratchLane('${race.id}', ${lane})">Scratch</button>` : ''}
       </div>
     </div>`;
   }).join('');
@@ -675,18 +675,18 @@ function raceBlockHtml(race){
           ${Array.from({length:meetNumDays},(_,i)=>i+1).map(d=>`<option value="${d}" ${(race.day||1)===d?'selected':''}>Day ${d}</option>`).join('')}
         </select>` : ''}
         ${locked ? '' : `
-          <button style="font-size:12px;padding:5px 8px" onclick="moveRaceTo('${race.id}','up')" title="Move up one">▲</button>
-          <button style="font-size:12px;padding:5px 8px" onclick="moveRaceTo('${race.id}','down')" title="Move down one">▼</button>
+          <button class="sm" onclick="moveRaceTo('${race.id}','up')" title="Move up one">Up</button>
+          <button class="sm" onclick="moveRaceTo('${race.id}','down')" title="Move down one">Down</button>
           <span style="display:inline-flex;align-items:center;gap:3px">
             <input type="number" id="movePos-${race.id}" placeholder="Race #" title="Type the race number this should become, then press Enter or click →" style="width:64px;padding:5px;font-size:12px" onkeydown="if(event.key==='Enter'){moveRaceTo('${race.id}', this.value);}">
-            <button style="font-size:12px;padding:5px 8px" onclick="moveRaceTo('${race.id}', document.getElementById('movePos-${race.id}').value)" title="Move to this race number">→</button>
+            <button class="sm" onclick="moveRaceTo('${race.id}', document.getElementById('movePos-${race.id}').value)" title="Move to this race number">Go</button>
           </span>
           <input type="text" class="time-input" placeholder="Start time e.g. 08:00" value="${race.scheduledLabel||''}" onchange="setSchedule('${race.id}', this.value)">
           <span style="display:inline-flex;align-items:center;gap:3px">
             <input type="number" min="1" value="${race.gapAfterMinutes||''}" placeholder="std gap" title="Minutes before next race" style="width:64px;padding:5px;font-size:12px" onchange="setGap('${race.id}', this.value)">
             <small style="color:var(--gray);white-space:nowrap">min before next</small>
           </span>
-          <button class="red" onclick="deleteRace('${race.id}')">Delete race</button>
+          <button class="sm red" onclick="deleteRace('${race.id}')">Delete race</button>
         `}
       </span>
     </h4>

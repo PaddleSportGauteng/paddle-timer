@@ -24,7 +24,7 @@
   <div id="progressStrip"></div>
   <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
     <p style="color:var(--gray);font-size:13px;margin:0">Combine small age groups into a shared start, or fix a wrong entry.</p>
-    <button onclick="markSortChecked()" style="font-size:12px;padding:6px 12px;white-space:nowrap">✓ Nothing to combine — mark as checked</button>
+    <button class="green" onclick="markSortChecked()">Nothing to combine, mark as checked</button>
   </div>
 
   <div class="card">
@@ -36,7 +36,7 @@
         <input type="text" id="combineLabel" placeholder="Custom label (optional)" style="width:220px;padding:6px" onkeydown="if(event.key==='Enter')saveCurrentGroup()">
         <input type="number" id="combineLaps" placeholder="Laps (mass-start only)" style="width:160px;padding:6px;display:none" onkeydown="if(event.key==='Enter')saveCurrentGroup()">
         <input type="number" id="combineStartSlide" placeholder="Starting slide #" style="width:150px;padding:6px;display:none" onkeydown="if(event.key==='Enter')saveCurrentGroup()">
-        <button class="green" onclick="saveCurrentGroup()">Save this group ▸</button>
+        <button class="green" onclick="saveCurrentGroup()">Save this group</button>
         <button class="red" onclick="clearCurrentGroup()">Clear</button>
       </div>
     </div>
@@ -127,7 +127,7 @@ async function loadCombineList(){
         <div class="lane-row">
           <span style="flex:1;${matches?'':'opacity:.4'}">${ev.label} <small style="color:var(--gray)">${ev.entryCount} entries${ev.isMassStart?' (mass start)':''}${ev.entryCount<3?' — below min 3 alone':''}</small></span>
           ${matches
-            ? `<button onclick="addToCurrentGroup('${ev.id}')">+ Add</button>${wouldNeedHeats ? ` <small style="color:var(--gray)">(would be ${currentGroupBoats + ev.entryCount} boats — over ${meetLanes} lanes, will split into heats)</small>` : ''} <button style="font-size:11px;padding:4px 8px" onclick="jumpToFixEntry('${ev.id}','${ev.label.replace(/'/g,"\\'")}')">Fix entries here</button>`
+            ? `<button onclick="addToCurrentGroup('${ev.id}')">+ Add</button>${wouldNeedHeats ? ` <small style="color:var(--gray)">(would be ${currentGroupBoats + ev.entryCount} boats — over ${meetLanes} lanes, will split into heats)</small>` : ''} <button onclick="jumpToFixEntry('${ev.id}','${ev.label.replace(/'/g,"\\'")}')">Fix entries here</button>`
             : `<small style="color:var(--gray)">different ${currentGroup.isMassStart!==ev.isMassStart?'type':'distance'}</small>`}
         </div>`;
       }).join('')}

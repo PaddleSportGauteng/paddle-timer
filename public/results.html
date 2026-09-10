@@ -31,13 +31,13 @@
   <div id="printHeader" class="print-only"></div>
   <div class="flag" id="meetWarning" style="display:none">No meet selected — pick one at the top-right first.</div>
   <div id="dayBar" style="margin-bottom:12px"></div>
-  <p style="color:var(--gray);font-size:14px">Every finished race, in running order, ranked by finish position. 🥇🥈🥉 only apply to finals — combined age groups (except 2000m/5000m, which stay grouped by design) are split back into their own category here for medals.</p>
+  <p style="color:var(--gray);font-size:14px">Every finished race, in running order, ranked by finish position. Medals only apply to finals — combined age groups (except 2000m/5000m, which stay grouped by design) are split back into their own category here for medals.</p>
   <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px" class="no-print">
     <input type="text" id="filterBox" placeholder="Filter by event or paddler name…" style="flex:1;margin:0" oninput="render()">
-    <button id="viewToggle" onclick="togglePrizeView()" style="white-space:nowrap;padding:8px 14px;font-weight:700;background:#C9A227;color:#fff;border:none;border-radius:6px;cursor:pointer">🏅 Prize giving</button>
-    <button onclick="exportResults('xlsx')" style="white-space:nowrap;padding:8px 14px;font-weight:600;background:var(--green);color:#fff;border:none;border-radius:6px;cursor:pointer">📊 Excel</button>
-    <button onclick="exportResults('pdf')" style="white-space:nowrap;padding:8px 14px;font-weight:600;background:var(--navy);color:#fff;border:none;border-radius:6px;cursor:pointer">📄 PDF</button>
-    <button onclick="window.print()" style="white-space:nowrap;padding:8px 14px;font-weight:600">🖨 Print</button>
+    <button id="viewToggle" class="orange" onclick="togglePrizeView()">Prize giving</button>
+    <button class="navy" onclick="exportResults('xlsx')">Excel</button>
+    <button class="navy" onclick="exportResults('pdf')">PDF</button>
+    <button class="navy" onclick="window.print()">Print</button>
   </div>
   <div id="resultsList">Loading…</div>
 </main>
@@ -94,7 +94,7 @@ function renderPrizes(){
 
   const shown = q ? groups.filter(g => g.title.toLowerCase().includes(q) || g.winners.some(w => (w.names||[]).join(' ').toLowerCase().includes(q) || (w.clubCode||'').toLowerCase().includes(q))) : groups;
   if(!shown.length){ el.innerHTML = '<p style="color:var(--gray)">No medals awarded yet.</p>'; return; }
-  const medalIcon = { GOLD:'🥇', SILVER:'🥈', BRONZE:'🥉' };
+  const medalIcon = { GOLD:'<span class="medal g">G</span>', SILVER:'<span class="medal s">S</span>', BRONZE:'<span class="medal b">B</span>' };
   el.innerHTML = shown.map(g => `<div class="rcard final">
     <div class="rlabel">${g.title} ${g.official ? '<span class="pill ok">Official</span>' : '<span class="pill warn">Provisional</span>'}</div>
     <div class="table-scroll"><table class="review-table">
@@ -133,9 +133,9 @@ function render(){
   el.innerHTML = blocks.map(b => {
     const medalFor = (place) => {
       if(!b.medalEligibility) return '';
-      if(place===1 && b.medalEligibility.gold) return '<span class="medal">🥇</span>';
-      if(place===2 && b.medalEligibility.silver) return '<span class="medal">🥈</span>';
-      if(place===3 && b.medalEligibility.bronze) return '<span class="medal">🥉</span>';
+      if(place===1 && b.medalEligibility.gold) return '<span class="medal g">G</span>';
+      if(place===2 && b.medalEligibility.silver) return '<span class="medal s">S</span>';
+      if(place===3 && b.medalEligibility.bronze) return '<span class="medal b">B</span>';
       return '';
     };
     const genderLetter = g => g ? (g.toLowerCase().startsWith('f') ? 'F' : g.toLowerCase().startsWith('m') ? 'M' : g) : '';
@@ -171,9 +171,9 @@ function render(){
     // Office controls: override official/provisional, or reopen the race
     const officeBtns = `<span style="float:right;display:inline-flex;gap:6px">
       ${b.resultsConfirmed
-        ? `<button style="font-size:11px;padding:4px 8px" onclick="setOfficial('${b.raceId}',false)" title="Mark provisional again">↩ Provisional</button>`
-        : `<button style="font-size:11px;padding:4px 8px;background:var(--green);color:#fff;border:none;border-radius:5px;cursor:pointer" onclick="setOfficial('${b.raceId}',true)" title="Mark official without waiting for weigh-ins">✓ Mark official</button>`}
-      <button style="font-size:11px;padding:4px 8px;background:#C93B3B;color:#fff;border:none;border-radius:5px;cursor:pointer" onclick="reopenRace('${b.raceId}')" title="Send this race back to the Tower to fix a result">⟲ Reopen</button>
+        ? `<button class="sm" onclick="setOfficial('${b.raceId}',false)" title="Mark provisional again">Provisional</button>`
+        : `<button class="sm green" onclick="setOfficial('${b.raceId}',true)" title="Mark official without waiting for weigh-ins">Mark official</button>`}
+      <button class="sm red" onclick="reopenRace('${b.raceId}')" title="Send this race back to the Tower to fix a result">Reopen</button>
     </span>`;
     const noResultsMsg = b.noResultsRecorded ? `<div class="flag" style="background:#FBE7E7;border-color:#EBAFAF;color:#C93B3B">This race was locked with no results recorded at all — likely ended before lane/crossing assignment finished. Go to Race Program and click <b>"Reopen race"</b> on R${b.raceNumber}, finish assigning, then lock it again.</div>` : '';
 
@@ -213,8 +213,8 @@ let prizeView = false;
 function togglePrizeView(){
   prizeView = !prizeView;
   const b = document.getElementById('viewToggle');
-  b.textContent = prizeView ? '📋 All results' : '🏅 Prize giving';
-  b.style.background = prizeView ? 'var(--navy)' : '#C9A227';
+  b.textContent = prizeView ? 'All results' : 'Prize giving';
+  b.classList.toggle('orange', !prizeView); b.classList.toggle('primary', prizeView);
   document.getElementById('filterBox').placeholder = prizeView ? 'Filter by category or paddler…' : 'Filter by event or paddler name…';
   render();
 }

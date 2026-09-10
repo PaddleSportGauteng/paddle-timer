@@ -23,8 +23,7 @@
   .board-row .result{font-family:'JetBrains Mono','SF Mono',monospace;color:var(--navy);font-weight:600;font-size:13px}
   #searchBox{width:100%;padding:12px;font-size:16px;border-radius:8px;border:1px solid var(--line);margin-bottom:14px}
   .empty-msg{color:var(--gray);text-align:center;padding:30px;}
-  .medal{font-size:16px;margin-right:2px}
-</style>
+  </style>
 </head>
 <body>
 <header class="topbar">
@@ -124,9 +123,9 @@ function liveRaceHtml(r){
 function resultBlockHtml(b){
   const medalFor = (place) => {
     if(!b.medalEligibility) return '';
-    if(place===1 && b.medalEligibility.gold) return '<span class="medal">🥇</span>';
-    if(place===2 && b.medalEligibility.silver) return '<span class="medal">🥈</span>';
-    if(place===3 && b.medalEligibility.bronze) return '<span class="medal">🥉</span>';
+    if(place===1 && b.medalEligibility.gold) return '<span class="medal g">G</span>';
+    if(place===2 && b.medalEligibility.silver) return '<span class="medal s">S</span>';
+    if(place===3 && b.medalEligibility.bronze) return '<span class="medal b">B</span>';
     return '';
   };
   const gl = g => g ? (g.toLowerCase().startsWith('f')?'F':g.toLowerCase().startsWith('m')?'M':g) : '';
@@ -158,7 +157,7 @@ function resultBlockHtml(b){
   // Weigh-ins pending only ever means the podium specifically — extra
   // boats beyond that are the office's own choice, never a requirement,
   // so this never says "pending" once positions 1-3 are actually done.
-  const statusText = b.resultsConfirmed ? '✅ Official' : '⏳ Provisional';
+  const statusText = b.resultsConfirmed ? 'Official' : 'Provisional';
   const medalFlag = b.medalEligibility && b.medalEligibility.flag ? `<div class="flag" style="margin:8px 0 0">${b.medalEligibility.flag}</div>` : '';
   const cssStatus = b.resultsConfirmed ? 'finished' : 'provisional';
 

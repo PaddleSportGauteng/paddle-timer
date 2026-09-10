@@ -113,9 +113,9 @@ function render(){
         ? `<input type="number" step="0.1" class="winput" placeholder="kg" style="width:90px" id="winput-${race.id}-${info.entryId}"
              value="${weighIn ? weighIn.weightKg : ''}"
              onkeydown="if(event.key==='Enter'){submitWeight('${race.id}','${info.entryId}');}">
-           <button class="primary" style="font-size:12px;padding:5px 9px" onclick="submitWeight('${race.id}','${info.entryId}')">Log</button>
-           ${weighIn ? `<button style="font-size:12px;padding:5px 9px" onclick="toggleBoat('${race.id}','${info.entryId}')">Cancel</button>` : ''}`
-        : `${badge} <button style="font-size:12px;padding:5px 9px" onclick="toggleBoat('${race.id}','${info.entryId}')">${weighIn ? 'Edit' : 'Weigh'}</button>`;
+           <button class="sm green" onclick="submitWeight('${race.id}','${info.entryId}')">Log</button>
+           ${weighIn ? `<button class="sm" onclick="toggleBoat('${race.id}','${info.entryId}')">Cancel</button>` : ''}`
+        : `${badge} <button class="sm orange" onclick="toggleBoat('${race.id}','${info.entryId}')">${weighIn ? 'Edit' : 'Weigh'}</button>`;
       return `<tr style="${blocked?'opacity:0.5':''}">
           <td class="clane">${race.isMassStart?'S':'L'}${num}</td>
           <td class="pname">${nameCell}</td>
@@ -137,12 +137,9 @@ function render(){
         <div class="wlabel" style="margin:0">R${race.raceNumber} — ${race.event ? race.event.label : ''} — ${phaseLabel(race)}${race.isMassStart?` (mass start)`:''}</div>
         <div style="display:flex;align-items:center;gap:10px">
           <span style="font-size:13px;color:${canLock?'var(--green)':'var(--gray)'}">
-            ${weighedCount}/${required} weighed${canLock?' ✓':''}
+            ${weighedCount}/${required} weighed
           </span>
-          <button onclick="lockRaceWeigh('${race.id}')" ${canLock?'':'disabled'}
-            style="padding:8px 16px;background:${canLock?'var(--orange)':'#ccc'};color:#fff;border:none;border-radius:8px;font-weight:700;font-size:13px;cursor:${canLock?'pointer':'not-allowed'}">
-            🔒 Lock & confirm
-          </button>
+          <button class="green" onclick="lockRaceWeigh('${race.id}')" ${canLock?'':'disabled'}>Lock and confirm</button>
         </div>
       </div>
       <div class="table-scroll"><table class="review-table">

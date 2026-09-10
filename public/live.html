@@ -115,9 +115,9 @@ function laneTable(r, opts={}){
 
 function resultTable(b){
   const medal = p => !b.medalEligibility ? '' :
-    p===1&&b.medalEligibility.gold ? '<span class="medal">🥇</span>' :
-    p===2&&b.medalEligibility.silver ? '<span class="medal">🥈</span>' :
-    p===3&&b.medalEligibility.bronze ? '<span class="medal">🥉</span>' : '';
+    p===1&&b.medalEligibility.gold ? '<span class="medal g">G</span>' :
+    p===2&&b.medalEligibility.silver ? '<span class="medal s">S</span>' :
+    p===3&&b.medalEligibility.bronze ? '<span class="medal b">B</span>' : '';
   const row = (r, bad) => {
     const hit = matches(r) ? ' class="hl"' : '';
     return `<tr${hit}>
@@ -144,7 +144,7 @@ function renderNow(){
   if(!running.length){ el.innerHTML=''; if(tick){cancelAnimationFrame(tick);tick=null;} return; }
   const r = running[0];
   el.innerHTML = `<div class="now">
-    <span class="pill-now">● NOW RACING</span>
+    <span class="pill-now">NOW RACING</span>
     <div class="title">${raceTitle(r)}</div>
     <div class="clock" id="nowClock">00:00.00</div>
     ${laneTable(r,{pos:true})}
@@ -180,7 +180,7 @@ function render(){
     const shown = s ? done.filter(blockHit) : done;
     if(!shown.length){ el.innerHTML = `<div class="empty">${s?'No results match your search.':'No results yet.'}</div>`; return; }
     el.innerHTML = shown.map(b => `<div class="race ${b.resultsConfirmed?'done':'prov'} ${blockHit(b)?'hit':''}">
-        <div class="head"><span class="t">R${b.raceNumber} · ${b.label} — ${b.phaseLabel}</span><span class="s">${b.resultsConfirmed?'✅ Official':'⏳ Provisional'}</span></div>
+        <div class="head"><span class="t">R${b.raceNumber} · ${b.label} — ${b.phaseLabel}</span><span class="s">${b.resultsConfirmed?'Official':'Provisional'}</span></div>
         ${resultTable(b)}
       </div>`).join('');
   }

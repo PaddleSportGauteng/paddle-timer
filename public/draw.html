@@ -67,15 +67,15 @@ async function loadEvents(){
       if(ev.hasRaces){
         action = planBtn
           + (ev.drawConfirmed
-          ? `<span class="pill ok">Confirmed</span> <button style="font-size:12px;padding:5px 8px" onclick="changeEvent('${ev.id}')">Change</button>`
-          : `<button class="green" style="font-size:12px" onclick="confirmDraw('${ev.id}')">Confirm</button> <button style="font-size:12px;padding:5px 8px" onclick="changeEvent('${ev.id}')">Change</button>`)
-          + ` <button style="font-size:12px;padding:5px 8px" onclick="toggleDrawView('${ev.id}')">View draw ▾</button>`;
+          ? `<span class="pill ok">Confirmed</span> <button class="sm" onclick="changeEvent('${ev.id}')">Change</button>`
+          : `<button class="sm green" onclick="confirmDraw('${ev.id}')">Confirm</button> <button class="sm" onclick="changeEvent('${ev.id}')">Change</button>`)
+          + ` <button class="sm" onclick="toggleDrawView('${ev.id}')">View draw</button>`;
       } else if(ev.isMassStart){
         action = massStartActionHtml(ev);
       } else if(ev.format.runnable){
-        action = planBtn + `<button onclick="generate('${ev.id}')">Generate</button>`;
+        action = planBtn + `<button class="sm primary" onclick="generate('${ev.id}')">Generate</button>`;
       } else {
-        action = `<span class="pill bad">Below min 3</span> <button style="font-size:12px" onclick="forceFinal('${ev.id}')">Race anyway</button> <small style="color:var(--gray)">or go to <a href="/race-sort.html">Race Sort</a> to combine it</small>`;
+        action = `<span class="pill bad">Below min 3</span> <button class="sm orange" onclick="forceFinal('${ev.id}')">Race anyway</button> <small style="color:var(--gray)">or go to <a href="/race-sort.html">Race Sort</a> to combine it</small>`;
       }
 
       const displayLabel = ev.isCombined ? `<b>${ev.combinedLabel}</b> <small style="color:var(--gray)">(combined)</small>` : ev.label;
@@ -142,15 +142,15 @@ async function loadEvents(){
       let action;
       if(ev.hasRaces){
         action = (ev.drawConfirmed
-          ? `<span class="pill ok">Confirmed</span> <button style="font-size:12px;padding:5px 8px" onclick="changeEvent('${ev.id}')">Change</button>`
-          : `<button class="green" style="font-size:12px" onclick="confirmDraw('${ev.id}')">Confirm</button> <button style="font-size:12px;padding:5px 8px" onclick="changeEvent('${ev.id}')">Change</button>`)
-          + ` <button style="font-size:12px;padding:5px 8px" onclick="toggleDrawView('${ev.id}')">View draw ▾</button>`;
+          ? `<span class="pill ok">Confirmed</span> <button class="sm" onclick="changeEvent('${ev.id}')">Change</button>`
+          : `<button class="sm green" onclick="confirmDraw('${ev.id}')">Confirm</button> <button class="sm" onclick="changeEvent('${ev.id}')">Change</button>`)
+          + ` <button class="sm" onclick="toggleDrawView('${ev.id}')">View draw</button>`;
       } else if(ev.isMassStart){
         action = massStartActionHtml(ev);
       } else if(ev.format.runnable){
-        action = `<button onclick="generate('${ev.id}')">Generate</button>`;
+        action = `<button class="sm primary" onclick="generate('${ev.id}')">Generate</button>`;
       } else {
-        action = `<span class="pill bad">Below min 3</span> <button style="font-size:12px" onclick="forceFinal('${ev.id}')">Race anyway</button> <small style="color:var(--gray)">or go to <a href="/race-sort.html">Race Sort</a> to combine it</small>`;
+        action = `<span class="pill bad">Below min 3</span> <button class="sm orange" onclick="forceFinal('${ev.id}')">Race anyway</button> <small style="color:var(--gray)">or go to <a href="/race-sort.html">Race Sort</a> to combine it</small>`;
       }
 
       const displayLabel = ev.isCombined ? `<b>${ev.combinedLabel}</b> <small style="color:var(--gray)">(combined)</small>` : ev.label;
@@ -294,7 +294,7 @@ async function loadVenueInfo(){
       ${std
         ? ' Standard ICF course — automatic heat→semi→final progression applies in full.'
         : ' Non-standard course — heats draw correctly, but ICF Appendix 1 only publishes exact semi/final quotas for 9 lanes, so advance semis/finals manually on the Race Program page.'}
-      ${anyRaces ? '' : ` <button style="margin-left:8px;font-size:12px;padding:4px 10px" onclick="editLanes('${meet.id}', ${meet.lanes})">Change lane count</button>`}
+      ${anyRaces ? '' : ` <button onclick="editLanes('${meet.id}', ${meet.lanes})">Change lane count</button>`}
     </div>`;
   } catch (err) {
     el.innerHTML = '';

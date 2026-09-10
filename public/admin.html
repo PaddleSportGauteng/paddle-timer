@@ -80,10 +80,10 @@
       <div class="meta" id="existingMeetMeta"></div>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <button onclick="copyLiveLink()" style="background:var(--green);color:#fff;border:none;border-radius:6px;padding:8px 14px;font-weight:700;cursor:pointer">🔗 Copy public live link</button>
-      <button class="red" onclick="deleteMeet()">🗑 Delete this event</button>
+      <button class="navy" onclick="copyLiveLink()">Copy public live link</button>
+      <button class="red" onclick="deleteMeet()">Delete this event</button>
       <button onclick="document.getElementById('createSection').style.display='block';document.getElementById('existingMeetBanner').style.display='none'">+ Create new event</button>
-      <a href="/race-sort.html"><button class="primary">Go to Race Sort →</button></a>
+      <a href="/race-sort.html"><button class="primary">Go to Race Sort</button></a>
     </div>
   </div>
 
@@ -123,7 +123,7 @@
       <span id="fileChosen">No file chosen</span>
     </div>
 
-    <button class="create-btn" id="createBtn" onclick="createAndImport(this)">Create event &amp; import entries →</button>
+    <button class="create-btn" id="createBtn" onclick="createAndImport(this)">Create event and import entries</button>
     <div id="importResult" style="margin-top:12px"></div>
   </div>
 
@@ -139,7 +139,7 @@
   <div class="post-card" id="nextStepCard">
     <h2>✅ Entries imported — next step</h2>
     <p style="color:var(--gray);font-size:14px">Head to <a href="/race-sort.html"><b>Race Sort</b></a> to combine small age groups into shared starts, then <a href="/program.html"><b>Race Program</b></a> to draw heats/finals and finalise to the Tower.</p>
-    <a href="/race-sort.html"><button class="primary" style="font-size:15px;padding:12px 24px">Go to Race Sort →</button></a>
+    <a href="/race-sort.html"><button class="primary">Go to Race Sort</button></a>
   </div>
 </main>
 

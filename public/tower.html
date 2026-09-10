@@ -17,21 +17,14 @@
   .now-card .race-title { font-size:16px; font-weight:700; color:var(--navy); }
   .now-card .race-sub { font-size:13px; color:var(--gray); margin-bottom:14px; }
 
-  .clock-block { flex:1; background:#111; color:#fff; font-family:monospace; font-size:22px; font-weight:700; letter-spacing:1px; text-align:center; padding:14px 10px; border-radius:10px; }
+  .clock-block { background:#111; color:#fff; font-family:monospace; font-size:22px; font-weight:700; letter-spacing:1px; text-align:center; padding:14px 10px; border-radius:10px; }
   .clock-block.stopped { background:#0e5c3a; }
   .now-pill { display:inline-block; background:#E4F5EC; color:#C93B3B; font-weight:700; font-size:15px; padding:6px 14px; border-radius:8px; letter-spacing:0.02em; }
 
-  .ctrl-row { display:flex; gap:6px; margin:12px 0; align-items:stretch; }
-  .ctrl-row button { flex:1; padding:14px 8px; font-size:14px; font-weight:700; border-radius:10px; border:none; cursor:pointer; white-space:nowrap; }
-  .btn-start { background:#27ae60; color:#fff; }
-  .btn-start:disabled { background:#b7e4c7; cursor:not-allowed; color:#fff; }
-  .btn-stop  { background:#C93B3B; color:#fff; }
-  .btn-stop:disabled { background:#f0b0b0; cursor:not-allowed; color:#fff; }
-  .btn-undo  { background:#888; color:#fff; }
-  .btn-lock  { background:var(--orange); color:#fff; }
-  .btn-lock:disabled { background:#f0b48a; cursor:not-allowed; color:#fff; }
+  .ctrl-row { margin:12px 0; align-items:stretch; }
+  .ctrl-row > button { padding:14px 8px; font-size:14px; border-radius:10px; }
 
-  .tap-btn { flex:2; padding:14px 12px; font-size:16px; font-weight:800; background:var(--orange); color:#fff; border:none; border-radius:10px; cursor:pointer; transition:transform 0.05s, background 0.05s; white-space:nowrap; }
+  .tap-btn { flex:2 !important; font-size:15px; font-weight:800; }
   .tap-btn:active { transform:scale(0.97); background:#d4420a; }
 
   /* Assignment table */
@@ -214,12 +207,12 @@ function laneCardHtml(race){
       <td class="name-cell">${info?info.names[0]:''}</td>
       <td>${assigned
         ? `<span style="display:inline-flex;gap:5px;align-items:center">
-             <button onclick="unassignCrossing('${race.id}',${c.position})" style="font-size:11px;padding:4px 9px;background:var(--orange);color:#fff;border:none;border-radius:5px;cursor:pointer" title="Change the lane — keeps the time">Edit</button>
-             <button onclick="clearCrossing('${race.id}',${c.position})" style="font-size:11px;padding:4px 8px;background:#C93B3B;color:#fff;border:none;border-radius:5px;cursor:pointer" title="Delete this crossing and its time">✕</button>
+             <button class="sm orange" onclick="unassignCrossing('${race.id}',${c.position})" title="Change the lane — keeps the time">Edit</button>
+             <button class="sm red" onclick="clearCrossing('${race.id}',${c.position})" title="Delete this crossing and its time">Delete</button>
            </span>`
         : `<span style="display:inline-flex;gap:6px;align-items:center">
              <input class="lane-input" type="text" inputmode="numeric" placeholder="L#" data-race="${race.id}" data-pos="${c.position}" autocomplete="off">
-             <button onclick="clearCrossing('${race.id}',${c.position})" style="font-size:11px;padding:4px 8px;background:#C93B3B;color:#fff;border:none;border-radius:5px;cursor:pointer" title="Delete this extra tap">✕</button>
+             <button class="sm red" onclick="clearCrossing('${race.id}',${c.position})" title="Delete this extra tap">Delete</button>
            </span>`
       }</td>
     </tr>`;
@@ -255,27 +248,27 @@ function laneCardHtml(race){
       <td class="pmeta cpsa">${(info.psaIds||[])[0]||''}</td>
       <td class="ctime">${timeCell}</td>
       <td class="cact">
-        <button onclick="editTime('${race.id}','${info.entryId}',${r&&r.status==='OK'?r.finishTimeMs:'null'})" title="Edit time (photo finish)">⏱</button>
-        <button onclick="markLane('${race.id}','${info.entryId}','DNS')">DNS</button>
-        <button onclick="markLane('${race.id}','${info.entryId}','DNF')">DNF</button>
-        <button onclick="markDQ('${race.id}','${info.entryId}')">DQ</button>
-        ${r?`<button onclick="clearResult('${race.id}','${info.entryId}')">✕</button>`:''}
+        <button class="sm" onclick="editTime('${race.id}','${info.entryId}',${r&&r.status==='OK'?r.finishTimeMs:'null'})" title="Edit time (photo finish)">Time</button>
+        <button class="sm" onclick="markLane('${race.id}','${info.entryId}','DNS')">DNS</button>
+        <button class="sm" onclick="markLane('${race.id}','${info.entryId}','DNF')">DNF</button>
+        <button class="sm" onclick="markDQ('${race.id}','${info.entryId}')">DQ</button>
+        ${r?`<button class="sm red" onclick="clearResult('${race.id}','${info.entryId}')">Clear</button>`:''}
       </td>
     </tr>`;
   }).join('');
 
   return `<div class="now-card" id="race-${race.id}">
     <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:4px">
-      <span class="now-pill">● NOW RACING</span>
+      <span class="now-pill">NOW RACING</span>
       <span class="race-title" style="margin:0">${raceLabel(race)}</span>
       <span class="race-sub" style="margin:0">${raceSub(race)}</span>
     </div>
-    <div class="ctrl-row">
+    <div class="ctrl-row btn-row equal">
       <div class="clock-block ${stopped?'stopped':''}" id="clock-${race.id}">00:00.00</div>
-      ${!stopped?`<button class="tap-btn" onclick="tap('${race.id}')">⚡ TAP (or Space)</button>`:''}
-      <button class="btn-stop" ${stopped?'disabled':''} onclick="stopClock('${race.id}')">⏹ Stop</button>
-      ${stopped?`<button class="btn-undo" style="background:#e67e22" onclick="restartClock('${race.id}')">↺ Restart</button>`:`<button class="btn-undo" onclick="undoTap('${race.id}')">↩ Undo</button>`}
-      <button class="btn-lock" ${allDone?'':'disabled'} onclick="lockRace('${race.id}')">🔒 Lock</button>
+      ${!stopped?`<button class="orange tap-btn" onclick="tap('${race.id}')">TAP (or Space)</button>`:''}
+      <button class="red" ${stopped?'disabled':''} onclick="stopClock('${race.id}')">Stop</button>
+      ${stopped?`<button class="orange" onclick="restartClock('${race.id}')">Restart</button>`:`<button onclick="undoTap('${race.id}')">Undo</button>`}
+      <button class="green" ${allDone?'':'disabled'} onclick="lockRace('${race.id}')">Lock</button>
     </div>
 
     ${crossings.length?`
@@ -286,7 +279,7 @@ function laneCardHtml(race){
 
     ${allDone?`
     <div style="margin-top:14px">
-      <div style="font-size:11px;font-weight:700;letter-spacing:0.06em;color:var(--gray);margin-bottom:6px">✓ ALL ASSIGNED — REVIEW THEN LOCK</div>
+      <div style="font-size:11px;font-weight:700;letter-spacing:0.06em;color:var(--gray);margin-bottom:6px">ALL ASSIGNED — REVIEW THEN LOCK</div>
       <div class="table-scroll"><table class="review-table">
         <tr><th></th><th>LANE</th><th>NAME</th><th>AGE</th><th>CLUB</th><th>M/F</th><th>UNION</th><th>PSA #</th><th>TIME</th><th></th></tr>
         ${reviewRows}
@@ -323,31 +316,31 @@ function massCardHtml(race){
       <td class="ctime">${laps.length?fmtTime(laps[laps.length-1].timeMs):'—'}</td>
       <td>${res}</td>
       <td class="cact" style="width:160px">
-        ${laps.length?`<button onclick="undoLap('${race.id}','${bib}')">↩</button>`:''}
-        <button onclick="markLane('${race.id}','${info.entryId}','DNS')">DNS</button>
-        <button onclick="markLane('${race.id}','${info.entryId}','DNF')">DNF</button>
-        <button onclick="markDQ('${race.id}','${info.entryId}')">DQ</button>
-        ${r?`<button onclick="clearResult('${race.id}','${info.entryId}')">✕</button>`:''}
+        ${laps.length?`<button class="sm" onclick="undoLap('${race.id}','${bib}')">Undo</button>`:''}
+        <button class="sm" onclick="markLane('${race.id}','${info.entryId}','DNS')">DNS</button>
+        <button class="sm" onclick="markLane('${race.id}','${info.entryId}','DNF')">DNF</button>
+        <button class="sm" onclick="markDQ('${race.id}','${info.entryId}')">DQ</button>
+        ${r?`<button class="sm red" onclick="clearResult('${race.id}','${info.entryId}')">Clear</button>`:''}
       </td>
     </tr>`;
   }).join('');
 
   return `<div class="now-card" id="race-${race.id}">
     <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:4px">
-      <span class="now-pill">● NOW RACING</span>
+      <span class="now-pill">NOW RACING</span>
       <span class="race-title" style="margin:0">${raceLabel(race)}</span>
       <span class="race-sub" style="margin:0">${raceSub(race)}</span>
     </div>
     <form class="bib-form" onsubmit="return submitBib(event,'${race.id}')">
       <input type="text" inputmode="numeric" placeholder="Slide #" autocomplete="off">
-      <button class="primary" type="submit">Log pass</button>
+      <button class="green" type="submit">Log pass</button>
     </form>
-    <div class="ctrl-row">
+    <div class="ctrl-row btn-row equal">
       <div class="clock-block ${stopped?'stopped':''}" id="clock-${race.id}">00:00.00</div>
-      <button class="btn-start" disabled>▶ Started</button>
-      <button class="btn-stop" ${stopped?'disabled':''} onclick="stopClock('${race.id}')">⏹ Stop</button>
-      <button class="btn-undo" onclick="undoLap('${race.id}',null)">↩ Undo</button>
-      <button class="btn-lock" ${allDone?'':'disabled'} onclick="lockRace('${race.id}')">🔒 Lock</button>
+      <button class="green" disabled>Started</button>
+      <button class="red" ${stopped?'disabled':''} onclick="stopClock('${race.id}')">Stop</button>
+      <button onclick="undoLap('${race.id}',null)">Undo</button>
+      <button class="green" ${allDone?'':'disabled'} onclick="lockRace('${race.id}')">Lock</button>
     </div>
     <div class="table-scroll"><table class="lap-table">
       <tr><th>SLIDE</th><th>NAME</th><th>AGE</th><th>CLUB</th><th>M/F</th><th>UNION</th><th>PSA #</th><th>LAPS</th><th>LAST</th><th>RESULT</th><th></th></tr>
@@ -371,9 +364,9 @@ function renderUpcoming(races){
       </div>
       <div style="display:flex;align-items:center;gap:6px">
         ${r.scheduledLabel?`<span class="u-time">${r.scheduledLabel}</span>`:''}
-        <button onclick="reorderRace('${r.id}','up')" ${i===0?'disabled':''} style="padding:6px 10px;border-radius:6px;border:1px solid var(--line);background:#fff;cursor:pointer;font-size:14px" title="Move up">▲</button>
-        <button onclick="reorderRace('${r.id}','down')" ${i===races.length-1?'disabled':''} style="padding:6px 10px;border-radius:6px;border:1px solid var(--line);background:#fff;cursor:pointer;font-size:14px" title="Move down">▼</button>
-        <button class="btn-start" style="padding:10px 18px;border-radius:8px;border:none;cursor:pointer;font-weight:700;font-size:14px;white-space:nowrap" onclick="startRace('${r.id}')">▶ Start</button>
+        <button class="sm" onclick="reorderRace('${r.id}','up')" ${i===0?'disabled':''} title="Move up">Up</button>
+        <button class="sm" onclick="reorderRace('${r.id}','down')" ${i===races.length-1?'disabled':''} title="Move down">Down</button>
+        <button class="green" onclick="startRace('${r.id}')">Start</button>
       </div>
     </div>`).join('');
 }
@@ -390,7 +383,7 @@ function renderFinished(races){
   el.innerHTML=`<div class="section-label">FINISHED</div>`+races.map(r=>`
     <div class="finished-card">
       <span>${raceLabel(r)}</span>
-      <span class="finished-pill">✓ Done</span>
+      <span class="finished-pill">Done</span>
     </div>`).join('');
 }
 
