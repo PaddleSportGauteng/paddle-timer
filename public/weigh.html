@@ -101,23 +101,33 @@ function render(){
         : weighIn.passed ? `<span class="weighed pass">✓ ${weighIn.weightKg}kg</span>`
         : `<span class="weighed fail">✗ DQ</span>`
       ) : '';
+      const g = info.gender ? (info.gender.toLowerCase().startsWith('f')?'F':info.gender.toLowerCase().startsWith('m')?'M':info.gender) : '';
+      const nameCell = info.names.length>1 ? `${info.names[0]}<br>${info.names[1]}` : info.names[0];
       const rightSide = isOpen
-        ? `<input type="number" step="0.1" class="winput" placeholder="kg" id="winput-${race.id}-${info.entryId}"
+        ? `<input type="number" step="0.1" class="winput" placeholder="kg" style="width:90px" id="winput-${race.id}-${info.entryId}"
              onkeydown="if(event.key==='Enter'){submitWeight('${race.id}','${info.entryId}');}">
-           <button class="primary" style="font-size:13px;padding:6px 10px" onclick="submitWeight('${race.id}','${info.entryId}')">Log</button>
-           ${weighIn ? `<button style="font-size:13px;padding:6px 10px" onclick="toggleBoat('${race.id}','${info.entryId}')">Cancel</button>` : ''}`
-        : `${badge} <button style="font-size:13px;padding:6px 10px" onclick="toggleBoat('${race.id}','${info.entryId}')">Re-weigh</button>`;
-      return `<div class="wboat">
-          <div class="num">${race.isMassStart?'Slide ':'Lane '}${num}</div>
-          <div class="name">${info.names.join(' / ')}${info.clubCode?` <small style="color:var(--gray)">— ${info.clubCode}</small>`:''}</div>
-          ${rightSide}
-        </div>
-        <div id="wresult-${race.id}-${info.entryId}"></div>`;
+           <button class="primary" style="font-size:12px;padding:5px 9px" onclick="submitWeight('${race.id}','${info.entryId}')">Log</button>
+           ${weighIn ? `<button style="font-size:12px;padding:5px 9px" onclick="toggleBoat('${race.id}','${info.entryId}')">Cancel</button>` : ''}`
+        : `${badge} <button style="font-size:12px;padding:5px 9px" onclick="toggleBoat('${race.id}','${info.entryId}')">Weigh</button>`;
+      return `<tr>
+          <td class="clane">${race.isMassStart?'S':'L'}${num}</td>
+          <td class="pname">${nameCell}</td>
+          <td class="pmeta cage">${info.ageCategory||''}</td>
+          <td class="pmeta cclub">${info.clubCode||''}</td>
+          <td class="pmeta csex">${g}</td>
+          <td class="pmeta cunion">${info.union||''}</td>
+          <td class="pmeta cpsa">${(info.psaIds||[])[0]||''}</td>
+          <td style="text-align:right;white-space:nowrap">${rightSide}</td>
+        </tr>
+        <tr><td colspan="8" style="padding:0"><div id="wresult-${race.id}-${info.entryId}"></div></td></tr>`;
     }).join('');
 
     return `<div class="wcard ${race.status}">
       <div class="wlabel">R${race.raceNumber} — ${race.event ? race.event.label : ''} — ${phaseLabel(race)}${race.isMassStart?` (mass start)`:''}</div>
-      ${rows}
+      <div class="table-scroll"><table class="review-table">
+        <tr><th>LANE</th><th>NAME</th><th>AGE</th><th>CLUB</th><th>M/F</th><th>UNION</th><th>PSA</th><th style="text-align:right">WEIGHT</th></tr>
+        ${rows}
+      </table></div>
     </div>`;
   }).join('');
 
