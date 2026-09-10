@@ -605,7 +605,7 @@ router.post('/events/:id/generate-mass-race', (req, res) => {
 
 // --- Combined starts (e.g. "MIXED U10-U12") -----------------------------
 // Several age-category events share ONE physical start (common at
-// Provincial level per PSA). Results are still ranked and medalled
+// Provincial level). Results are still ranked and medalled
 // per-event afterward (see results.js) — this only pools who's racing
 // together.
 
@@ -726,7 +726,7 @@ router.post('/auto-sequence', (req, res) => {
   const locked = Object.values(database.races).filter((r) => eventIds.has(r.eventId) && r.status !== 'pending');
   const maxLockedNumber = locked.reduce((m, r) => Math.max(m, r.raceNumber), 0);
 
-  // Age order: youngest to oldest covering all PSA/ICF categories
+  // Age order: youngest to oldest covering all age categories
   const AGE_ORDER = [
     'GUPPY','U8','U9','U10','U11','U12','U13','U14','U15','U16','U17','U18',
     'U19','U20','U21','U23','U26','JUN','JUNIOR',

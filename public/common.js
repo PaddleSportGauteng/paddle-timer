@@ -100,7 +100,7 @@ function laneCountDialog(currentValue){
 
 // Combined venue-settings dialog for creating a new meet: lane count,
 // number of days, and race type. Race type is currently locked to
-// Sprints — this app only knows ICF/PSA sprint rules right now — but the
+// Sprints — this app only knows ICF sprint rules right now — but the
 // selector is here so the other disciplines are visible as a roadmap and
 // slot straight in later without reshaping this dialog again.
 //

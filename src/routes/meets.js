@@ -26,7 +26,7 @@ router.post('/', (req, res) => {
   if (!Number.isInteger(numDays) || numDays < 1 || numDays > 14) {
     return res.status(400).json({ error: 'Number of days must be a whole number between 1 and 14.' });
   }
-  // The rules engine (rules.js, progression.js) only knows ICF/PSA sprint
+  // The rules engine (rules.js, progression.js) only knows ICF sprint
   // format today. Trilogy/Marathon/River are on the roadmap — accepted
   // here so the meet list can already show what's coming, but locked to
   // 'sprint' for now since picking one of the others would create a meet

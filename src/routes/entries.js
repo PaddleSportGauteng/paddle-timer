@@ -154,7 +154,7 @@ router.post('/import', upload.single('file'), (req, res) => {
     // Crew age category / gender: flag disagreement instead of guessing silently
     const ageCats = [...new Set(seats.map((s) => s.ageCategory).filter(Boolean))];
     const genders = [...new Set(seats.map((s) => s.gender).filter(Boolean))];
-    if (ageCats.length > 1) flagSet.add(`Crew(s) in "${raceName}" have mixed age categories (${ageCats.join(', ')}) — needs organiser call per PSA 4.1 (e.g. row ${r + 1}).`);
+    if (ageCats.length > 1) flagSet.add(`Crew(s) in "${raceName}" have mixed age categories (${ageCats.join(', ')}) — needs organiser call (e.g. row ${r + 1}).`);
     if (genders.length > 1) flagSet.add(`Crew(s) in "${raceName}" have mixed genders — flag for mixed-crew handling (e.g. row ${r + 1}).`);
     if (ambiguousWithGuppy) flagSet.add(`"${raceName}" mixes "${boatClass}" and "Guppy" in one race name — can't tell which individual boats are Guppy class from this sheet alone. All defaulted to ${boatClass}; please confirm per-athlete boat class before finals/medals.`);
 

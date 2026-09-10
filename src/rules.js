@@ -1,7 +1,7 @@
-// Rules engine — ICF Canoe Sprint Competition Rules 2025 + PSA Paddlers
-// Handbook amendments. Every rule below is commented with its source so
-// it's easy to check against the rulebook and correct if we got a detail
-// wrong.
+// Rules engine — ICF Canoe Sprint Competition Rules 2025. Every rule below
+// is commented with its ICF clause so it can be checked against the
+// rulebook. The ONLY non-ICF rule is the Guppy minimum boat weight, which
+// ICF does not define and comes from the PSA Paddlers Handbook 2.2.1.
 //
 // LANE COUNT: venues differ (9 is the ICF/international standard, but
 // many club/provincial courses run 6, 7, or 8). Lane count is set PER
@@ -29,27 +29,24 @@ function centerOutLaneOrder(numLanes) {
     .sort((a, b) => (Math.abs(a - center) - Math.abs(b - center)) || (a - b));
 }
 
-// ICF Chapter 3 "BOATS SPECIFICATIONS" - minimum weight (kg)
-// PSA 2.2.1 adds the Guppy class minimum (10kg), which ICF doesn't cover.
+// ICF Chapter 3 "BOATS SPECIFICATIONS" - minimum weight (kg).
+// Guppy (10kg) is the single PSA addition — ICF has no Guppy class.
 //
-// Every figure here comes from a published rule. K3 is deliberately
-// ABSENT: ICF has no K3 class, and the PSA handbook mentions K3 only
-// once (2.4.2, treating K3s and K4s as K2s for grading) without giving a
-// weight. A guessed minimum could wrongly disqualify a boat, so if a K3
-// is ever weighed the station says "no minimum weight on file" and
-// records the weight without passing judgement — which is the honest
-// answer. Add K3 here if your federation publishes a figure.
+// K3 is deliberately ABSENT: ICF has no K3 class and publishes no weight.
+// A guessed minimum could wrongly disqualify a boat, so if a K3 is ever
+// weighed the station records the weight with "no minimum on file".
 const MIN_WEIGHT_KG = {
   K1: 12, K2: 18, K4: 30,
   C1: 14, C2: 20, C4: 30,
   Guppy: 10,
 };
 
-// PSA Handbook 9.4 / 9.6 / 9.8 etc — minimum boats entered in a category
-// to award each medal colour. Below Gold's minimum: no medals at all, but
-// the race still happens and results still stand. This is a flag for the
-// prize table, never a reason to stop someone racing.
-const MEDAL_MINIMUMS = { gold: 3, silver: 5, bronze: 5 };
+// ICF 1.8.6.b — medals: 1st gold, 2nd silver, 3rd bronze. ICF sets no
+// entry-count minimum for awarding medals; the only related rule is 5.1.1
+// (at least 3 boats to hold the race). Kept as constants so the medal
+// logic reads clearly; all three are 1 = "always award if a valid finisher
+// exists in that place" (1.8.6.e — no medal for an IRM).
+const MEDAL_MINIMUMS = { gold: 1, silver: 1, bronze: 1 };
 
 // ICF Appendix 1 "Division Systems" — heat/semifinal/final progression.
 // Transcribed from the clear prose summary for each plan (e.g. Plan A,
@@ -132,25 +129,22 @@ function decideFormat(entryCount, lanes = DEFAULT_LANES) {
 }
 
 /**
- * PSA medal-minimum check. Takes a ranked (1st, 2nd, 3rd...) list for a
- * SINGLE category (already split out from any combined start) and returns
- * which places are medal-eligible, flagging the rest without hiding them.
+ * ICF 1.8.6 medal eligibility for a single category. Medals go to 1st,
+ * 2nd and 3rd valid finishers (1.8.6.b); IRM results (DNF/DSQ/DNS) are
+ * never awarded (1.8.6.e). ICF sets no entry-count threshold, so a place
+ * is eligible whenever a valid finisher occupies it.
  */
 function computeMedalEligibility(rankedEntryCount) {
   return {
-    gold: rankedEntryCount >= MEDAL_MINIMUMS.gold,
-    silver: rankedEntryCount >= MEDAL_MINIMUMS.silver,
-    bronze: rankedEntryCount >= MEDAL_MINIMUMS.bronze,
-    flag: rankedEntryCount < MEDAL_MINIMUMS.gold
-      ? `Only ${rankedEntryCount} boat(s) — below minimum of ${MEDAL_MINIMUMS.gold} for any medal (PSA 9.4). Race stands, no medals awarded.`
-      : rankedEntryCount < MEDAL_MINIMUMS.silver
-      ? `${rankedEntryCount} boats — Gold only awarded, below minimum of ${MEDAL_MINIMUMS.silver} for Silver/Bronze (PSA 9.4).`
-      : null,
+    gold: rankedEntryCount >= 1,
+    silver: rankedEntryCount >= 2,
+    bronze: rankedEntryCount >= 3,
+    flag: null,
   };
 }
 
 /**
- * ICF Ch.3 boat weight minimums (+ PSA Guppy addition). Called after a
+ * ICF Ch.3 boat weight minimums (Guppy from PSA 2.2.1). Called after a
  * boat finishes and is weighed. Returns whether it passes and, if not,
  * the DQ reason to attach to the result.
  */
@@ -164,24 +158,18 @@ function checkWeight(boatClass, measuredWeightKg) {
     checked: true,
     passed,
     minRequiredKg: min,
-    dqReason: passed ? null : `Underweight: ${measuredWeightKg}kg < ${min}kg minimum for ${boatClass} (ICF Ch.3 / PSA 2.2.1).`,
+    dqReason: passed ? null : `Underweight: ${measuredWeightKg}kg < ${min}kg minimum for ${boatClass} (${boatClass === 'Guppy' ? 'PSA 2.2.1' : 'ICF Ch.3'}).`,
   };
 }
 
 /**
- * PSA weigh-in requirement (office rule, not a published PSA clause —
- * confirmed with the user directly): every FINAL result's podium
- * (positions 1-3, or however many finishers there are if fewer than 3)
- * must be weighed before the race can be considered final. Weighing
- * anyone beyond the podium is entirely at the office's discretion —
- * there's no cap, and it's never REQUIRED, so it never blocks
- * completion on its own.
+ * ICF 7.3.5.c post-race boat control: "At least three (3) boats will be
+ * selected at random from the participants in the races for boat control
+ * after the finish." This system requires 3 weigh-ins per race (any 3
+ * boats, chosen by the official) before results are marked official.
  *
- * `ranked` is the finish-order list for ONE category (already split from
- * any combined start), each item needing at least an `entryId`.
- * `weighedEntryIds` is a Set (or array) of entryIds that have a weigh-in
- * recorded, regardless of pass/fail — the requirement is that they were
- * WEIGHED, not that they passed.
+ * `ranked` is the finish-order list for ONE race; `weighedEntryIds` is a
+ * Set (or array) of entryIds with a weigh-in recorded, pass or fail.
  */
 function computeWeighInRequirement(ranked, weighedEntryIds) {
   const weighed = weighedEntryIds instanceof Set ? weighedEntryIds : new Set(weighedEntryIds);
