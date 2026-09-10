@@ -182,7 +182,7 @@ let lastFinishedHash = '';
 
 function renderRunning(races){
   const hash = JSON.stringify(races.map(r => ({
-    id:r.id, status:r.status, stop:r.stopTimeMs,
+    id:r.id, status:r.status, start:r.startTimeMs, stop:r.stopTimeMs,
     cross:(r.blindCrossings||[]).map(c=>[c.position,c.assignedLane]),
     res:Object.entries(r.results||{}).map(([k,v])=>[k,v.status,v.position]),
     laps:Object.entries(r.laneEntries||{}).map(([l,i])=>i&&i.laps?i.laps.length:0)
