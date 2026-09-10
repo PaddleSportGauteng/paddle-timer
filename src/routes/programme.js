@@ -1119,4 +1119,16 @@ router.post('/unfinalise', (req, res) => {
   res.json({ unpublished: pendingRaces.length });
 });
 
+// Set ICF draw plan variant (P1 or P2) for an event
+router.patch('/events/:id/icf-plan-variant', (req, res) => {
+  const database = db.load();
+  const event = database.events[req.params.id];
+  if (!event) return res.status(404).json({ error: 'Event not found.' });
+  const variant = req.body.variant;
+  if (variant !== 'P1' && variant !== 'P2') return res.status(400).json({ error: 'Variant must be P1 or P2.' });
+  event.icfPlanVariant = variant;
+  db.save();
+  res.json({ ok: true, variant });
+});
+
 module.exports = router;

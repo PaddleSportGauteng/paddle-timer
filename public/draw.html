@@ -57,6 +57,89 @@ async function loadEvents(){
       if(!ev.format.runnable){ fmtLabel = ev.format.reason; fmtClass='bad'; }
       else { fmtLabel = ev.format.rounds.join(' → '); fmtClass = ev.format.rounds.length>1 ? 'warn':'ok'; }
 
+      const hasHeats = ev.format.runnable && ev.format.rounds && ev.format.rounds.includes('heats');
+      const variant = ev.icfPlanVariant || 'P1';
+      const planBtn = hasHeats
+        ? `<button style="font-size:11px;padding:4px 8px;background:${variant==='P1'?'#0B2540':'#E2662D'};color:#fff;border:none;border-radius:5px;cursor:pointer;margin-right:4px"
+            onclick="togglePlan('${ev.id}','${variant}')" title="ICF draw plan — default is P1. Click to switch.">ICF ${variant}</button>`
+        : '';
+
+      let action;
+      if(ev.hasRaces){
+        action = planBtn
+          + (ev.drawConfirmed
+          ? `<span class="pill ok">Confirmed</span> <button style="font-size:12px;padding:5px 8px" onclick="changeEvent('${ev.id}')">Change</button>`
+          : `<button class="green" style="font-size:12px" onclick="confirmDraw('${ev.id}')">Confirm</button> <button style="font-size:12px;padding:5px 8px" onclick="changeEvent('${ev.id}')">Change</button>`)
+          + ` <button style="font-size:12px;padding:5px 8px" onclick="toggleDrawView('${ev.id}')">View draw ▾</button>`;
+      } else if(ev.isMassStart){
+        action = massStartActionHtml(ev);
+      } else if(ev.format.runnable){
+        action = planBtn + `<button onclick="generate('${ev.id}')">Generate</button>`;
+      } else {
+        action = `<span class="pill bad">Below min 3</span> <button style="font-size:12px" onclick="forceFinal('${ev.id}')">Race anyway</button> <small style="color:var(--gray)">or go to <a href="/race-sort.html">Race Sort</a> to combine it</small>`;
+      }
+
+      const displayLabel = ev.isCombined ? `<b>${ev.combinedLabel}</b> <small style="color:var(--gray)">(combined)</small>` : ev.label;
+      return `<tr><td>${displayLabel}${ev.isMassStart?' <small style="color:var(--gray)">(mass start)</small>':''}</td><td>${ev.entryCount}</td><td><span class="pill ${fmtClass}">${fmtLabel}</span></td><td>${action}</td></tr>`;
+YPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Draw — PaddleSport Gauteng</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  .events-table td, .events-table th{font-size:13px}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <a href="/" class="title"><img src="/psg-logo.jpg" alt="PSG" class="psg-logo"> PaddleSport Gauteng</a>
+  <nav><a href="/admin.html">Race Office</a><a href="/race-sort.html">Race Sort</a><a href="/draw.html">Draw</a><a href="/program.html">Race Program</a><a href="/tower.html">Tower</a><a href="/weigh.html">Weigh</a><a href="/results.html">Results</a><a href="/board.html">Board</a></nav>
+  <div id="meetBar"></div>
+</header>
+<main>
+  <h1>Draw</h1>
+  <div class="flag" id="meetWarning" style="display:none">No meet selected — pick or create one at the top-right first.</div>
+  <div id="dayBar" style="margin-bottom:12px"></div>
+  <div id="venueInfo" style="margin-bottom:14px"></div>
+
+  <div class="card" style="background:#EAF1FA;border-color:#B8D0EA">
+    <p style="margin:0;color:#1a3a5c">Need to combine age groups first? <a href="/race-sort.html"><b>Go to Race Sort →</b></a> Do that before drawing below, so combined groups show as one row here instead of separate undersized categories.</p>
+  </div>
+
+  <div class="card">
+    <h2 style="margin-top:0">Draw events</h2>
+    <p style="color:var(--gray);font-size:14px">Combined groups (from Race Sort) show as one row here. Below 3 boats with no combine partner? Use "Race anyway" to override ICF's minimum — it's flagged so nobody mistakes it for an oversight. Once a draw looks right, click <b>Confirm</b>; <b>Change</b> undoes the draw and puts it back here to redo.</p>
+    <div id="eventsTable">Loading…</div>
+  </div>
+
+  <div class="card">
+    <p style="margin:0">Done drawing? <a href="/program.html"><b>Continue to Race Program →</b></a> to set start times, sequence the day, and finalise to the Tower.</p>
+  </div>
+</main>
+<script src="common.js"></script>
+<script>
+let allEvents = [];
+let selectedDay = null;
+
+async function loadEvents(){
+  const meetId = getMeetId();
+  const el = document.getElementById('eventsTable');
+  if(!meetId){ el.innerHTML = ''; return; }
+  try {
+    const dayQS = selectedDay ? `&day=${selectedDay}` : '';
+    const res = await fetch(`/api/programme/events?meetId=${encodeURIComponent(meetId)}${dayQS}`);
+    if(!res.ok) throw new Error(`Server returned ${res.status}`);
+    const events = await res.json();
+    allEvents = events;
+    const drawableEvents = events.filter(ev => ev.entryCount > 0);
+    if(drawableEvents.length===0){ el.innerHTML = '<p style="color:var(--gray)">No events with entries yet — import entries in Race Office.</p>'; return; }
+    const rows = drawableEvents.map(ev => {
+      let fmtLabel, fmtClass;
+      if(!ev.format.runnable){ fmtLabel = ev.format.reason; fmtClass='bad'; }
+      else { fmtLabel = ev.format.rounds.join(' → '); fmtClass = ev.format.rounds.length>1 ? 'warn':'ok'; }
+
       let action;
       if(ev.hasRaces){
         action = (ev.drawConfirmed
@@ -117,6 +200,17 @@ async function createMassRace(eventId){
   const data = await res.json();
   if(!res.ok){ alert(data.error); return; }
   await loadEvents();
+}
+
+async function togglePlan(eventId, current){
+  const next = current === 'P1' ? 'P2' : 'P1';
+  const label = next === 'P2' ? 'Switch to ICF Plan 2? (Plan 1 is the standard default — only change if the Competition Committee has drawn Plan 2)' : 'Switch back to ICF Plan 1 (standard default)?';
+  if(!confirm(label)) return;
+  const res = await fetch(`/api/programme/events/${eventId}/icf-plan-variant`, {
+    method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({variant: next})
+  });
+  if(!res.ok){ const d=await res.json(); alert(d.error); return; }
+  loadEvents();
 }
 
 async function generate(eventId){

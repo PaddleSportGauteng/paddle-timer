@@ -224,7 +224,7 @@ function autoAdvance(database, eventId) {
           })),
       }));
 
-      const icfDraw = applyICFSemiDraw(heatResultsForDraw, heatRaces.length, 'P1');
+      const icfDraw = applyICFSemiDraw(heatResultsForDraw, heatRaces.length, event.icfPlanVariant || 'P1');
 
       if (icfDraw) {
         // ICF exact draw available — use pre-determined lane assignments
