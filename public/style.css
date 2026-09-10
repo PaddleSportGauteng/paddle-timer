@@ -19,25 +19,16 @@ body{
 header.topbar{
   background:var(--navy);
   color:#fff;
-  padding:0 18px 0 0;          /* no left padding — the white logo block sits flush */
+  padding:0 18px;
   display:flex;
   justify-content:space-between;
-  align-items:stretch;
+  align-items:center;
   flex-wrap:wrap;
   gap:10px;
-  min-height:56px;              /* bar height unchanged */
+  min-height:56px;
 }
 header.topbar a{color:#fff;text-decoration:none;}
-/* Logo on a white block outside the navy, title big beside it */
-header.topbar .title{
-  display:flex; align-items:center; gap:14px;
-  font-weight:800; font-size:26px; letter-spacing:0.01em; line-height:1;
-}
-header.topbar .title .psg-logo{
-  height:56px; width:auto; display:block;
-  background:#fff; padding:6px 12px; box-sizing:border-box;
-}
-header.topbar nav, header.topbar #meetBar{ align-self:center; }
+header.topbar .title{ font-weight:800; font-size:26px; letter-spacing:0.01em; line-height:1; }
 header.topbar nav{display:flex;gap:14px;font-size:14px;}
 header.topbar nav a{opacity:0.85;}
 header.topbar nav a:hover{opacity:1;text-decoration:underline;}
