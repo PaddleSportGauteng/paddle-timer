@@ -58,10 +58,8 @@ async function loadEvents(){
       else { fmtLabel = ev.format.rounds.join(' → '); fmtClass = ev.format.rounds.length>1 ? 'warn':'ok'; }
 
       const hasHeats = ev.format.runnable && ev.format.rounds && ev.format.rounds.includes('heats');
-      const variant = ev.icfPlanVariant || 'P1';
       const planBtn = hasHeats
-        ? `<button style="font-size:11px;padding:4px 8px;background:${variant==='P1'?'#0B2540':'#E2662D'};color:#fff;border:none;border-radius:5px;cursor:pointer;margin-right:4px"
-            onclick="togglePlan('${ev.id}','${variant}')" title="ICF draw plan — default is P1. Click to switch.">ICF ${variant}</button>`
+        ? `<span style="font-size:11px;padding:3px 7px;background:#0B2540;color:#fff;border-radius:4px;margin-right:4px;letter-spacing:0.03em" title="ICF Appendix 1 Plan — automatically selected based on entry count">ICF AUTO</span>`
         : '';
 
       let action;
@@ -200,17 +198,6 @@ async function createMassRace(eventId){
   const data = await res.json();
   if(!res.ok){ alert(data.error); return; }
   await loadEvents();
-}
-
-async function togglePlan(eventId, current){
-  const next = current === 'P1' ? 'P2' : 'P1';
-  const label = next === 'P2' ? 'Switch to ICF Plan 2? (Plan 1 is the standard default — only change if the Competition Committee has drawn Plan 2)' : 'Switch back to ICF Plan 1 (standard default)?';
-  if(!confirm(label)) return;
-  const res = await fetch(`/api/programme/events/${eventId}/icf-plan-variant`, {
-    method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({variant: next})
-  });
-  if(!res.ok){ const d=await res.json(); alert(d.error); return; }
-  loadEvents();
 }
 
 async function generate(eventId){
