@@ -91,6 +91,13 @@ function render(){
   el.innerHTML = races.map(race => {
     const rows = Object.entries(race.laneEntries).sort((a,b)=>Number(a[0])-Number(b[0])).map(([num, info]) => {
       if(!info) return '';
+      // Skip paddlers DQ'd for non-weight reasons (lane crossing, false start etc.)
+      // A weight DQ still shows since the weigh-in was done
+      const result = race.results && race.results[info.entryId];
+      const isRaceDQ = result && result.status === 'DQ' && result.dqReason && !result.dqReason.toLowerCase().includes('underweight') && !result.dqReason.toLowerCase().includes('kg');
+      const isDNF = result && result.status === 'DNF';
+      const isDNS = result && result.status === 'DNS';
+      if(isRaceDQ || isDNF || isDNS) return ''; // not eligible for weigh-in
       const weighIn = info.weighIn;
       const isOpen = (openBoat && openBoat.raceId === race.id && openBoat.entryId === info.entryId) || !weighIn;
       const badge = weighIn ? (

@@ -68,8 +68,19 @@ function enrichRace(database, race) {
       .filter(([, r]) => r.status === 'OK')
       .sort((a, b) => a[1].finishTimeMs - b[1].finishTimeMs)
       .map(([entryId], i) => ({ entryId, place: i + 1 }));
-    const weighedIds = new Set(Object.keys(database.weighIns || {}));
-    weighInStatus = rules.computeWeighInRequirement(ranked, weighedIds);
+    // Count weigh-ins from ALL boats in this race (finishers + DQ'd by weight)
+    // A race-DQ (lane crossing etc.) doesn't need weighing, but a weight-DQ counts
+    const allEntryIds = Object.values(race.lanes || {}).filter(Boolean);
+    const weighedInThisRace = allEntryIds.filter(entryId => database.weighIns && database.weighIns[entryId]);
+    // Build a combined list: ranked finishers + weight-DQ'd boats
+    const allRankedForWeigh = [...ranked];
+    weighedInThisRace.forEach(entryId => {
+      if (!allRankedForWeigh.find(r => r.entryId === entryId)) {
+        allRankedForWeigh.push({ entryId, place: 999 });
+      }
+    });
+    const weighedIds = new Set(weighedInThisRace);
+    weighInStatus = rules.computeWeighInRequirement(allRankedForWeigh, weighedIds);
   }
 
   return { ...race, laneEntries, results, blindCrossings, weighInStatus };
