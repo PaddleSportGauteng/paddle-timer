@@ -321,6 +321,10 @@ router.post('/:id/restart-clock', (req, res) => {
   if (!race) return res.status(404).json({ error: 'Race not found.' });
   if (race.status !== 'running') return res.status(400).json({ error: 'Race is not running.' });
   race.stopTimeMs = null;
+  race.startTimeMs = Date.now(); // reset to zero
+  // Clear any existing crossings so the timing starts fresh
+  database.blindCrossings[race.id] = [];
+  database.raceResults[race.id] = {};
   db.save();
   res.json({ ok: true });
 });

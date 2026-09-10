@@ -461,8 +461,8 @@ async function clearCrossing(raceId,position){
 async function restartClock(raceId){
   const res=await fetch(`/api/races/${raceId}/restart-clock`,{method:'POST'});
   if(!res.ok){const d=await res.json();alert(d.error);return;}
-  lastRunningHash=''; // force re-render
-  await refresh();
+  lastRunningHash=''; // force full re-render
+  await refresh(true);
 }
 
 async function stopClock(raceId){
