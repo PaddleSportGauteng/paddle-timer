@@ -166,11 +166,13 @@ async function refresh(force){
 // ── Tick ──────────────────────────────────────────────────────────
 function startTick(race){
   if(tickHandles[race.id]) cancelAnimationFrame(tickHandles[race.id]);
+  delete tickHandles[race.id];
   function tick(){
     const el=document.getElementById('clock-'+race.id); if(!el){delete tickHandles[race.id];return;}
     const ms=race.stopTimeMs ? race.stopTimeMs-race.startTimeMs : Date.now()-race.startTimeMs;
-    el.textContent=fmtTime(ms);
+    el.textContent=fmtTime(Math.max(0,ms));
     if(!race.stopTimeMs) tickHandles[race.id]=requestAnimationFrame(tick);
+    else delete tickHandles[race.id];
   }
   tick();
 }
@@ -461,7 +463,13 @@ async function clearCrossing(raceId,position){
 async function restartClock(raceId){
   const res=await fetch(`/api/races/${raceId}/restart-clock`,{method:'POST'});
   if(!res.ok){const d=await res.json();alert(d.error);return;}
-  lastRunningHash=''; // force full re-render
+  // Kill any existing tick for this race so the old startTimeMs closure is gone
+  if(tickHandles[raceId]){ cancelAnimationFrame(tickHandles[raceId]); delete tickHandles[raceId]; }
+  // Immediately show 00:00.00 so there's no visual carry-over
+  const el=document.getElementById('clock-'+raceId);
+  if(el) el.textContent='00:00.00';
+  // Force a full re-render with fresh server data
+  lastRunningHash='';
   await refresh(true);
 }
 
