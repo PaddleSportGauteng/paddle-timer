@@ -13,6 +13,8 @@
   .lane-row{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px dashed var(--line);font-size:13px;}
   .lane-row:last-child{border-bottom:none}
   .lane-row .lanenum{width:52px;font-weight:700;color:var(--gray);flex-shrink:0}
+  .lane-row.lane-header{padding:4px 0;border-bottom:2px solid var(--line)}
+  .lane-row.lane-header .lanenum,.lane-row.lane-header td{font-size:11px;font-weight:700;color:var(--gray);letter-spacing:0.06em}
   .lane-row select{font-size:12px;padding:4px;border-radius:5px;border:1px solid var(--line)}
   .lane-row button{font-size:12px;padding:5px 8px;flex-shrink:0}
   .paddler-table{flex:1;min-width:0;border-collapse:collapse;table-layout:fixed;width:420px;font-family:Arial,sans-serif;}
@@ -689,6 +691,17 @@ function raceBlockHtml(race){
       </span>
     </h4>
     <div class="race-lanes" id="lanes-${race.id}" style="display:none">
+      <div class="lane-row lane-header">
+        <span class="lanenum">LANE</span>
+        <table class="paddler-table"><tr>
+          <td class="pname">NAME</td>
+          <td class="pmeta cage">AGE</td>
+          <td class="pmeta cclub">CLUB</td>
+          <td class="pmeta csex">M/F</td>
+          <td class="pmeta cunion">UNION</td>
+          <td class="pmeta cpsa">PSA #</td>
+        </tr></table>
+      </div>
       ${laneRows}
     </div>
   </div>`;

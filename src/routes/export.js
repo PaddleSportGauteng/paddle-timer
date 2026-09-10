@@ -72,53 +72,112 @@ router.get('/programme.pdf', (req, res) => {
 
   const left = doc.page.margins.left;
   const right = doc.page.width - doc.page.margins.right;
-  const colNum = left;
-  const colNumW = 34;
-  const colLeave = right - 60;
-  const colLeaveW = 60;
-  const colTime = colLeave - 62;
-  const colTimeW = 60;
-  const colDesc = colNum + colNumW;
-  const colDescW = colTime - colDesc - 10;
-  const rowHeight = 20;
+  const pageW = right - left;
 
-  function drawHeader() {
-    doc.fontSize(9).font('Helvetica-Bold').fillColor('#666');
-    const y = doc.y;
-    doc.text('#', colNum, y, { width: colNumW });
-    doc.text('Event', colDesc, y, { width: colDescW });
-    doc.text('Time', colTime, y, { width: colTimeW, align: 'right' });
-    doc.text('Leave', colLeave, y, { width: colLeaveW, align: 'right' });
-    doc.moveDown(0.6);
-    doc.moveTo(left, doc.y).lineTo(right, doc.y).strokeColor('#D8DCE0').stroke();
-    doc.moveDown(0.4);
-    doc.fillColor('#000');
+  // Lane table columns — same order as every screen:
+  // LANE · NAME · AGE · CLUB · M/F · UNION · PSA # · TIME
+  const cols = [
+    { key: 'lane',  label: 'LANE',  w: 40 },
+    { key: 'name',  label: 'NAME',  w: 0 },   // flex
+    { key: 'age',   label: 'AGE',   w: 44 },
+    { key: 'club',  label: 'CLUB',  w: 48 },
+    { key: 'sex',   label: 'M/F',   w: 30 },
+    { key: 'union', label: 'UNION', w: 46 },
+    { key: 'psa',   label: 'PSA #', w: 52 },
+    { key: 'time',  label: 'TIME',  w: 60 },
+  ];
+  const fixedW = cols.reduce((s, col) => s + col.w, 0);
+  cols.find((col) => col.key === 'name').w = pageW - fixedW;
+  let x = left;
+  cols.forEach((col) => { col.x = x; x += col.w; });
+
+  const rowH = 14;
+  const gl = (g) => g ? (g.toLowerCase().startsWith('f') ? 'F' : g.toLowerCase().startsWith('m') ? 'M' : g) : '';
+  const fmtMs = (ms) => {
+    if (ms == null) return '';
+    const cs = Math.floor(ms / 10) % 100, s = Math.floor(ms / 1000) % 60, m = Math.floor(ms / 60000);
+    return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}.${String(cs).padStart(2, '0')}`;
+  };
+
+  function ensureRoom(h) {
+    if (doc.y + h > doc.page.height - doc.page.margins.bottom) doc.addPage();
   }
 
-  drawHeader();
+  function drawLaneHeader() {
+    const y = doc.y;
+    doc.fontSize(7.5).font('Helvetica-Bold').fillColor('#6B7480');
+    cols.forEach((col) => doc.text(col.label, col.x + 3, y, { width: col.w - 6, lineBreak: false }));
+    doc.y = y + 11;
+    doc.moveTo(left, doc.y).lineTo(right, doc.y).strokeColor('#D8DCE0').lineWidth(1).stroke();
+    doc.y += 2;
+  }
 
+  let currentDay = null;
   races.forEach((race) => {
-    if (doc.y > doc.page.height - doc.page.margins.bottom - rowHeight) {
-      doc.addPage();
-      drawHeader();
+    const lanes = Object.entries(race.laneEntries || {}).sort((a, b) => Number(a[0]) - Number(b[0]));
+    const blockH = 24 + 13 + lanes.length * rowH + 8;
+    ensureRoom(Math.min(blockH, 120));
+
+    // Day separator
+    if ((race.day || 1) !== currentDay) {
+      currentDay = race.day || 1;
+      doc.rect(left, doc.y, pageW, 16).fill('#0B2540');
+      doc.fontSize(9).font('Helvetica-Bold').fillColor('#fff').text(`DAY ${currentDay}`, left + 6, doc.y + 4, { lineBreak: false });
+      doc.y += 20;
+      doc.fillColor('#000');
     }
+
+    // Race title row
     const y = doc.y;
     const desc = raceDescription(race);
     const time = race.scheduledLabel || 'TBC';
-    const leave = leaveForStart(race.scheduledLabel, leadMinutes) || '—';
-    const descColor = race.placeholder ? '#999' : (race.overridden ? '#C93B3B' : '#000');
+    const leave = leaveForStart(race.scheduledLabel, leadMinutes);
+    doc.fontSize(10.5).font('Helvetica-Bold').fillColor('#0B2540');
+    doc.text(`R${race.raceNumber}`, left, y, { width: 34, lineBreak: false });
+    doc.fillColor(race.placeholder ? '#999' : (race.overridden ? '#C93B3B' : '#0B2540'));
+    doc.text(desc, left + 36, y, { width: pageW - 36 - 140, lineBreak: false });
+    doc.font('Helvetica').fillColor('#E2662D');
+    doc.text(`Start ${time}`, right - 140, y, { width: 70, align: 'right', lineBreak: false });
+    doc.fillColor('#6B7480');
+    doc.text(leave ? `Leave ${leave}` : '', right - 66, y, { width: 66, align: 'right', lineBreak: false });
+    doc.y = y + 15;
 
-    doc.fontSize(10).font('Helvetica-Bold').fillColor('#1a3a5c');
-    doc.text(String(race.raceNumber), colNum, y, { width: colNumW });
-    doc.font('Helvetica').fillColor(descColor);
-    doc.text(desc, colDesc, y, { width: colDescW });
-    const descHeight = doc.heightOfString(desc, { width: colDescW });
-    doc.font('Helvetica-Bold').fillColor('#1a3a5c');
-    doc.text(time, colTime, y, { width: colTimeW, align: 'right' });
-    doc.font('Helvetica').fillColor('#666');
-    doc.text(leave, colLeave, y, { width: colLeaveW, align: 'right' });
-
-    doc.y = y + Math.max(descHeight, doc.currentLineHeight()) + 6;
+    if (lanes.length === 0) {
+      doc.fontSize(8).font('Helvetica-Oblique').fillColor('#999').text('No lanes assigned yet.', left + 4, doc.y);
+      doc.y += 14;
+    } else {
+      drawLaneHeader();
+      doc.fontSize(8.5).font('Helvetica').fillColor('#000');
+      lanes.forEach(([lane, info], i) => {
+        ensureRoom(rowH);
+        const ry = doc.y;
+        if (i % 2 === 1) doc.rect(left, ry - 2, pageW, rowH).fill('#F3F6FA');
+        doc.fillColor('#000');
+        if (!info) {
+          doc.font('Helvetica').fillColor('#6B7480');
+          doc.text(`${race.isMassStart ? 'S' : 'L'}${lane}`, cols[0].x + 3, ry, { width: cols[0].w - 6, lineBreak: false });
+          doc.text('—', cols[1].x + 3, ry, { width: cols[1].w - 6, lineBreak: false });
+        } else {
+          const r = race.results && race.results[info.entryId];
+          const timeStr = r ? (r.status === 'OK' ? fmtMs(r.finishTimeMs) : r.status) : '';
+          const name = (info.names || []).join(' / ').toUpperCase();
+          doc.font('Helvetica-Bold').fillColor('#6B7480');
+          doc.text(`${race.isMassStart ? 'S' : 'L'}${lane}`, cols[0].x + 3, ry, { width: cols[0].w - 6, lineBreak: false });
+          doc.fillColor('#000');
+          doc.text(name, cols[1].x + 3, ry, { width: cols[1].w - 6, lineBreak: false, ellipsis: true });
+          doc.font('Helvetica').fillColor('#6B7480');
+          doc.text(info.ageCategory || '', cols[2].x + 3, ry, { width: cols[2].w - 6, lineBreak: false });
+          doc.text(info.clubCode || '', cols[3].x + 3, ry, { width: cols[3].w - 6, lineBreak: false });
+          doc.text(gl(info.gender), cols[4].x + 3, ry, { width: cols[4].w - 6, lineBreak: false });
+          doc.text(info.union || '', cols[5].x + 3, ry, { width: cols[5].w - 6, lineBreak: false });
+          doc.text((info.psaIds || [])[0] || '', cols[6].x + 3, ry, { width: cols[6].w - 6, lineBreak: false });
+          doc.font('Helvetica-Bold').fillColor(r && r.status === 'OK' ? '#1E8E5A' : '#C93B3B');
+          doc.text(timeStr, cols[7].x + 3, ry, { width: cols[7].w - 6, align: 'right', lineBreak: false });
+        }
+        doc.y = ry + rowH;
+      });
+    }
+    doc.y += 10;
     doc.fillColor('#000');
   });
 

@@ -81,11 +81,11 @@ router.get('/draws.xlsx', async (req, res) => {
     if (isCrewRace) {
       writeRow([
         'Pos', race.isMassStart ? 'Slide' : 'Lane',
-        'Name (Paddler 1)', 'Surname (Paddler 1)', 'Club (Paddler 1)', 'Age', 'Sex', 'PSA ID (P1)',
-        'Name (Paddler 2)', 'Surname (Paddler 2)', 'Club (Paddler 2)', 'Age', 'Sex', 'PSA ID (P2)',
+        'Name (P1)', 'Surname (P1)', 'Age', 'Club (P1)', 'M/F', 'Union (P1)', 'PSA # (P1)',
+        'Name (P2)', 'Surname (P2)', 'Age', 'Club (P2)', 'M/F', 'Union (P2)', 'PSA # (P2)',
       ], { font: boldFont });
     } else {
-      writeRow(['Pos', race.isMassStart ? 'Slide' : 'Lane', 'Name', 'Surname', 'Club', 'Age', 'Sex', 'PSA ID'], { font: boldFont });
+      writeRow(['Pos', race.isMassStart ? 'Slide' : 'Lane', 'Name', 'Surname', 'Age', 'Club', 'M/F', 'Union', 'PSA #'], { font: boldFont });
     }
 
     const rowsToShow = race.isMassStart
@@ -101,9 +101,9 @@ router.get('/draws.xlsx', async (req, res) => {
     rowsToShow.forEach(([laneOrSlide, info]) => {
       if (!info) {
         if (isCrewRace) {
-          writeRow(['-', Number(laneOrSlide), '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-']);
+          writeRow(['-', Number(laneOrSlide), '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-']);
         } else {
-          writeRow(['-', Number(laneOrSlide), '-', '-', '-', '-', '-', '-']);
+          writeRow(['-', Number(laneOrSlide), '-', '-', '-', '-', '-', '-', '-']);
         }
         return;
       }
@@ -127,7 +127,8 @@ router.get('/draws.xlsx', async (req, res) => {
           const surname = fullName ? fullName.split(' ').slice(1).join(' ') || '-' : '-';
           const clubCode = athlete && athlete.club ? getClubCode(database, athlete.club) : (i === 0 ? info.clubCode || '-' : '-');
           const psaId = athlete ? athlete.psaId || '-' : '-';
-          return [firstName, surname, clubCode, ageCategory, gender, psaId];
+          const union = athlete && athlete.club ? (database.clubUnions[athlete.club] || '-') : (i === 0 ? info.union || '-' : '-');
+          return [firstName, surname, ageCategory, clubCode, gender, union, psaId];
         });
         writeRow([pos, Number(laneOrSlide), ...paddlerData[0], ...paddlerData[1]]);
       } else {
@@ -140,7 +141,8 @@ router.get('/draws.xlsx', async (req, res) => {
         const surname = fullName ? fullName.split(' ').slice(1).join(' ') : '';
         const clubCode = athlete && athlete.club ? getClubCode(database, athlete.club) : (info.clubCode || '');
         const psaId = athlete ? athlete.psaId || '-' : '-';
-        writeRow([pos, Number(laneOrSlide), firstName, surname, clubCode, ageCategory, gender, psaId]);
+        const union = info.union || (athlete && athlete.club ? database.clubUnions[athlete.club] : '') || '';
+        writeRow([pos, Number(laneOrSlide), firstName, surname, ageCategory, clubCode, gender, union, psaId]);
       }
     });
 
