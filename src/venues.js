@@ -1,21 +1,19 @@
 // Known venues. Lat/long positions the weather lookup; bearing is the
 // direction boats race TOWARDS the finish (degrees true), used to classify
 // wind as head / tail / cross relative to the course.
+// Known PSG flatwater venues. Lat/long = race office / club position,
+// used for the weather lookup. bearing = default direction boats travel
+// from start to finish (degrees true). Bearings are DEFAULTS ONLY — a
+// meet can override its course bearing (courses get reversed), and the
+// values below are [Likely] not [Certain] until confirmed on the water.
 const VENUES = {
-  vlc: {
-    id: 'vlc',
-    name: 'Victoria Lake Club, Germiston',
-    lat: -26.22642, lon: 28.16261,
-    bearing: 70,               // WSW → ENE
-    direction: 'WSW → ENE',
-  },
-  roodeplaat: {
-    id: 'roodeplaat',
-    name: 'Alan Francis Rowing Course, Roodeplaat Dam',
-    lat: -25.62335, lon: 28.34984,
-    bearing: 20,               // SSW → NNE
-    direction: 'SSW → NNE',
-  },
+  vlc:        { id: 'vlc',        short: 'VLC',         name: 'Victoria Lake Club, Germiston',          lat: -26.22642,  lon: 28.16261,  bearing: 70  },
+  roodeplaat: { id: 'roodeplaat', short: 'Roodeplaat',  name: 'Roodeplaat Dam, Academy / Sprint Course', lat: -25.62208,  lon: 28.350997, bearing: 20  },
+  erk:        { id: 'erk',        short: 'ERK',         name: 'ERK, Homestead Dam, Benoni',              lat: -26.173989, lon: 28.287243, bearing: 195 },
+  dabs:       { id: 'dabs',       short: 'DABS',        name: 'Dabulamanzi, Emmarentia Dam',             lat: -26.15108,  lon: 28.00628,  bearing: 20  },
+  rietvlei:   { id: 'rietvlei',   short: 'Rietvlei',    name: 'Centurion Canoe Club, Rietvlei Dam',      lat: -25.87390,  lon: 28.26580,  bearing: 295 },
+  florida:    { id: 'florida',    short: 'Florida',     name: 'Florida Lake Canoe Club, Florida Lake',   lat: -26.17832,  lon: 27.90641,  bearing: 270 },
+  wemmer:     { id: 'wemmer',     short: 'Wemmer Pan',  name: 'Johannesburg Canoe Club, Wemmer Pan',     lat: -26.23076,  lon: 28.05794,  bearing: 270 },
 };
 
 // Classify wind relative to the course. windFrom is the meteorological
@@ -52,8 +50,9 @@ function wmoLabel(code) {
 
 // Fetch current conditions from Open-Meteo (free, no key). Returns null
 // on any failure — weather is decoration, never a reason to block a race.
-async function fetchConditions(venue) {
+async function fetchConditions(venue, bearingOverride) {
   if (!venue || venue.lat == null) return null;
+  const bearing = bearingOverride != null ? bearingOverride : venue.bearing;
   const url = `https://api.open-meteo.com/v1/forecast?latitude=${venue.lat}&longitude=${venue.lon}`
     + `&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m,wind_direction_10m&wind_speed_unit=ms&timezone=Africa%2FJohannesburg`;
   try {
@@ -68,7 +67,8 @@ async function fetchConditions(venue) {
       windMs: c.wind_speed_10m ?? null,
       windFromDeg: c.wind_direction_10m ?? null,
       windCompass: compass(c.wind_direction_10m),
-      windRelative: windRelative(c.wind_direction_10m, venue.bearing),
+      windRelative: windRelative(c.wind_direction_10m, bearing),
+      courseBearing: bearing,
       source: 'forecast',
       capturedAt: Date.now(),
     };

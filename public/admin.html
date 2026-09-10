@@ -16,7 +16,6 @@
 
   /* Discipline cards */
   .discipline-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:18px; }
-  .venue-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-bottom:18px; }
   .disc-card.soon { opacity:.55; }
   .disc-card.soon h3::after { content:' · soon'; font-size:11px; color:var(--gray); font-weight:400; }
   .disc-card { border:2px solid var(--line); border-radius:10px; padding:16px 12px; cursor:pointer; text-align:center; transition:border-color 0.15s, background 0.15s; }
@@ -97,12 +96,19 @@
         <select id="condVenue" onchange="saveConditions()" style="padding:8px;min-width:280px"></select>
       </div>
       <div>
+        <label style="display:block;font-size:12px;color:var(--gray);margin-bottom:4px">Course bearing °</label>
+        <div style="display:flex;gap:6px;align-items:center">
+          <input type="number" min="0" max="359" id="condBearing" placeholder="e.g. 070" style="width:90px;padding:8px" onchange="saveConditions()">
+          <button type="button" class="sm" onclick="reverseCourse()" title="Add 180° — use when the course is run the other way">Reverse</button>
+        </div>
+      </div>
+      <div>
         <label style="display:block;font-size:12px;color:var(--gray);margin-bottom:4px">Water temp °C</label>
         <input type="number" step="0.1" id="condWater" placeholder="e.g. 20.8" style="width:110px;padding:8px" onchange="saveConditions()">
       </div>
       <div id="condPreview" style="font-size:13px;color:var(--gray);flex:1;min-width:240px"></div>
     </div>
-    <p style="font-size:12px;color:var(--gray);margin:8px 0 0">Air temp, humidity, wind and sky are captured automatically when each race is locked. Water temp is manual and carries forward until you change it.</p>
+    <p style="font-size:12px;color:var(--gray);margin:8px 0 0">Weather is captured automatically at each lock. Bearing is the direction boats travel start to finish; the venue default is a best estimate, confirm it on the water. Water temp is manual.</p>
   </div>
 
   <!-- Step 1: Create event + import -->
@@ -133,7 +139,7 @@
     </div>
 
     <div class="lane-label">Venue</div>
-    <div class="venue-grid" id="venueGrid"></div>
+    <div class="btn-row" id="venueGrid" style="margin-bottom:18px"></div>
 
     <div class="lane-label">Number of lanes at this venue</div>
     <div class="lane-btns" id="laneBtns"></div>
@@ -176,27 +182,20 @@ let selectedDisc = 'sprint';
 let selectedDays = 1;
 let selectedVenue = null;
 
-(async function buildVenueCards(){
+(async function buildVenueBtns(){
   const el = document.getElementById('venueGrid');
   let venues = [];
   try { venues = await (await fetch('/api/meets/venues')).json(); } catch(e){}
-  el.innerHTML = venues.map(v => `
-    <div class="disc-card" id="venue-${v.id}" onclick="pickVenue('${v.id}')">
-      <h3>${v.name.split(',')[0]}</h3>
-      <p>${v.name.split(',').slice(1).join(',').trim()} · course ${String(v.bearing).padStart(3,'0')}° ${v.direction}</p>
-    </div>`).join('') + `
-    <div class="disc-card" id="venue-none" onclick="pickVenue(null)">
-      <h3>Other</h3>
-      <p>No venue set · no weather capture</p>
-    </div>`;
+  el.innerHTML = venues.map(v => `<button type="button" id="venue-${v.id}" onclick="pickVenue('${v.id}')" title="${v.name} · default course ${String(v.bearing).padStart(3,'0')}°">${v.short}</button>`).join('')
+    + `<button type="button" id="venue-none" onclick="pickVenue(null)" title="No venue — no weather capture">Other</button>`;
   pickVenue(venues[0] ? venues[0].id : null);
 })();
 
 function pickVenue(id){
   selectedVenue = id;
-  document.querySelectorAll('#venueGrid .disc-card').forEach(x => x.classList.remove('active'));
+  document.querySelectorAll('#venueGrid button').forEach(x => x.classList.remove('orange'));
   const el = document.getElementById('venue-' + (id || 'none'));
-  if(el) el.classList.add('active');
+  if(el) el.classList.add('orange');
 }
 
 (function buildLaneBtns(){
@@ -328,7 +327,9 @@ async function loadConditions(meet){
   card.style.display = 'block';
   const vs = await (await fetch('/api/meets/venues')).json();
   const sel = document.getElementById('condVenue');
-  sel.innerHTML = '<option value="">No venue (no weather)</option>' + vs.map(v => `<option value="${v.id}" ${meet.venueId===v.id?'selected':''}>${v.name} — course ${String(v.bearing).padStart(3,'0')}° ${v.direction}</option>`).join('');
+  sel.innerHTML = '<option value="">No venue (no weather)</option>' + vs.map(v => `<option value="${v.id}" ${meet.venueId===v.id?'selected':''}>${v.short} — ${v.name}</option>`).join('');
+  window._condVenueLoaded = meet.venueId ?? null;
+  document.getElementById('condBearing').value = meet.courseBearing ?? '';
   document.getElementById('condWater').value = meet.waterTempC ?? '';
   previewConditions();
 }
@@ -346,8 +347,20 @@ async function saveConditions(){
   const meetId = getMeetId(); if(!meetId) return;
   const venueId = document.getElementById('condVenue').value || null;
   const w = document.getElementById('condWater').value;
-  await fetch(`/api/meets/${encodeURIComponent(meetId)}/conditions`, {method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({venueId, waterTempC: w===''?null:Number(w)})});
+  const b = document.getElementById('condBearing').value;
+  const body = { waterTempC: w===''?null:Number(w), courseBearing: b===''?null:Number(b) };
+  // Only send venueId if it actually changed — sending it resets bearing to the venue default
+  if(venueId !== (window._condVenueLoaded ?? null)){ body.venueId = venueId; window._condVenueLoaded = venueId; }
+  const res = await fetch(`/api/meets/${encodeURIComponent(meetId)}/conditions`, {method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)});
+  const data = await res.json();
+  if(data.courseBearing != null) document.getElementById('condBearing').value = data.courseBearing;
   previewConditions();
+}
+function reverseCourse(){
+  const el = document.getElementById('condBearing');
+  const b = Number(el.value); if(isNaN(b) || el.value==='') return;
+  el.value = (b + 180) % 360;
+  saveConditions();
 }
 
 async function copyLiveLink(){

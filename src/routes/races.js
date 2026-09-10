@@ -375,7 +375,7 @@ router.post('/:id/finish-race', async (req, res) => {
     const meet = event && database.meets[event.meetId];
     const venue = meet && meet.venueId ? VENUES[meet.venueId] : null;
     if (venue) {
-      const w = await fetchConditions(venue);
+      const w = await fetchConditions(venue, meet.courseBearing);
       race.conditions = w ? { ...w, waterTempC: meet.waterTempC ?? null } : { waterTempC: meet.waterTempC ?? null };
     }
   }

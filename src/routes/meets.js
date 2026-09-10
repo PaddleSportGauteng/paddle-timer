@@ -38,7 +38,7 @@ router.post('/', (req, res) => {
     return res.status(400).json({ error: `${raceType} isn't supported yet — this app only runs Sprints for now.` });
   }
   const id = db.nextId();
-  database.meets[id] = { id, name, raceType, lanes, restMinutes, numDays, venueId, waterTempC: null, createdAt: Date.now(), nextRaceNumber: 1 };
+  database.meets[id] = { id, name, raceType, lanes, restMinutes, numDays, venueId, courseBearing: venueId ? VENUES[venueId].bearing : null, waterTempC: null, createdAt: Date.now(), nextRaceNumber: 1 };
   db.save();
   res.json(database.meets[id]);
 });
@@ -103,14 +103,23 @@ router.patch('/:id/conditions', (req, res) => {
   const database = db.load();
   const meet = database.meets[req.params.id];
   if (!meet) return res.status(404).json({ error: 'Meet not found.' });
-  if (req.body.venueId !== undefined) meet.venueId = VENUES[req.body.venueId] ? req.body.venueId : null;
+  if (req.body.venueId !== undefined) {
+    meet.venueId = VENUES[req.body.venueId] ? req.body.venueId : null;
+    // Switching venue resets bearing to that venue's default
+    meet.courseBearing = meet.venueId ? VENUES[meet.venueId].bearing : null;
+  }
+  if (req.body.courseBearing !== undefined) {
+    const b = req.body.courseBearing === null || req.body.courseBearing === '' ? null : Number(req.body.courseBearing);
+    if (b !== null && (isNaN(b) || b < 0 || b >= 360)) return res.status(400).json({ error: 'Bearing must be 0–359.' });
+    meet.courseBearing = b;
+  }
   if (req.body.waterTempC !== undefined) {
     const t = req.body.waterTempC === null || req.body.waterTempC === '' ? null : Number(req.body.waterTempC);
     if (t !== null && (isNaN(t) || t < -5 || t > 50)) return res.status(400).json({ error: 'Water temp must be a number between -5 and 50.' });
     meet.waterTempC = t;
   }
   db.save();
-  res.json({ ok: true, venueId: meet.venueId, waterTempC: meet.waterTempC });
+  res.json({ ok: true, venueId: meet.venueId, courseBearing: meet.courseBearing, waterTempC: meet.waterTempC });
 });
 
 router.get('/:id/conditions-now', async (req, res) => {
@@ -119,7 +128,7 @@ router.get('/:id/conditions-now', async (req, res) => {
   if (!meet) return res.status(404).json({ error: 'Meet not found.' });
   const venue = meet.venueId ? VENUES[meet.venueId] : null;
   if (!venue) return res.json({ text: '' });
-  const w = await fetchConditions(venue);
+  const w = await fetchConditions(venue, meet.courseBearing);
   res.json({ text: formatConditions(w, meet.waterTempC), raw: w });
 });
 
