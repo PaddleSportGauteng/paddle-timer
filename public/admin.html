@@ -187,13 +187,12 @@ let selectedVenue = null;
   let venues = [];
   try { venues = await (await fetch('/api/meets/venues')).json(); } catch(e){}
   el.innerHTML = venues.map(v => `<button type="button" id="venue-${v.id}" onclick="pickVenue('${v.id}')" title="${v.name} · default course ${String(v.bearing).padStart(3,'0')}°">${v.short}</button>`).join('')
-    + `<button type="button" id="venue-other" onclick="pickVenue('other')" title="A venue not in the list — no weather capture">Other</button>`
     + `<button type="button" id="venue-none" onclick="pickVenue(null)" title="No venue, no weather capture">None</button>`;
   pickVenue(venues[0] ? venues[0].id : null);
 })();
 
 function pickVenue(id){
-  selectedVenue = id === 'other' ? null : id;   // Other and None both mean no coordinates, no weather
+  selectedVenue = id;
   document.querySelectorAll('#venueGrid button').forEach(x => x.classList.remove('orange'));
   const el = document.getElementById('venue-' + (id || 'none'));
   if(el) el.classList.add('orange');
