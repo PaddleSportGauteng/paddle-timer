@@ -31,8 +31,7 @@
   <div id="printHeader" class="print-only"></div>
   <div class="flag" id="meetWarning" style="display:none">No meet selected — pick one at the top-right first.</div>
   <div id="dayBar" style="margin-bottom:12px"></div>
-  <p style="color:var(--gray);font-size:14px">Every finished race, in running order, ranked by finish position. Medals only apply to finals — combined age groups (except 2000m/5000m, which stay grouped by design) are split back into their own category here for medals.</p>
-  <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px" class="no-print">
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px" class="no-print">
     <input type="text" id="filterBox" placeholder="Filter by event or paddler name…" style="flex:1;margin:0" oninput="render()">
     <button id="viewToggle" class="orange" onclick="togglePrizeView()">Prize giving</button>
     <button class="navy" onclick="exportResults('xlsx')">Excel</button>

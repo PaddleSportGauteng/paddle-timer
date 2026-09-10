@@ -29,7 +29,7 @@
 
   <div class="card">
     <h2 style="margin-top:0">Combine events for a shared start</h2>
-    <p style="color:var(--gray);font-size:13px">Click <b>+ Add</b> on each event to group, give it a label, then <b>Save this group</b>.</p>
+    
     <div id="currentGroupBox" class="flag" style="background:#EAF1FA;border-color:#B8D0EA;color:#1a3a5c">
       <b>Current group:</b> <span id="currentGroupChips" style="color:var(--gray)">empty — click "+ Add" below on the first event</span>
       <div id="currentGroupActions" style="margin-top:8px;display:none">
@@ -49,7 +49,7 @@
 
   <div class="card">
     <h2 style="margin-top:0">Fix a wrong entry</h2>
-    <p style="color:var(--gray);font-size:13px">Search a paddler and move them to the correct event.</p>
+    
     <input type="text" id="moveSearch" placeholder="Search by paddler name or event…" oninput="fixEntryEventId=null; doMoveSearch()" onkeydown="if(event.key==='Enter')doMoveSearch()">
     <div id="moveResults" style="margin-top:10px"></div>
   </div>
@@ -59,7 +59,7 @@
       <h2 style="margin:0">Review: what's combined so far</h2>
       <button onclick="loadSummary()">Refresh</button>
     </div>
-    <p style="color:var(--gray);font-size:13px">All events with boat counts.</p>
+    
     <div id="sortSummary">Loading…</div>
   </div>
 

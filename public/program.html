@@ -74,13 +74,13 @@
         <button onclick="unfinalise()">Unfinalise</button>
       </div>
     </div>
-    <p style="color:var(--gray);font-size:13px">Order races, set days and times, then <b>Finalise → Tower</b>. Only finalised races appear on the Tower.</p>
-    <div class="flag" style="background:#EAF1FA;border-color:#B8D0EA;color:#1a3a5c">
-      <b>Ordering:</b> <button onclick="autoSequence()">Auto-sequence</button> <small style="color:var(--gray)">heats → semis → finals, by distance then age</small>
-      — a starting-point heuristic, not a full optimiser: it front-loads heats from multi-round events (so their semis/finals can start sooner) and mixes in straight finals so results keep coming. Use the ▲▼ buttons to nudge a race one place, or type a race number into the box and click → (or hit Enter) to jump straight there — whichever's moved always anchors back to race 1's original time, with everything else automatically shifting to match and renumbering correctly; no separate step needed. Semis/finals get their own time automatically once created (based on real rest gaps), so you won't see them here to reorder until their heats finish. Reordering here always keeps race 1 pinned to whatever start time is set in section 1 above, re-flowing everyone else to match — so it doesn't matter whether you sort before or after setting that.
+    <p style="color:var(--gray);font-size:13px">Order races and set times, then Finalise to send them to the Tower.</p>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:8px 0">
+      <button onclick="autoSequence()">Auto-sequence</button>
+      <small style="color:var(--gray)">Heats first, then semis, then finals. Use Up / Down or type a race number to adjust.</small>
     </div>
     <div class="flag" style="background:#FFFBF2;border-color:#F3C98B;color:#8A5A12">
-      <b>Space keeper:</b> for anything that needs a gap but isn't a race — moving a jetty between courses, lunch, tea. Give it a label and how many minutes it needs, pick where it goes, then use its own ▲▼/# controls afterward to fine-tune. Everything after it shifts automatically to match, wherever it ends up.
+      <b>Space keeper</b> <small style="color:var(--gray)">— lunch, jetty move, any non-race gap</small>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px">
         <input type="text" id="newBreakLabel" placeholder="e.g. Jetty move to 200m course" style="flex:1;min-width:220px;padding:7px">
         <input type="number" id="newBreakDuration" placeholder="Minutes" min="1" style="width:90px;padding:7px">
@@ -94,7 +94,7 @@
 
   <div class="card">
     <h2 style="margin-top:0">3. Round advancement</h2>
-    <p style="color:var(--gray);font-size:13px">Semis and finals are created automatically when heats finish. Nothing to do here normally.</p>
+    <p style="color:var(--gray);font-size:13px">Automatic — semis and finals are created when heats finish.</p>
     <div id="advanceTable">Loading…</div>
   </div>
 </main>
@@ -360,10 +360,10 @@ async function loadRaceList(keepOpen){
       mergeBarEl.innerHTML = `
       <div class="merge-bar">
         <div style="cursor:pointer" onclick="document.getElementById('mergeBarBody').style.display = document.getElementById('mergeBarBody').style.display==='none' ? 'block' : 'none'">
-          <b>Optional: merge under-full heats ▸</b> <span style="color:var(--gray);font-weight:400">(only useful if scratches left some heats sparse — click to open)</span>
+          <b>Merge under-full heats</b> <span style="color:var(--gray);font-weight:400">(optional — click to open)</span>
         </div>
         <div id="mergeBarBody" style="display:none;margin-top:10px">
-          <p style="color:var(--gray);margin:0 0 8px">Tick 2+ heats <b>within the same event</b> below, then merge — refuses if the combined boats wouldn't fit in the lanes. Most days you won't need this at all.</p>
+          <p style="color:var(--gray);margin:0 0 8px;font-size:12px">Tick two or more heats from the same event, then merge.</p>
           ${Object.values(mergeableByEvent).filter(g => g.races.length > 1).map(g => `
             <div style="margin-bottom:8px">
               <div style="font-weight:700;font-size:13px;margin-bottom:4px">${g.label}</div>
@@ -843,7 +843,7 @@ async function loadDayAllocator(){
     const numDays = (meet && meet.numDays) || 1;
     document.getElementById('numDaysInput').value = numDays;
     const el = document.getElementById('dayGroupsTable');
-    if(numDays <= 1){ el.innerHTML = '<p style="color:var(--gray);font-size:13px">Single day event — all races run on one day. Set more than 1 day above to assign distances to specific days.</p>'; return; }
+    if(numDays <= 1){ el.innerHTML = '<p style="color:var(--gray);font-size:13px">Single-day event.</p>'; return; }
     const groups = await (await fetch(`/api/programme/day-groups?meetId=${encodeURIComponent(meetId)}`)).json();
     if(!groups.length){ el.innerHTML = '<p style="color:var(--gray);font-size:13px">No events drawn yet.</p>'; return; }
     const dayOptions = Array.from({length: numDays}, (_,i) => i+1);
