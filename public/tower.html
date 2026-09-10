@@ -235,7 +235,7 @@ function runningCardHtml(race){
       <td style="font-family:Arial;font-size:12px">${info.names.join(' / ')}<br><small style="color:var(--gray)">${[info.clubCode,info.ageCategory].filter(Boolean).join(' · ')}</small></td>
       <td>${res}</td>
       <td style="white-space:nowrap">
-        ${crossing ? `<input type="text" inputmode="numeric" placeholder="Fix lane" title="Type correct lane number and press Enter" style="width:65px;font-size:13px;padding:4px;text-align:center;border-radius:5px;border:1px solid var(--line)"
+        ${crossing ? `<input type="text" inputmode="numeric" placeholder="→ correct lane" title="Wrong lane? Type the correct lane number and press Enter" style="width:90px;font-size:12px;padding:4px;text-align:center;border-radius:5px;border:1px solid var(--orange);color:var(--orange)"
           onkeydown="if(event.key==='Enter'&&this.value.trim()){assignCrossing('${race.id}',${crossing.position},this.value.trim());this.value='';}">` : ''}
         <button style="font-size:11px;padding:3px 6px" onclick="markLane('${race.id}','${info.entryId}','DNS')">DNS</button>
         <button style="font-size:11px;padding:3px 6px" onclick="markLane('${race.id}','${info.entryId}','DNF')">DNF</button>
