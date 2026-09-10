@@ -34,7 +34,9 @@
   <p style="color:var(--gray);font-size:14px">Every finished race, in running order, ranked by finish position. 🥇🥈🥉 only apply to finals — combined age groups (except 2000m/5000m, which stay grouped by design) are split back into their own category here for medals.</p>
   <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px" class="no-print">
     <input type="text" id="filterBox" placeholder="Filter by event or paddler name…" style="flex:1;margin:0" oninput="render()">
-    <button onclick="window.print()" style="white-space:nowrap;padding:8px 14px;font-weight:600">🖨 Print results</button>
+    <button onclick="exportResults('xlsx')" style="white-space:nowrap;padding:8px 14px;font-weight:600;background:var(--green);color:#fff;border:none;border-radius:6px;cursor:pointer">📊 Excel</button>
+    <button onclick="exportResults('pdf')" style="white-space:nowrap;padding:8px 14px;font-weight:600;background:var(--navy);color:#fff;border:none;border-radius:6px;cursor:pointer">📄 PDF</button>
+    <button onclick="window.print()" style="white-space:nowrap;padding:8px 14px;font-weight:600">🖨 Print</button>
   </div>
   <div id="resultsList">Loading…</div>
 </main>
@@ -159,6 +161,12 @@ async function reopenRace(raceId){
   if(!res.ok){ const d=await res.json(); alert(d.error); return; }
   alert('Race reopened — go to the Tower to fix it, then Lock again.');
   loadResults();
+}
+
+function exportResults(kind){
+  const meetId = getMeetId(); if(!meetId){ alert('Pick a meet first.'); return; }
+  const dayQS = selectedDay ? `&day=${selectedDay}` : '';
+  window.location.href = `/api/export/results.${kind}?meetId=${encodeURIComponent(meetId)}${dayQS}`;
 }
 
 function setPrintHeader(){

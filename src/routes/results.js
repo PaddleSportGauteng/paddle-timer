@@ -58,11 +58,7 @@ function buildOthers(database, results, filterEntryId) {
 //  - Mass-start races (2000m/5000m) are combined by DESIGN as one big
 //    group (e.g. "2000m U8-U12 Male") and stay that way — one result
 //    block for the whole race, not split back into individual ages.
-router.get('/all', (req, res) => {
-  const database = db.load();
-  const meetId = req.query.meetId;
-  if (!meetId) return res.status(400).json({ error: 'meetId is required — pick a meet first.' });
-  const dayFilter = req.query.day ? Number(req.query.day) : null;
+function buildResultBlocks(database, meetId, dayFilter) {
   const eventIds = new Set(
     Object.values(database.events)
       .filter((e) => e.meetId === meetId && (!dayFilter || (e.day || 1) === dayFilter))
@@ -114,7 +110,16 @@ router.get('/all', (req, res) => {
     }
   });
 
-  res.json(blocks);
+  return blocks;
+}
+
+router.get('/all', (req, res) => {
+  const database = db.load();
+  const meetId = req.query.meetId;
+  if (!meetId) return res.status(400).json({ error: 'meetId is required — pick a meet first.' });
+  const dayFilter = req.query.day ? Number(req.query.day) : null;
+  res.json(buildResultBlocks(database, meetId, dayFilter));
 });
 
 module.exports = router;
+module.exports.buildResultBlocks = buildResultBlocks;

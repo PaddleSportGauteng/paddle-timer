@@ -49,6 +49,7 @@ app.use('/api/races', require('./src/routes/races'));
 app.use('/api/results', require('./src/routes/results'));
 app.use('/api/export', require('./src/routes/export'));
 app.use('/api/export', require('./src/routes/export-draws'));
+app.use('/api/export', require('./src/routes/export-results'));
 
 app.get('/api/health', (req, res) => res.json({ ok: true }));
 
