@@ -1,197 +1,367 @@
 /**
- * ICF Appendix 1 — Exact lane draw tables for heats → semis → finals.
- * 
- * Structure: PLANS[numHeats][planVariant] = { semis: [...], finals: [...] }
- * Each entry: { fromHeat, fromPosition, toSemi, toLane }
- * 
- * Transcribed verbatim from ICF Canoe Sprint Competition Rules 2025, pp 76-80.
- * Only Plans A-D transcribed for PSG use (2-5 heats, up to 45 boats).
- * Plans E-G (46+ boats) can be added if needed.
- * 
- * "BT" (by time) positions are handled specially — they represent the next
- * fastest qualifier across all heats, assigned to the designated lane.
+ * ICF Appendix 1 — Exact lane draw for heats → semis → finals.
+ * Transcribed verbatim from ICF Canoe Sprint Competition Rules 2025.
+ * Plans A-D cover 10-45 boats (2-5 heats) on a 9-lane course.
  */
 
-// Plan A: 2 heats, 10-18 boats
-// 4th-7th from each heat + 1 best-time qualifier go to 1 semifinal
-// 1st-3rd from each heat go direct to Final
+// ─────────────────────────────────────────────────────────────
+// PLAN A  (2 heats, 10-18 boats)
+// ─────────────────────────────────────────────────────────────
 const PLAN_A = {
+  // 4th-7th + 1 BT → SF1
   semis: {
     P1: [
-      // SF1
-      { fromHeat:1, fromPosition:4, toSemi:1, toLane:5 },
-      { fromHeat:1, fromPosition:5, toSemi:1, toLane:6 },
-      { fromHeat:1, fromPosition:6, toSemi:1, toLane:2 },
-      { fromHeat:1, fromPosition:7, toSemi:1, toLane:8 },
-      { fromHeat:2, fromPosition:4, toSemi:1, toLane:4 },
-      { fromHeat:2, fromPosition:5, toSemi:1, toLane:3 },
-      { fromHeat:2, fromPosition:6, toSemi:1, toLane:7 },
-      { fromHeat:2, fromPosition:7, toSemi:1, toLane:1 },
-      { fromHeat:'BT', fromPosition:1, toSemi:1, toLane:9 },
-    ],
-    P2: [
-      // SF1 (alternative)
-      { fromHeat:1, fromPosition:4, toSemi:1, toLane:4 },
-      { fromHeat:1, fromPosition:5, toSemi:1, toLane:3 },
-      { fromHeat:1, fromPosition:6, toSemi:1, toLane:7 },
-      { fromHeat:1, fromPosition:7, toSemi:1, toLane:1 },
-      { fromHeat:2, fromPosition:4, toSemi:1, toLane:5 },
-      { fromHeat:2, fromPosition:5, toSemi:1, toLane:6 },
-      { fromHeat:2, fromPosition:6, toSemi:1, toLane:2 },
-      { fromHeat:2, fromPosition:7, toSemi:1, toLane:8 },
-      { fromHeat:'BT', fromPosition:1, toSemi:1, toLane:9 },
+      { fromHeat:1, pos:4, toSemi:1, toLane:5 },
+      { fromHeat:1, pos:5, toSemi:1, toLane:6 },
+      { fromHeat:1, pos:6, toSemi:1, toLane:2 },
+      { fromHeat:1, pos:7, toSemi:1, toLane:8 },
+      { fromHeat:2, pos:4, toSemi:1, toLane:4 },
+      { fromHeat:2, pos:5, toSemi:1, toLane:3 },
+      { fromHeat:2, pos:6, toSemi:1, toLane:7 },
+      { fromHeat:2, pos:7, toSemi:1, toLane:1 },
+      { fromHeat:'BT', pos:1, toSemi:1, toLane:9 },
     ],
   },
-  finals: {
-    // Direct qualifiers from heats to Final A
-    directFromHeats: [
-      { fromHeat:1, fromPosition:1, toLane:5 },
-      { fromHeat:1, fromPosition:2, toLane:3 },
-      { fromHeat:1, fromPosition:3, toLane:7 },
-      { fromHeat:2, fromPosition:1, toLane:4 },
-      { fromHeat:2, fromPosition:2, toLane:6 },
-      { fromHeat:2, fromPosition:3, toLane:2 },
-    ],
-    // From SF to Final A
-    fromSemi: [
-      { fromSemi:1, fromPosition:1, toLane:8 },
-      { fromSemi:1, fromPosition:2, toLane:1 },
-      { fromSemi:1, fromPosition:3, toLane:9 },
-    ],
-  },
+  // Finals
+  finalA: [
+    // Direct from heats (1st-3rd)
+    { from:'heat', heat:1, pos:1, toLane:5 },
+    { from:'heat', heat:1, pos:2, toLane:3 },
+    { from:'heat', heat:1, pos:3, toLane:7 },
+    { from:'heat', heat:2, pos:1, toLane:4 },
+    { from:'heat', heat:2, pos:2, toLane:6 },
+    { from:'heat', heat:2, pos:3, toLane:2 },
+    // From SF
+    { from:'semi', semi:1, pos:1, toLane:8 },
+    { from:'semi', semi:1, pos:2, toLane:1 },
+    { from:'semi', semi:1, pos:3, toLane:9 },
+  ],
 };
 
-// Plan B: 3 heats, 19-27 boats
-// 1st from each heat → direct Final A; 2nd-7th → semis
+// ─────────────────────────────────────────────────────────────
+// PLAN B  (3 heats, 19-27 boats)
+// ─────────────────────────────────────────────────────────────
 const PLAN_B = {
   semis: {
     P1: [
       // SF1
-      { fromHeat:1, fromPosition:2, toSemi:1, toLane:5 },
-      { fromHeat:1, fromPosition:4, toSemi:1, toLane:7 },
-      { fromHeat:1, fromPosition:6, toSemi:1, toLane:1 },
-      { fromHeat:2, fromPosition:3, toSemi:1, toLane:4 },
-      { fromHeat:2, fromPosition:5, toSemi:1, toLane:2 },
-      { fromHeat:2, fromPosition:7, toSemi:1, toLane:9 },
-      { fromHeat:3, fromPosition:3, toSemi:1, toLane:6 },
-      { fromHeat:3, fromPosition:4, toSemi:1, toLane:3 },
-      { fromHeat:3, fromPosition:6, toSemi:1, toLane:8 },
+      { fromHeat:1, pos:2, toSemi:1, toLane:5 },
+      { fromHeat:1, pos:4, toSemi:1, toLane:7 },
+      { fromHeat:1, pos:6, toSemi:1, toLane:1 },
+      { fromHeat:2, pos:3, toSemi:1, toLane:4 },
+      { fromHeat:2, pos:5, toSemi:1, toLane:2 },
+      { fromHeat:2, pos:7, toSemi:1, toLane:9 },
+      { fromHeat:3, pos:3, toSemi:1, toLane:6 },
+      { fromHeat:3, pos:4, toSemi:1, toLane:3 },
+      { fromHeat:3, pos:6, toSemi:1, toLane:8 },
       // SF2
-      { fromHeat:1, fromPosition:3, toSemi:2, toLane:6 },
-      { fromHeat:1, fromPosition:5, toSemi:2, toLane:7 },
-      { fromHeat:1, fromPosition:7, toSemi:2, toLane:1 },
-      { fromHeat:2, fromPosition:2, toSemi:2, toLane:5 },
-      { fromHeat:2, fromPosition:4, toSemi:2, toLane:3 },
-      { fromHeat:2, fromPosition:6, toSemi:2, toLane:8 },
-      { fromHeat:3, fromPosition:2, toSemi:2, toLane:4 },
-      { fromHeat:3, fromPosition:5, toSemi:2, toLane:2 },
-      { fromHeat:3, fromPosition:7, toSemi:2, toLane:9 },
-    ],
-    P2: [
-      // SF1
-      { fromHeat:1, fromPosition:3, toSemi:1, toLane:6 },
-      { fromHeat:1, fromPosition:5, toSemi:1, toLane:2 },
-      { fromHeat:1, fromPosition:6, toSemi:1, toLane:9 },
-      { fromHeat:2, fromPosition:3, toSemi:1, toLane:4 },
-      { fromHeat:2, fromPosition:4, toSemi:1, toLane:7 },
-      { fromHeat:2, fromPosition:6, toSemi:1, toLane:8 },
-      { fromHeat:3, fromPosition:2, toSemi:1, toLane:5 },
-      { fromHeat:3, fromPosition:4, toSemi:1, toLane:3 },
-      { fromHeat:3, fromPosition:7, toSemi:1, toLane:1 },
-      // SF2
-      { fromHeat:1, fromPosition:2, toSemi:2, toLane:5 },
-      { fromHeat:1, fromPosition:4, toSemi:2, toLane:3 },
-      { fromHeat:1, fromPosition:7, toSemi:2, toLane:9 },
-      { fromHeat:2, fromPosition:2, toSemi:2, toLane:4 },
-      { fromHeat:2, fromPosition:5, toSemi:2, toLane:7 },
-      { fromHeat:2, fromPosition:7, toSemi:2, toLane:1 },
-      { fromHeat:3, fromPosition:3, toSemi:2, toLane:6 },
-      { fromHeat:3, fromPosition:5, toSemi:2, toLane:2 },
-      { fromHeat:3, fromPosition:6, toSemi:2, toLane:8 },
+      { fromHeat:1, pos:3, toSemi:2, toLane:6 },
+      { fromHeat:1, pos:5, toSemi:2, toLane:7 },
+      { fromHeat:1, pos:7, toSemi:2, toLane:1 },
+      { fromHeat:2, pos:2, toSemi:2, toLane:5 },
+      { fromHeat:2, pos:4, toSemi:2, toLane:3 },
+      { fromHeat:2, pos:6, toSemi:2, toLane:8 },
+      { fromHeat:3, pos:2, toSemi:2, toLane:4 },
+      { fromHeat:3, pos:5, toSemi:2, toLane:2 },
+      { fromHeat:3, pos:7, toSemi:2, toLane:9 },
     ],
   },
-  directFromHeats: [
-    { fromHeat:1, fromPosition:1, toLane:5 },
-    { fromHeat:2, fromPosition:1, toLane:4 },
-    { fromHeat:3, fromPosition:1, toLane:6 },
+  directToFinal: [
+    { heat:1, pos:1, toLane:5 },
+    { heat:2, pos:1, toLane:4 },
+    { heat:3, pos:1, toLane:6 },
+  ],
+  finalA: [
+    // Direct heat winners
+    { from:'heat', heat:1, pos:1, toLane:5 },
+    { from:'heat', heat:2, pos:1, toLane:4 },
+    { from:'heat', heat:3, pos:1, toLane:6 },
+    // From SF1
+    { from:'semi', semi:1, pos:1, toLane:3 },
+    { from:'semi', semi:1, pos:2, toLane:8 },
+    { from:'semi', semi:1, pos:3, toLane:1 },
+    // From SF2
+    { from:'semi', semi:2, pos:1, toLane:7 },
+    { from:'semi', semi:2, pos:2, toLane:2 },
+    { from:'semi', semi:2, pos:3, toLane:9 },
+  ],
+  finalB: [
+    { from:'semi', semi:1, pos:4, toLane:5 },
+    { from:'semi', semi:1, pos:5, toLane:3 },
+    { from:'semi', semi:1, pos:6, toLane:7 },
+    { from:'semi', semi:1, pos:7, toLane:1 },
+    { from:'semi', semi:2, pos:4, toLane:4 },
+    { from:'semi', semi:2, pos:5, toLane:6 },
+    { from:'semi', semi:2, pos:6, toLane:2 },
+    { from:'semi', semi:2, pos:7, toLane:8 },
+    { from:'BT',             pos:1, toLane:9 },
   ],
 };
 
+// ─────────────────────────────────────────────────────────────
+// PLAN C  (4 heats, 28-36 boats)
+// ─────────────────────────────────────────────────────────────
+const PLAN_C = {
+  semis: {
+    P1: [
+      // SF1
+      { fromHeat:1, pos:1, toSemi:1, toLane:5 },
+      { fromHeat:1, pos:5, toSemi:1, toLane:8 },
+      { fromHeat:2, pos:2, toSemi:1, toLane:4 },
+      { fromHeat:2, pos:6, toSemi:1, toLane:1 },
+      { fromHeat:3, pos:2, toSemi:1, toLane:6 },
+      { fromHeat:3, pos:5, toSemi:1, toLane:2 },
+      { fromHeat:4, pos:3, toSemi:1, toLane:3 },
+      { fromHeat:4, pos:4, toSemi:1, toLane:7 },
+      { fromHeat:'BT', pos:1, toSemi:1, toLane:9 },
+      // SF2
+      { fromHeat:1, pos:2, toSemi:2, toLane:4 },
+      { fromHeat:1, pos:6, toSemi:2, toLane:8 },
+      { fromHeat:2, pos:1, toSemi:2, toLane:6 },
+      { fromHeat:2, pos:6, toSemi:2, toLane:1 },
+      { fromHeat:3, pos:3, toSemi:2, toLane:3 },
+      { fromHeat:3, pos:4, toSemi:2, toLane:7 },
+      { fromHeat:4, pos:2, toSemi:2, toLane:4 },
+      { fromHeat:4, pos:5, toSemi:2, toLane:2 },
+      { fromHeat:'BT', pos:2, toSemi:2, toLane:1 },
+      // SF3
+      { fromHeat:1, pos:3, toSemi:3, toLane:6 },
+      { fromHeat:1, pos:4, toSemi:3, toLane:2 },
+      { fromHeat:2, pos:3, toSemi:3, toLane:3 },
+      { fromHeat:2, pos:5, toSemi:3, toLane:8 },
+      { fromHeat:3, pos:1, toSemi:3, toLane:4 },
+      { fromHeat:3, pos:6, toSemi:3, toLane:9 },
+      { fromHeat:4, pos:1, toSemi:3, toLane:5 },
+      { fromHeat:4, pos:4, toSemi:3, toLane:7 },
+      { fromHeat:'BT', pos:3, toSemi:3, toLane:1 },
+    ],
+  },
+  finalA: [
+    { from:'semi', semi:1, pos:1, toLane:5 },
+    { from:'semi', semi:1, pos:2, toLane:3 },
+    { from:'semi', semi:1, pos:3, toLane:8 },
+    { from:'semi', semi:2, pos:1, toLane:4 },
+    { from:'semi', semi:2, pos:2, toLane:7 },
+    { from:'semi', semi:2, pos:3, toLane:1 },
+    { from:'semi', semi:3, pos:1, toLane:6 },
+    { from:'semi', semi:3, pos:2, toLane:2 },
+    { from:'semi', semi:3, pos:3, toLane:9 },
+  ],
+  finalB: [
+    { from:'semi', semi:1, pos:4, toLane:5 },
+    { from:'semi', semi:1, pos:5, toLane:7 },
+    { from:'semi', semi:1, pos:6, toLane:2 },
+    { from:'semi', semi:2, pos:4, toLane:6 },
+    { from:'semi', semi:2, pos:5, toLane:3 },
+    { from:'semi', semi:2, pos:6, toLane:1 },
+    { from:'semi', semi:3, pos:4, toLane:4 },
+    { from:'semi', semi:3, pos:5, toLane:8 },
+    { from:'semi', semi:3, pos:6, toLane:9 },
+  ],
+};
+
+// ─────────────────────────────────────────────────────────────
+// PLAN D  (5 heats, 37-45 boats)
+// ─────────────────────────────────────────────────────────────
+const PLAN_D = {
+  semis: {
+    P1: [
+      // SF1
+      { fromHeat:1, pos:1, toSemi:1, toLane:5 },
+      { fromHeat:1, pos:4, toSemi:1, toLane:2 },
+      { fromHeat:2, pos:2, toSemi:1, toLane:6 },
+      { fromHeat:2, pos:5, toSemi:1, toLane:1 },
+      { fromHeat:3, pos:3, toSemi:1, toLane:7 },
+      { fromHeat:4, pos:1, toSemi:1, toLane:4 },
+      { fromHeat:4, pos:4, toSemi:1, toLane:8 },
+      { fromHeat:5, pos:2, toSemi:1, toLane:3 },
+      { fromHeat:5, pos:5, toSemi:1, toLane:9 },
+      // SF2
+      { fromHeat:1, pos:2, toSemi:2, toLane:4 },
+      { fromHeat:1, pos:5, toSemi:2, toLane:8 },
+      { fromHeat:2, pos:3, toSemi:2, toLane:3 },
+      { fromHeat:3, pos:1, toSemi:2, toLane:5 },
+      { fromHeat:3, pos:4, toSemi:2, toLane:2 },
+      { fromHeat:4, pos:2, toSemi:2, toLane:6 },
+      { fromHeat:4, pos:5, toSemi:2, toLane:1 },
+      { fromHeat:5, pos:3, toSemi:2, toLane:7 },
+      { fromHeat:'BT', pos:1, toSemi:2, toLane:9 },
+      // SF3
+      { fromHeat:1, pos:3, toSemi:3, toLane:3 },
+      { fromHeat:2, pos:1, toSemi:3, toLane:5 },
+      { fromHeat:2, pos:4, toSemi:3, toLane:2 },
+      { fromHeat:3, pos:2, toSemi:3, toLane:6 },
+      { fromHeat:3, pos:5, toSemi:3, toLane:1 },
+      { fromHeat:4, pos:3, toSemi:3, toLane:7 },
+      { fromHeat:5, pos:1, toSemi:3, toLane:4 },
+      { fromHeat:5, pos:4, toSemi:3, toLane:8 },
+      { fromHeat:'BT', pos:2, toSemi:3, toLane:9 },
+    ],
+  },
+  finalA: [
+    { from:'semi', semi:1, pos:1, toLane:5 },
+    { from:'semi', semi:1, pos:2, toLane:3 },
+    { from:'semi', semi:1, pos:3, toLane:8 },
+    { from:'semi', semi:2, pos:1, toLane:4 },
+    { from:'semi', semi:2, pos:2, toLane:7 },
+    { from:'semi', semi:2, pos:3, toLane:1 },
+    { from:'semi', semi:3, pos:1, toLane:6 },
+    { from:'semi', semi:3, pos:2, toLane:2 },
+    { from:'semi', semi:3, pos:3, toLane:9 },
+  ],
+  finalB: [
+    { from:'semi', semi:1, pos:4, toLane:5 },
+    { from:'semi', semi:1, pos:5, toLane:7 },
+    { from:'semi', semi:1, pos:6, toLane:2 },
+    { from:'semi', semi:2, pos:4, toLane:6 },
+    { from:'semi', semi:2, pos:5, toLane:3 },
+    { from:'semi', semi:2, pos:6, toLane:1 },
+    { from:'semi', semi:3, pos:4, toLane:4 },
+    { from:'semi', semi:3, pos:5, toLane:8 },
+    { from:'semi', semi:3, pos:6, toLane:9 },
+  ],
+  finalC: [
+    { from:'semi', semi:1, pos:7, toLane:5 },
+    { from:'semi', semi:1, pos:8, toLane:3 },
+    { from:'semi', semi:1, pos:9, toLane:8 },
+    { from:'semi', semi:2, pos:7, toLane:4 },
+    { from:'semi', semi:2, pos:8, toLane:7 },
+    { from:'semi', semi:2, pos:9, toLane:1 },
+    { from:'semi', semi:3, pos:7, toLane:6 },
+    { from:'semi', semi:3, pos:8, toLane:2 },
+    { from:'semi', semi:3, pos:9, toLane:9 },
+  ],
+};
+
+const PLANS = { 2: PLAN_A, 3: PLAN_B, 4: PLAN_C, 5: PLAN_D };
+
 /**
- * Given heat results, apply ICF Appendix 1 lane draw to produce semi entries.
- * 
- * @param {Array} heatResults - [{heatNumber, entries: [{entryId, position, finishTimeMs}]}]
- * @param {number} numHeats - 2, 3, 4, or 5
- * @param {string} planVariant - 'P1' or 'P2' (default 'P1')
- * @returns {Object} { semis: [{semiNumber, lanes: {laneNum: entryId}}], directToFinal: {laneNum: entryId} }
+ * Apply ICF semi draw — returns { semis: {semiNum: {lane: entryId}}, directToFinalLanes: {lane: entryId} }
+ * or null if no plan available for this heat count.
  */
 function applyICFSemiDraw(heatResults, numHeats, planVariant = 'P1') {
-  const plan = numHeats === 2 ? PLAN_A : numHeats === 3 ? PLAN_B : null;
-  
-  if (!plan) {
-    // Plans C-G not yet transcribed — fall back to snake distribution
-    return null;
-  }
-  
-  const semiAssignments = plan.semis[planVariant] || plan.semis['P1'];
-  
-  // Build lookup: heatNumber → position → entryId
-  const heatLookup = {};
-  heatResults.forEach(heat => {
-    heatLookup[heat.heatNumber] = {};
-    heat.entries.forEach(e => {
-      heatLookup[heat.heatNumber][e.position] = e;
-    });
+  const plan = PLANS[numHeats];
+  if (!plan) return null;
+
+  const semiRules = plan.semis[planVariant] || plan.semis['P1'];
+
+  // Build heat lookup: heatNumber → position → entry
+  const byHeat = {};
+  heatResults.forEach(h => {
+    byHeat[h.heatNumber] = {};
+    h.entries.filter(e => e.status === 'OK')
+      .sort((a,b) => a.position - b.position)
+      .forEach(e => { byHeat[h.heatNumber][e.position] = e; });
   });
-  
-  // BT qualifiers: all non-direct qualifiers sorted by time, excluding those already placed
-  const allQualifiers = [];
-  heatResults.forEach(heat => {
-    heat.entries.forEach(e => {
-      if (e.status === 'OK') allQualifiers.push({ ...e, heatNumber: heat.heatNumber });
-    });
+
+  const usedIds = new Set();
+  const semiLanes = {}; // {semiNum: {lane: entryId}}
+  const btPool = []; // filled after direct placements
+
+  // First pass — place direct heat qualifiers
+  semiRules.filter(r => r.fromHeat !== 'BT').forEach(r => {
+    const entry = byHeat[r.fromHeat]?.[r.pos];
+    if (!entry) return;
+    if (!semiLanes[r.toSemi]) semiLanes[r.toSemi] = {};
+    semiLanes[r.toSemi][r.toLane] = entry.entryId;
+    usedIds.add(entry.entryId);
   });
-  
-  // Build semi lanes
-  const semiLanes = {}; // {semiNumber: {laneNum: entryId}}
-  const usedEntryIds = new Set();
-  const btQualifiers = []; // will be populated after direct placements
-  
-  semiAssignments.forEach(assignment => {
-    if (assignment.fromHeat === 'BT') return; // handle BT separately
-    const heatEntry = heatLookup[assignment.fromHeat]?.[assignment.fromPosition];
-    if (!heatEntry) return;
-    
-    if (!semiLanes[assignment.toSemi]) semiLanes[assignment.toSemi] = {};
-    semiLanes[assignment.toSemi][assignment.toLane] = heatEntry.entryId;
-    usedEntryIds.add(heatEntry.entryId);
+
+  // BT pool — all OK results not yet placed, sorted by time
+  heatResults.forEach(h => {
+    h.entries.filter(e => e.status === 'OK' && !usedIds.has(e.entryId))
+      .forEach(e => btPool.push(e));
   });
-  
-  // Handle BT (best time) qualifiers
-  const btSorted = allQualifiers
-    .filter(e => !usedEntryIds.has(e.entryId) && e.status === 'OK')
-    .sort((a, b) => a.finishTimeMs - b.finishTimeMs);
-  
+  btPool.sort((a,b) => a.finishTimeMs - b.finishTimeMs);
+
+  // Second pass — place BT qualifiers
   let btIdx = 0;
-  semiAssignments.forEach(assignment => {
-    if (assignment.fromHeat !== 'BT') return;
-    const bt = btSorted[btIdx++];
-    if (!bt) return;
-    if (!semiLanes[assignment.toSemi]) semiLanes[assignment.toSemi] = {};
-    semiLanes[assignment.toSemi][assignment.toLane] = bt.entryId;
-    usedEntryIds.add(bt.entryId);
+  semiRules.filter(r => r.fromHeat === 'BT').forEach(r => {
+    const entry = btPool[btIdx++];
+    if (!entry) return;
+    if (!semiLanes[r.toSemi]) semiLanes[r.toSemi] = {};
+    semiLanes[r.toSemi][r.toLane] = entry.entryId;
+    usedIds.add(entry.entryId);
   });
-  
-  // Direct heat → final qualifiers
-  const directToFinal = {};
-  if (plan.directFromHeats) {
-    plan.directFromHeats.forEach(d => {
-      const heatEntry = heatLookup[d.fromHeat]?.[d.fromPosition];
-      if (heatEntry) directToFinal[d.toLane] = heatEntry.entryId;
+
+  // Direct heat → final qualifiers (Plan B only — Plan A direct qualifiers
+  // are handled separately in progression.js via directPerHeat)
+  const directToFinalLanes = {};
+  if (plan.directToFinal) {
+    plan.directToFinal.forEach(d => {
+      const entry = byHeat[d.heat]?.[d.pos];
+      if (entry) directToFinalLanes[d.toLane] = entry.entryId;
     });
   }
-  
-  return { semis: semiLanes, directToFinal };
+
+  return { semis: semiLanes, directToFinalLanes };
 }
 
-module.exports = { applyICFSemiDraw, PLAN_A, PLAN_B };
+/**
+ * Apply ICF final draw from semi results.
+ * Returns {finalA: {lane: entryId}, finalB: ..., finalC: ...}
+ */
+function applyICFFinalDraw(semiResults, numHeats, heatResults, directQualifierIds) {
+  const plan = PLANS[numHeats];
+  if (!plan) return null;
+
+  // Build semi lookup: semiNum → position → entryId
+  const bySemi = {};
+  semiResults.forEach(s => {
+    bySemi[s.semiNumber] = {};
+    s.entries.filter(e => e.status === 'OK')
+      .sort((a,b) => a.position - b.position)
+      .forEach(e => { bySemi[s.semiNumber][e.position] = e; });
+  });
+
+  // Build heat lookup for Plan A direct qualifiers
+  const byHeat = {};
+  if (heatResults) {
+    heatResults.forEach(h => {
+      byHeat[h.heatNumber] = {};
+      h.entries.filter(e => e.status === 'OK')
+        .sort((a,b) => a.position - b.position)
+        .forEach(e => { byHeat[h.heatNumber][e.position] = e; });
+    });
+  }
+
+  function buildFinal(rules) {
+    if (!rules) return null;
+    const lanes = {};
+    const usedIds = new Set();
+    const btPool = [];
+
+    rules.filter(r => r.from !== 'BT').forEach(r => {
+      let entry;
+      if (r.from === 'semi') entry = bySemi[r.semi]?.[r.pos];
+      else if (r.from === 'heat') entry = byHeat[r.heat]?.[r.pos];
+      if (!entry) return;
+      lanes[r.toLane] = entry.entryId;
+      usedIds.add(entry.entryId);
+    });
+
+    // BT from semis — all not yet placed, sorted by time
+    semiResults.forEach(s => {
+      s.entries.filter(e => e.status === 'OK' && !usedIds.has(e.entryId))
+        .forEach(e => btPool.push(e));
+    });
+    btPool.sort((a,b) => a.finishTimeMs - b.finishTimeMs);
+
+    let btIdx = 0;
+    rules.filter(r => r.from === 'BT').forEach(r => {
+      const entry = btPool[btIdx++];
+      if (!entry) return;
+      lanes[r.toLane] = entry.entryId;
+    });
+
+    return Object.keys(lanes).length > 0 ? lanes : null;
+  }
+
+  return {
+    finalA: buildFinal(plan.finalA),
+    finalB: buildFinal(plan.finalB),
+    finalC: buildFinal(plan.finalC),
+  };
+}
+
+module.exports = { applyICFSemiDraw, applyICFFinalDraw, PLANS };

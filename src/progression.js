@@ -6,7 +6,7 @@
 
 const db = require('./db');
 const rules = require('./rules');
-const { applyICFSemiDraw } = require('./icf-lane-draw');
+const { applyICFSemiDraw, applyICFFinalDraw } = require('./icf-lane-draw');
 
 function assignLanes(entryIds, numLanes) {
   const laneOrder = rules.centerOutLaneOrder(numLanes);
@@ -98,18 +98,66 @@ function rankedFinishers(database, races) {
 // advance further — matches ICF's "rest out" after the last named final.
 function createFinals(database, event, directIds, rankedPoolIds, sourceRaces, existingFinalRaces) {
   const meet = database.meets[event.meetId];
-  const lanes = (meet && meet.lanes) || rules.DEFAULT_LANES;
+  const meetLanes = (meet && meet.lanes) || rules.DEFAULT_LANES;
   const finalsCount = event.plan.finalsNeeded || 1;
+  const scheduledLabel = computeRestScheduledLabel(database, sourceRaces || [], event.meetId);
+
+  // Try ICF exact final draw
+  const allRaces = Object.values(database.races).filter(r => r.eventId === event.id);
+  const heatRaces = allRaces.filter(r => r.phase === 'heat' && r.status === 'finished');
+  const semiRaces = allRaces.filter(r => r.phase === 'semi' && r.status === 'finished');
+  const numHeats = heatRaces.length;
+
+  const heatResultsForDraw = heatRaces.map(race => ({
+    heatNumber: race.heatNumber,
+    entries: Object.entries(database.raceResults[race.id] || {})
+      .filter(([,r]) => r.status === 'OK')
+      .map(([entryId,r]) => ({ entryId, position: r.position, finishTimeMs: r.finishTimeMs, status: r.status })),
+  }));
+
+  const semiResultsForDraw = semiRaces.map(race => ({
+    semiNumber: race.heatNumber,
+    entries: Object.entries(database.raceResults[race.id] || {})
+      .filter(([,r]) => r.status === 'OK')
+      .map(([entryId,r]) => ({ entryId, position: r.position, finishTimeMs: r.finishTimeMs, status: r.status })),
+  }));
+
+  const icfFinals = (semiRaces.length > 0 || numHeats > 0)
+    ? applyICFFinalDraw(semiResultsForDraw, numHeats, heatResultsForDraw, directIds)
+    : null;
+
+  if (icfFinals && icfFinals.finalA) {
+    const phaseMap = { finalA: 'final', finalB: 'finalB', finalC: 'finalC' };
+    let filled = 0;
+    ['finalA','finalB','finalC'].slice(0, finalsCount).forEach(key => {
+      const lanes = icfFinals[key];
+      if (!lanes || Object.keys(lanes).length === 0) return;
+      const phase = phaseMap[key];
+      const placeholder = (existingFinalRaces || []).find(r => r.phase === phase && r.heatNumber === 1 && r.placeholder);
+      if (placeholder) {
+        placeholder.lanes = lanes;
+        placeholder.placeholder = false;
+        placeholder.published = true;
+        if (scheduledLabel) placeholder.scheduledLabel = scheduledLabel;
+      } else {
+        const race = newRace(database, event.id, phase, 1, lanes, scheduledLabel);
+        race.published = true;
+      }
+      filled++;
+    });
+    event.pendingDirectQualifiers = [];
+    return { action: 'created-finals-icf', count: filled, plan: 'ICF-Appendix1' };
+  }
+
+  // Fallback: center-out for events not covered by ICF plans
   const phases = ['final', 'finalB', 'finalC'].slice(0, finalsCount);
   const pool = [...rankedPoolIds];
   let filled = 0;
-  const scheduledLabel = computeRestScheduledLabel(database, sourceRaces || [], event.meetId);
-
   phases.forEach((phase, i) => {
-    const capacity = i === 0 ? lanes - directIds.length : lanes;
+    const capacity = i === 0 ? meetLanes - directIds.length : meetLanes;
     const group = (i === 0 ? directIds : []).concat(pool.splice(0, Math.max(0, capacity)));
     if (group.length === 0) return;
-    fillOrCreateRace(database, existingFinalRaces || [], event, phase, 1, group, lanes, scheduledLabel);
+    fillOrCreateRace(database, existingFinalRaces || [], event, phase, 1, group, meetLanes, scheduledLabel);
     filled++;
   });
   event.pendingDirectQualifiers = [];
