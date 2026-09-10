@@ -161,3 +161,17 @@ header.topbar nav a.active {
   border-bottom: 2px solid var(--orange);
   padding-bottom: 2px;
 }
+
+/* ── Nav groups: SETUP / RACE DAY ── */
+header.topbar nav { gap: 22px; align-items: center; }
+.nav-group { display: inline-flex; align-items: center; gap: 12px; padding: 4px 10px; border-radius: 6px; background: rgba(255,255,255,0.06); }
+.nav-group-label { font-size: 9px; font-weight: 700; letter-spacing: 0.12em; opacity: 0.55; margin-right: 2px; }
+
+/* ── Setup progress strip ── */
+.progress-strip { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; margin-bottom: 14px; font-size: 12px; }
+.ps-step { padding: 5px 10px; border-radius: 5px; text-decoration: none; font-weight: 600; white-space: nowrap; }
+.ps-step.done { background: #E4F5EC; color: #1E8E5A; }
+.ps-step.next { background: var(--orange); color: #fff; }
+.ps-step.todo { background: #f0f0f0; color: var(--gray); }
+.ps-step.here { outline: 2px solid var(--navy); outline-offset: 1px; }
+.ps-arrow { color: var(--line); font-weight: 700; }

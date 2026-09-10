@@ -70,6 +70,7 @@
 </header>
 
 <main>
+  <div id="progressStrip"></div>
   <h1>Race Office</h1>
 
   <!-- Existing meet banner (shown when a meet is already selected) -->
@@ -312,6 +313,7 @@ async function deleteMeet() {
 
 async function init() {
   await initMeetBar('meetBar');
+  renderProgressStrip('progressStrip');
   const meetId = getMeetId();
   if (meetId) {
     // A meet already exists — show the banner instead of the create form

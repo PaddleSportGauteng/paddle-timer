@@ -105,4 +105,29 @@ router.patch('/:id/num-days', (req, res) => {
   res.json(meet);
 });
 
+// Setup progress for the progress strip on setup pages.
+router.get('/:id/setup-status', (req, res) => {
+  const database = db.load();
+  const meet = database.meets[req.params.id];
+  if (!meet) return res.status(404).json({ error: 'Meet not found.' });
+  const events = Object.values(database.events).filter((e) => e.meetId === meet.id);
+  const eventIds = new Set(events.map((e) => e.id));
+  const entries = Object.values(database.entries).filter((en) => eventIds.has(en.eventId));
+  const races = Object.values(database.races).filter((r) => eventIds.has(r.eventId));
+  const drawable = events.filter((e) => entries.some((en) => en.eventId === e.id));
+  const drawnConfirmed = drawable.length > 0 && drawable.every((e) => e.drawConfirmed || races.some((r) => r.eventId === e.id && r.combinedEventIds));
+  const anyScheduled = races.some((r) => r.scheduledLabel);
+  const anyPublished = races.some((r) => r.published);
+  const daysMissing = (meet.numDays || 1) > 1 && races.some((r) => !r.day);
+  res.json({
+    imported: entries.length > 0,
+    sorted: !!meet.raceSortChecked || drawnConfirmed, // sort is implicit once draws are confirmed
+    drawn: drawnConfirmed,
+    programmed: anyScheduled,
+    finalised: anyPublished,
+    daysMissing,
+    numDays: meet.numDays || 1,
+  });
+});
+
 module.exports = router;

@@ -21,11 +21,12 @@
 <main>
   <h1>Race Sort</h1>
   <div class="flag" id="meetWarning" style="display:none">No meet selected — pick or create one at the top-right first.</div>
-  <p style="color:var(--gray);font-size:14px">Do this <b>before</b> Race Program — check which age groups need combining before drawing anything. For groups that start together but get separate results (PSA 1.2.1/1.2.2) — e.g. "MIXED U10-U12", or a small category with too few boats to run alone.</p>
+  <div id="progressStrip"></div>
+  <p style="color:var(--gray);font-size:13px">Combine small age groups into a shared start, or fix a wrong entry. Skip if nothing needs combining.</p>
 
   <div class="card">
     <h2 style="margin-top:0">Combine events for a shared start</h2>
-    <p style="color:var(--gray);font-size:14px">Build <b>one group at a time</b>: click "+ Add" on an event to start a group, then only matching events stay clickable so you can't mix distances by accident. Give it a label if you want (e.g. "2000m U8-U12" instead of listing every age category). For mass-start groups, set the lap count and a starting slide number here too — slides get assigned across the whole combined group at once, not per age category. Then "Save this group" and start the next one.</p>
+    <p style="color:var(--gray);font-size:13px">Click <b>+ Add</b> on each event to group, give it a label, then <b>Save this group</b>.</p>
     <div id="currentGroupBox" class="flag" style="background:#EAF1FA;border-color:#B8D0EA;color:#1a3a5c">
       <b>Current group:</b> <span id="currentGroupChips" style="color:var(--gray)">empty — click "+ Add" below on the first event</span>
       <div id="currentGroupActions" style="margin-top:8px;display:none">
@@ -45,7 +46,7 @@
 
   <div class="card">
     <h2 style="margin-top:0">Fix a wrong entry</h2>
-    <p style="color:var(--gray);font-size:14px">Athlete entered the wrong event (e.g. 2000m instead of 5000m)? Search, then move them — pulls them out of any un-started race and reassigns which event they belong to.</p>
+    <p style="color:var(--gray);font-size:13px">Search a paddler and move them to the correct event.</p>
     <input type="text" id="moveSearch" placeholder="Search by paddler name or event…" oninput="fixEntryEventId=null; doMoveSearch()" onkeydown="if(event.key==='Enter')doMoveSearch()">
     <div id="moveResults" style="margin-top:10px"></div>
   </div>
@@ -55,7 +56,7 @@
       <h2 style="margin:0">Review: what's combined so far</h2>
       <button onclick="loadSummary()">Refresh</button>
     </div>
-    <p style="color:var(--gray);font-size:14px">Every event, combined or not, with boat counts — check nothing exceeds this venue's lanes before you head to Race Program.</p>
+    <p style="color:var(--gray);font-size:13px">All events with boat counts.</p>
     <div id="sortSummary">Loading…</div>
   </div>
 
@@ -382,6 +383,7 @@ async function loadSummary(){
 
 async function init(){
   await initMeetBar('meetBar', {allowCreate:false});
+  renderProgressStrip('progressStrip');
   if(!getMeetId()){ document.getElementById('meetWarning').style.display = 'block'; return; }
   await loadMeetLanes();
   await loadEvents();

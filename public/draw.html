@@ -18,6 +18,7 @@
 <main>
   <h1>Draw</h1>
   <div class="flag" id="meetWarning" style="display:none">No meet selected — pick or create one at the top-right first.</div>
+  <div id="progressStrip"></div>
   <div id="dayBar" style="margin-bottom:12px"></div>
   <div id="venueInfo" style="margin-bottom:14px"></div>
 
@@ -27,7 +28,7 @@
 
   <div class="card">
     <h2 style="margin-top:0">Draw events</h2>
-    <p style="color:var(--gray);font-size:14px">Combined groups (from Race Sort) show as one row here. Below 3 boats with no combine partner? Use "Race anyway" to override ICF's minimum — it's flagged so nobody mistakes it for an oversight. Once a draw looks right, click <b>Confirm</b>; <b>Change</b> undoes the draw and puts it back here to redo.</p>
+    <p style="color:var(--gray);font-size:13px"><b>Generate</b> each event, check the draw, then <b>Confirm</b>. Heats, semis and finals follow ICF Appendix 1 automatically.</p>
     <div id="eventsTable">Loading…</div>
   </div>
 
@@ -108,7 +109,7 @@ YPE html>
 
   <div class="card">
     <h2 style="margin-top:0">Draw events</h2>
-    <p style="color:var(--gray);font-size:14px">Combined groups (from Race Sort) show as one row here. Below 3 boats with no combine partner? Use "Race anyway" to override ICF's minimum — it's flagged so nobody mistakes it for an oversight. Once a draw looks right, click <b>Confirm</b>; <b>Change</b> undoes the draw and puts it back here to redo.</p>
+    <p style="color:var(--gray);font-size:13px"><b>Generate</b> each event, check the draw, then <b>Confirm</b>. Heats, semis and finals follow ICF Appendix 1 automatically.</p>
     <div id="eventsTable">Loading…</div>
   </div>
 
@@ -311,6 +312,7 @@ async function editLanes(meetId, currentLanes){
 
 async function init(){
   await initMeetBar('meetBar', {allowCreate:false});
+  renderProgressStrip('progressStrip');
   if(!getMeetId()){ document.getElementById('meetWarning').style.display = 'block'; return; }
   selectedDay = await initDayBar('dayBar');
   await loadEvents();

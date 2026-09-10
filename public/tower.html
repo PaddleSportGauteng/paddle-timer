@@ -465,6 +465,8 @@ async function clearCrossing(raceId,position){
   await refresh();
 }
 async function restartClock(raceId){
+  const ok=await customConfirm('Restart the clock from 00:00.00? This clears ALL crossings and times captured so far for this race.');
+  if(!ok) return;
   const res=await fetch(`/api/races/${raceId}/restart-clock`,{method:'POST'});
   if(!res.ok){const d=await res.json();alert(d.error);return;}
   // Kill any existing tick for this race so the old startTimeMs closure is gone

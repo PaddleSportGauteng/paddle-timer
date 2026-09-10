@@ -116,10 +116,17 @@ function render(){
     // anything beyond that is the office's own choice, never required,
     // so this never lingers on "pending" once the podium's actually done.
     const confirmedPill = b.isFinal ? `<span class="pill ${b.resultsConfirmed?'ok':'warn'}">${b.resultsConfirmed?'Official':'Provisional — awaiting weigh-in'}</span>` : '';
+    // Office controls: override official/provisional, or reopen the race
+    const officeBtns = `<span style="float:right;display:inline-flex;gap:6px">
+      ${b.resultsConfirmed
+        ? `<button style="font-size:11px;padding:4px 8px" onclick="setOfficial('${b.raceId}',false)" title="Mark provisional again">↩ Provisional</button>`
+        : `<button style="font-size:11px;padding:4px 8px;background:var(--green);color:#fff;border:none;border-radius:5px;cursor:pointer" onclick="setOfficial('${b.raceId}',true)" title="Mark official without waiting for weigh-ins">✓ Mark official</button>`}
+      <button style="font-size:11px;padding:4px 8px;background:#C93B3B;color:#fff;border:none;border-radius:5px;cursor:pointer" onclick="reopenRace('${b.raceId}')" title="Send this race back to the Tower to fix a result">⟲ Reopen</button>
+    </span>`;
     const noResultsMsg = b.noResultsRecorded ? `<div class="flag" style="background:#FBE7E7;border-color:#EBAFAF;color:#C93B3B">This race was locked with no results recorded at all — likely ended before lane/crossing assignment finished. Go to Race Program and click <b>"Reopen race"</b> on R${b.raceNumber}, finish assigning, then lock it again.</div>` : '';
 
     return `<div class="rcard ${b.isFinal?'final':'heat-semi'}">
-      <div class="rlabel">R${b.raceNumber} — ${b.label} — ${b.phaseLabel} ${confirmedPill}</div>
+      <div class="rlabel">R${b.raceNumber} — ${b.label} — ${b.phaseLabel} ${confirmedPill}${officeBtns}</div>
       ${b.combinedWith ? `<div class="rsub">Combined start with: ${b.combinedWith} — results split back to this category per PSA 1.2.1/1.2.2</div>` : ''}
       ${noResultsMsg}
       ${flagMsg}
@@ -130,6 +137,24 @@ function render(){
       </table></div>
     </div>`;
   }).join('');
+}
+
+async function setOfficial(raceId, official){
+  const msg = official
+    ? 'Mark this race OFFICIAL now, even if fewer than 3 boats have been weighed?'
+    : 'Set this race back to PROVISIONAL?';
+  if(!(await customConfirm(msg))) return;
+  const res = await fetch(`/api/races/${raceId}/${official?'confirm-results':'unconfirm-results'}`, {method:'POST'});
+  if(!res.ok){ const d=await res.json(); alert(d.error); return; }
+  loadResults();
+}
+
+async function reopenRace(raceId){
+  if(!(await customConfirm('Reopen this race? It goes back to the Tower as RUNNING with all its times intact so you can fix a lane or result. Any semis/finals it fed will be reset to empty until you lock it again.'))) return;
+  const res = await fetch(`/api/races/${raceId}/reopen`, {method:'POST'});
+  if(!res.ok){ const d=await res.json(); alert(d.error); return; }
+  alert('Race reopened — go to the Tower to fix it, then Lock again.');
+  loadResults();
 }
 
 async function init(){

@@ -199,3 +199,59 @@ async function initMeetBar(containerId, opts){
     });
   });
 })();
+
+// ── Nav: split into SETUP and RACE DAY groups ─────────────────────
+(function splitNav(){
+  document.addEventListener('DOMContentLoaded', () => {
+    const nav = document.querySelector('header.topbar nav');
+    if(!nav) return;
+    const links = Array.from(nav.querySelectorAll('a'));
+    const setup = ['/admin.html','/race-sort.html','/draw.html','/program.html'];
+    const raceDay = ['/tower.html','/weigh.html','/results.html','/board.html'];
+    const mk = (label, hrefs) => {
+      const g = document.createElement('span');
+      g.className = 'nav-group';
+      const l = document.createElement('span');
+      l.className = 'nav-group-label';
+      l.textContent = label;
+      g.appendChild(l);
+      hrefs.forEach(h => { const a = links.find(x => x.getAttribute('href') === h); if(a) g.appendChild(a); });
+      return g;
+    };
+    const s = mk('SETUP', setup);
+    const r = mk('RACE DAY', raceDay);
+    nav.innerHTML = '';
+    nav.appendChild(s);
+    nav.appendChild(r);
+  });
+})();
+
+// ── Setup progress strip ──────────────────────────────────────────
+// Shown on the four setup pages. Fetches meet status once and renders
+// a 5-step strip: Import → Sort → Draw → Program → Finalise. Replaces
+// the long explanatory paragraphs — the next unticked step is what to do.
+async function renderProgressStrip(containerId){
+  const el = document.getElementById(containerId);
+  const meetId = getMeetId();
+  if(!el || !meetId){ if(el) el.innerHTML=''; return; }
+  let s;
+  try { s = await (await fetch(`/api/meets/${encodeURIComponent(meetId)}/setup-status`)).json(); }
+  catch(e){ el.innerHTML=''; return; }
+  const steps = [
+    { key:'imported',  label:'1 · Entries imported', href:'/admin.html' },
+    { key:'sorted',    label:'2 · Race Sort checked', href:'/race-sort.html' },
+    { key:'drawn',     label:'3 · Draws confirmed',   href:'/draw.html' },
+    { key:'programmed',label:'4 · Programme set',     href:'/program.html' },
+    { key:'finalised', label:'5 · Finalised → Tower', href:'/program.html' },
+  ];
+  const here = window.location.pathname;
+  let nextFound = false;
+  el.innerHTML = `<div class="progress-strip">` + steps.map(st => {
+    const done = !!s[st.key];
+    const isNext = !done && !nextFound;
+    if(isNext) nextFound = true;
+    const cls = done ? 'done' : isNext ? 'next' : 'todo';
+    const active = st.href === here ? ' here' : '';
+    return `<a class="ps-step ${cls}${active}" href="${st.href}">${done?'✓ ':''}${st.label}</a>`;
+  }).join('<span class="ps-arrow">›</span>') + `</div>`;
+}
