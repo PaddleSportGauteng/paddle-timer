@@ -194,7 +194,20 @@ router.post('/:id/draw/:round', (req, res) => {
 
   let races;
   if (roundNum === 1) {
-    races = T.drawRound1(paddlers);
+    // If the front end sent a custom order, use it; otherwise auto-group by age
+    const customOrder = req.body && Array.isArray(req.body.order) ? req.body.order : null;
+    if (customOrder && customOrder.length) {
+      const pById = {}; paddlers.forEach(p => pById[p.id] = p);
+      const ordered = customOrder.map(id => pById[id]).filter(Boolean);
+      // pair them in the order given — same pairing logic (1+2, 3+4…)
+      const T2 = require('../trilogy');
+      races = T2.pairBySeed(ordered.map(p => p.id)).map((group, i) => ({
+        raceNumber: i + 1, timed: true, rematch: false,
+        lanes: group.map((id, j) => ({ lane: j + 1, paddlerId: id, buoys: 0 })),
+      }));
+    } else {
+      races = T.drawRound1(paddlers);
+    }
   } else if (roundNum === 2) {
     const r1Times = {};
     paddlers.forEach(p => { r1Times[p.id] = (timeByPaddler[p.id] || {}).r1 || 0; });
