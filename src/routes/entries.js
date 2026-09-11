@@ -151,7 +151,8 @@ router.post('/import', upload.single('file'), (req, res) => {
     summary.rowsRead++;
 
     const distance = extractDistance(raceName);
-    const { boatClass, ambiguousWithGuppy } = extractBoatClassInfo(raceName);
+    const rawAge = row[col['K1 AGE CATEGORY']] || row[col['K2 AGE CATEGORY']] || '';
+    const { boatClass, ambiguousWithGuppy } = extractBoatClassInfo(raceName, String(rawAge));
     if (!distance) { flagSet.add(`Couldn't parse a distance from "${raceName}" — skipped (row ${r + 1}+).`); continue; }
     if (boatClass === 'Unknown') { flagSet.add(`Couldn't parse a boat class from "${raceName}" — skipped (row ${r + 1}+).`); continue; }
 
@@ -179,7 +180,6 @@ router.post('/import', upload.single('file'), (req, res) => {
     const genders = [...new Set(seats.map((s) => s.gender).filter(Boolean))];
     if (ageCats.length > 1) flagSet.add(`Crew(s) in "${raceName}" have mixed age categories (${ageCats.join(', ')}) — needs organiser call (e.g. row ${r + 1}).`);
     if (genders.length > 1) flagSet.add(`Crew(s) in "${raceName}" have mixed genders — flag for mixed-crew handling (e.g. row ${r + 1}).`);
-    if (ambiguousWithGuppy) flagSet.add(`"${raceName}" mixes "${boatClass}" and "Guppy" in one race name — can't tell which individual boats are Guppy class from this sheet alone. All defaulted to ${boatClass}; please confirm per-athlete boat class before finals/medals.`);
 
     const ageCategory = ageCats[0] || 'Unknown';
     const gender = genders[0] || 'Unknown';
