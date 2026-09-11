@@ -42,9 +42,7 @@
   .post-card { background:#fff; border:1px solid var(--line); border-radius:12px; padding:20px; margin-bottom:16px; display:none; }
   .post-card 
   /* Existing meet banner */
-  .meet-banner { background:#EAF1FA; border:1px solid #B8D0EA; border-radius:10px; padding:16px 20px; margin-bottom:16px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; }
-  .meet-banner .mn { color:var(--navy); font-size:18px; font-weight:800; margin-bottom:2px; }
-  .meet-banner .meta { font-size:13px; color:var(--gray); }
+  /* meet banner now uses .card */
 </style>
 </head>
 <body>
@@ -68,35 +66,44 @@
   <h1>Race Office</h1>
 
   <!-- Existing meet banner (shown when a meet is already selected) -->
-  <div class="meet-banner" id="existingMeetBanner" style="display:none">
-    <div>
-      <div class="mn" id="existingMeetName"></div>
-      <div class="meta" id="existingMeetMeta"></div>
-    </div>
-    <div class="btn-row">
-      <button class="primary" onclick="window.location.href='/race-sort.html'">Go to Race Sort</button>
-      <button class="navy" onclick="copyLiveLink()">Copy live link</button>
-      <button onclick="document.getElementById('createSection').style.display='block';document.getElementById('existingMeetBanner').style.display='none'">New event</button>
-      <button class="red" onclick="deleteMeet()">Delete</button>
-    </div>
-  </div>
-  <div class="card" id="conditionsCard" style="display:none">
-    <h2 style="margin-top:0">Conditions</h2>
-    <div style="display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap">
-      <div style="flex:2;min-width:220px">
-        <label class="lane-label">Venue</label>
-        <select id="condVenue" onchange="saveConditions()" style="width:100%"></select>
-      </div>
+  <!-- Active meet card -->
+  <div class="card" id="existingMeetBanner" style="display:none">
+    <!-- Meet name + action buttons -->
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:20px">
       <div>
-        <label class="lane-label">Course bearing °</label>
-        <div class="btn-row">
-          <input type="number" min="0" max="359" id="condBearing" placeholder="e.g. 070" class="w-num" onchange="saveConditions()">
-          <button type="button" class="sm" onclick="reverseCourse()">Reverse</button>
-        </div>
+        <div style="font-size:22px;font-weight:800;color:var(--navy);margin-bottom:4px" id="existingMeetName"></div>
+        <div style="font-size:13px;color:var(--gray)" id="existingMeetMeta"></div>
       </div>
-      <div id="condPreview" style="font-size:13px;color:var(--gray);flex:1;min-width:200px;align-self:center"></div>
+      <div class="btn-row">
+        <button class="primary" onclick="window.location.href='/race-sort.html'">Go to Race Sort</button>
+        <button class="navy" onclick="copyLiveLink()">Copy live link</button>
+        <button onclick="document.getElementById('createSection').style.display='block';document.getElementById('existingMeetBanner').style.display='none'">New event</button>
+        <button class="red" onclick="deleteMeet()">Delete</button>
+      </div>
     </div>
-    <p style="font-size:12px;color:var(--gray);margin:8px 0 0">Weather is captured automatically at each lock. Bearing is the direction boats travel start to finish; the venue default is a best estimate, confirm it on the water.</p>
+
+    <!-- Divider -->
+    <div style="border-top:1px solid var(--line);margin-bottom:18px"></div>
+
+    <!-- Conditions -->
+    <div id="conditionsCard" style="display:none">
+      <div style="font-size:13px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px">Conditions</div>
+      <div style="display:grid;grid-template-columns:1fr auto auto;gap:16px;align-items:end;flex-wrap:wrap">
+        <div>
+          <label class="lane-label">Venue</label>
+          <select id="condVenue" onchange="saveConditions()" style="width:100%"></select>
+        </div>
+        <div>
+          <label class="lane-label">Course bearing °</label>
+          <div style="display:flex;gap:6px">
+            <input type="number" min="0" max="359" id="condBearing" placeholder="070" class="w-num" onchange="saveConditions()">
+            <button type="button" class="sm" onclick="reverseCourse()">Reverse</button>
+          </div>
+        </div>
+        <div id="condPreview" style="font-size:13px;color:var(--gray);padding-bottom:8px"></div>
+      </div>
+      <p style="font-size:12px;color:var(--gray);margin:12px 0 0">Weather captured automatically at each lock. Bearing = direction boats travel start to finish.</p>
+    </div>
   </div>
 
   <!-- Step 1: Create event + import -->
@@ -319,7 +326,7 @@ async function editClubCode(clubName, code) {
 // ── Init ──────────────────────────────────────────────────────────
 async function loadConditions(meet){
   const card = document.getElementById('conditionsCard');
-  card.style.display = 'block';
+  card.style.display = '';
   const vs = await (await fetch('/api/meets/venues')).json();
   const sel = document.getElementById('condVenue');
   sel.innerHTML = '<option value="">No venue (no weather)</option>' + vs.map(v => `<option value="${v.id}" ${meet.venueId===v.id?'selected':''}>${v.short} — ${v.name}</option>`).join('');
