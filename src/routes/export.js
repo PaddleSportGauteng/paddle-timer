@@ -44,9 +44,13 @@ router.get('/programme.pdf', (req, res) => {
       .filter((e) => (!meetId || e.meetId === meetId) && (!dayFilter || (e.day || 1) === dayFilter))
       .map((e) => e.id)
   );
-  const races = sortByScheduleThenNumber(
+  const raceItems = sortByScheduleThenNumber(
     Object.values(database.races).filter((r) => eventIds.has(r.eventId))
-  ).map((r) => enrichRace(database, { ...r, event: database.events[r.eventId] }));
+  ).map((r) => ({ ...enrichRace(database, { ...r, event: database.events[r.eventId] }), type: 'race' }));
+  const breakItems2 = Object.values(database.breaks)
+    .filter((b) => b.meetId === meetId && (!dayFilter || (b.day||1) === dayFilter))
+    .map((b) => ({ type:'break', raceNumber:null, sortKey:b.sortKey, day:b.day||1, label:b.label, scheduledLabel:b.scheduledLabel, durationMinutes:b.durationMinutes, laneEntries:{}, results:{} }));
+  const races = [...raceItems, ...breakItems2].sort((a,b) => (a.day||1)-(b.day||1) || (a.scheduledLabel||'99:99').localeCompare(b.scheduledLabel||'99:99') || (a.raceNumber||999)-(b.raceNumber||999));
 
   res.setHeader('Content-Type', 'application/pdf');
   res.setHeader('Content-Disposition', `attachment; filename="programme${dayFilter ? '-day' + dayFilter : ''}.pdf"`);
@@ -142,7 +146,12 @@ router.get('/programme.pdf', (req, res) => {
     doc.text(leave ? `Leave ${leave}` : '', right - 66, y, { width: 66, align: 'right', lineBreak: false });
     doc.y = y + 15;
 
-    if (lanes.length === 0) {
+    if (race.type === 'break') {
+      doc.rect(left, doc.y - 2, pageW, 20).fill('#FFF3E0');
+      doc.fontSize(10).font('Helvetica-Oblique').fillColor('#8A5A12');
+      doc.text(`— ${race.label}${race.durationMinutes ? ' (' + race.durationMinutes + ' min)' : ''}${race.scheduledLabel ? '  ' + race.scheduledLabel : ''} —`, left + 8, doc.y + 3, { width: pageW - 16, lineBreak: false });
+      doc.y += 22; doc.fillColor('#000');
+    } else if (lanes.length === 0) {
       doc.fontSize(8).font('Helvetica-Oblique').fillColor('#999').text('No lanes assigned yet.', left + 4, doc.y);
       doc.y += 14;
     } else {

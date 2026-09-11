@@ -75,7 +75,7 @@
     <div id="gapForm" class="flag" style="display:none;background:#FFFBF2;border-color:#F3C98B;color:#8A5A12">
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <input type="text" id="newBreakLabel" placeholder="Label, e.g. Lunch or Jetty move" style="flex:1;min-width:200px;padding:7px">
-        <input type="number" id="newBreakDuration" placeholder="Minutes" min="1" style="width:90px;padding:7px">
+        <input type="number" id="newBreakDuration" placeholder="Minutes (0 = time marker)" min="0" style="width:90px;padding:7px">
         <select id="newBreakAfter" style="min-width:180px;padding:7px"><option value="0">at start of day</option></select>
         <button class="green" onclick="addBreak()">Add</button>
         <button onclick="toggleGapForm()">Cancel</button>
@@ -497,35 +497,32 @@ function massRaceBlockHtml(race){
   }).join('');
 
   return `<div class="race-block ${race.published?'published':'unpublished'}" id="raceblock-${race.id}">
-    <h4 onclick="toggleRaceBlock('${race.id}')" style="cursor:pointer">
-      <span>
-        <span style="color:var(--gray);font-size:13px;margin-right:6px" id="toggle-${race.id}">▶</span>
-        Race ${race.raceNumber}: ${race.combinedEventIds && race.combinedEventIds.length>1 ? `<b>${race.combinedLabel}</b>` : race.event.label} — ${phaseLabel(race)}
-        ${locked ? `(mass start, ${race.totalLaps} laps)` : `(mass start, <span onclick="event.stopPropagation()"><input type="number" value="${race.totalLaps}" class="sm" style="width:50px" onchange="editLaps('${race.id}', this.value)"></span> laps)`}
-        ${race.overridden ? ' <span class="pill bad">OVERRIDDEN</span>' : ''}
-        <span class="pill ${statusPill}">${race.status}</span> ${publishedPill} ${resultsConfirmHtml(race)}
-        <small style="color:var(--gray);margin-left:8px">${race.scheduledLabel||''}</small>
-      </span>
-      <span onclick="event.stopPropagation()">
+    <div style="padding:10px 12px;cursor:pointer" onclick="toggleRaceBlock('${race.id}')">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <span style="color:var(--gray);font-size:13px" id="toggle-${race.id}">▶</span>
+          <span style="font-weight:700;font-size:14px;color:var(--navy)">R${race.raceNumber} — ${race.combinedEventIds && race.combinedEventIds.length>1 ? `<b>${race.combinedLabel}</b>` : race.event.label} — ${phaseLabel(race)}</span>
+          <span class="pill ${statusPill}">${race.status}</span> ${publishedPill} ${resultsConfirmHtml(race)}
+          ${race.overridden ? '<span class="pill bad">OVERRIDDEN</span>' : ''}
+        </div>
+        <span style="font-weight:700;color:var(--orange);font-size:14px;white-space:nowrap">${race.scheduledLabel||''}</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap" onclick="event.stopPropagation()">
         ${meetNumDays > 1 ? `<select class="sm" onchange="setRaceDay('${race.id}',this.value)">
-          ${Array.from({length:meetNumDays},(_,i)=>i+1).map(d=>`<option value="${d}" ${(race.day||1)===d?'selected':''}>Day ${d}</option>`).join('')}
+          <option value="" ${!race.day?'selected':''}>-- Day --</option>${Array.from({length:meetNumDays},(_,i)=>i+1).map(d=>`<option value="${d}" ${race.day===d?'selected':''}>Day ${d}</option>`).join('')}
         </select>` : ''}
         ${locked ? '' : `
-          <button class="sm" onclick="moveRaceTo('${race.id}','up')" title="Move up one">Up</button>
-          <button class="sm" onclick="moveRaceTo('${race.id}','down')" title="Move down one">Down</button>
-          <span style="display:inline-flex;align-items:center;gap:3px">
-            <input type="number" id="movePos-${race.id}" placeholder="Race #" class="sm w-num" onkeydown="if(event.key==='Enter'){moveRaceTo('${race.id}', this.value);}">
-            <button class="sm" onclick="moveRaceTo('${race.id}', document.getElementById('movePos-${race.id}').value)">Go</button>
-          </span>
-          <input type="text" class="time-input" placeholder="Start time e.g. 08:00" value="${race.scheduledLabel||''}" onchange="setSchedule('${race.id}', this.value)">
-          <span style="display:inline-flex;align-items:center;gap:3px">
-            <input type="number" min="1" value="${race.gapAfterMinutes||''}" placeholder="std gap" class="sm w-num" onchange="setGap('${race.id}', this.value)">
-            <small style="color:var(--gray);white-space:nowrap">min before next</small>
-          </span>
-          <button class="sm red" onclick="deleteRace('${race.id}')">Change grouping (undo draw)</button>
+          <button class="sm" onclick="moveRaceTo('${race.id}','up')">Up</button>
+          <button class="sm" onclick="moveRaceTo('${race.id}','down')">Down</button>
+          <input type="number" id="movePos-${race.id}" placeholder="Race #" class="sm w-num" onkeydown="if(event.key==='Enter'){moveRaceTo('${race.id}',this.value);}">
+          <button class="sm" onclick="moveRaceTo('${race.id}',document.getElementById('movePos-${race.id}').value)">Go</button>
+          <input type="text" class="time-input" placeholder="08:00" value="${race.scheduledLabel||''}" onchange="setSchedule('${race.id}',this.value)" style="width:80px">
+          <input type="number" min="0" value="${race.gapAfterMinutes||''}" placeholder="gap" class="sm w-num" onchange="setGap('${race.id}',this.value)" title="Minutes before next race">
+          <small style="color:var(--gray)">min gap</small>
+          <button class="sm red" onclick="deleteRace('${race.id}')">Delete</button>
         `}
-      </span>
-    </h4>
+      </div>
+    </div>
     <div class="race-lanes" id="lanes-${race.id}" style="display:none">
       ${rows}
     </div>
@@ -663,33 +660,20 @@ function raceBlockHtml(race){
   const publishedPill = race.published ? `<span class="pill ok">Published</span>` : `<span class="pill warn">Draft</span>`;
 
   return `<div class="race-block ${race.published?'published':'unpublished'}" id="raceblock-${race.id}">
-    <h4 onclick="toggleRaceBlock('${race.id}')" style="cursor:pointer">
-      <span>
-        <span style="color:var(--gray);font-size:13px;margin-right:6px" id="toggle-${race.id}">▶</span>
-        Race ${race.raceNumber}: ${race.combinedEventIds && race.combinedEventIds.length>1 ? `<b>${race.combinedLabel}</b>` : race.event.label} — ${phaseLabel(race)}${race.overridden ? ' <span class="pill bad">OVERRIDDEN</span>' : ''}
-        <span class="pill ${statusPill}">${race.status}</span> ${publishedPill} ${resultsConfirmHtml(race)}
-        <small style="color:var(--gray);margin-left:8px">${race.scheduledLabel||''}</small>
-      </span>
-      <span onclick="event.stopPropagation()">
-        ${meetNumDays > 1 ? `<select class="sm" onchange="setRaceDay('${race.id}',this.value)" title="Which day does this race run on">
-          ${Array.from({length:meetNumDays},(_,i)=>i+1).map(d=>`<option value="${d}" ${(race.day||1)===d?'selected':''}>Day ${d}</option>`).join('')}
-        </select>` : ''}
-        ${locked ? '' : `
-          <button class="sm" onclick="moveRaceTo('${race.id}','up')" title="Move up one">Up</button>
-          <button class="sm" onclick="moveRaceTo('${race.id}','down')" title="Move down one">Down</button>
-          <span style="display:inline-flex;align-items:center;gap:3px">
-            <input type="number" id="movePos-${race.id}" placeholder="Race #" title="Type the race number this should become, then press Enter or click →" class="sm w-num" onkeydown="if(event.key==='Enter'){moveRaceTo('${race.id}', this.value);}">
-            <button class="sm" onclick="moveRaceTo('${race.id}', document.getElementById('movePos-${race.id}').value)" title="Move to this race number">Go</button>
-          </span>
-          <input type="text" class="time-input" placeholder="Start time e.g. 08:00" value="${race.scheduledLabel||''}" onchange="setSchedule('${race.id}', this.value)">
-          <span style="display:inline-flex;align-items:center;gap:3px">
-            <input type="number" min="1" value="${race.gapAfterMinutes||''}" placeholder="std gap" title="Minutes before next race" class="sm w-num" onchange="setGap('${race.id}', this.value)">
-            <small style="color:var(--gray);white-space:nowrap">min before next</small>
-          </span>
-          <button class="sm red" onclick="deleteRace('${race.id}')">Delete race</button>
-        `}
-      </span>
-    </h4>
+    <div style="padding:10px 14px;border-bottom:1px solid var(--line)" onclick="toggleRaceBlock('${race.id}')" style="cursor:pointer">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px;cursor:pointer">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <span style="color:var(--gray);font-size:13px" id="toggle-${race.id}">▶</span>
+          <b style="font-size:14px;color:var(--navy)">R${race.raceNumber} — ${race.combinedEventIds && race.combinedEventIds.length>1 ? race.combinedLabel : race.event.label} — ${phaseLabel(race)}</b>
+          <span class="pill ${statusPill}">${race.status}</span> ${publishedPill} ${resultsConfirmHtml(race)}
+        </div>
+        <b style="color:var(--orange);font-size:14px">${race.scheduledLabel||''}</b>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap" onclick="event.stopPropagation()">
+        ${meetNumDays > 1 ? '<select class="sm" onchange="setRaceDay(\'${race.id}\',this.value)"><option value="" '+(!race.day?'selected':'')+'>-- Day --</option>'+Array.from({length:meetNumDays},(_,i)=>i+1).map(d=>'<option value="'+d+'" '+( race.day===d?'selected':'')+'>Day '+d+'</option>').join('')+'</select>' : ''}
+        ${locked ? '' : `<button class="sm" onclick="moveRaceTo('${race.id}','up')">Up</button><button class="sm" onclick="moveRaceTo('${race.id}','down')">Down</button><input type="number" id="movePos-${race.id}" placeholder="Race #" class="sm w-num" onkeydown="if(event.key==='Enter'){moveRaceTo('${race.id}',this.value);}"><button class="sm" onclick="moveRaceTo('${race.id}',document.getElementById('movePos-${race.id}').value)">Go</button><input type="text" placeholder="08:00" value="${race.scheduledLabel||''}" onchange="setSchedule('${race.id}',this.value)" style="width:80px;padding:5px;border-radius:5px;border:1px solid var(--line);font-size:12px"><input type="number" min="0" value="${race.gapAfterMinutes||''}" placeholder="gap" class="sm w-num" onchange="setGap('${race.id}',this.value)" title="Minutes before next race"><small style="color:var(--gray)">min gap</small><button class="sm red" onclick="deleteRace('${race.id}')">Delete</button>`}
+      </div>
+    </div>
     <div class="race-lanes" id="lanes-${race.id}" style="display:none">
       <div class="lane-row lane-header">
         <span class="lanenum">LANE</span>

@@ -795,13 +795,23 @@ function gapAfter(meet, race) {
 function reflowTimes(database, meetId) {
   const meet = database.meets[meetId];
   if (!meet || meet.lastStartTime == null || meet.lastIntervalMinutes == null) return 0;
-  const items = combinedSchedule(database, meetId);
-  let current = meet.lastStartTime;
-  items.forEach((item) => {
-    item.ref.scheduledLabel = formatHHMM(current);
-    current += item.type === 'race' ? gapAfter(meet, item.ref) : (item.ref.durationMinutes || meet.lastIntervalMinutes);
-  });
-  return items.length;
+  const numDays = meet.numDays || 1;
+  let totalUpdated = 0;
+  for (let day = 1; day <= numDays; day++) {
+    const items = combinedSchedule(database, meetId, day);
+    if (!items.length) continue;
+    // Use the day-specific start time if set, otherwise fall back to lastStartTime
+    const dayStart = (meet.dayStartTimes && meet.dayStartTimes[day] != null)
+      ? meet.dayStartTimes[day]
+      : meet.lastStartTime;
+    let current = dayStart;
+    items.forEach((item) => {
+      item.ref.scheduledLabel = formatHHMM(current);
+      current += item.type === 'race' ? gapAfter(meet, item.ref) : (item.ref.durationMinutes || meet.lastIntervalMinutes);
+    });
+    totalUpdated += items.length;
+  }
+  return totalUpdated;
 }
 
 router.post('/generate-start-times', (req, res) => {
@@ -816,9 +826,13 @@ router.post('/generate-start-times', (req, res) => {
 
   database.meets[meetId].lastStartTime = startMinutes;
   database.meets[meetId].lastIntervalMinutes = interval;
+  // Store per-day start time so reflow knows each day's anchor
+  database.meets[meetId].dayStartTimes = database.meets[meetId].dayStartTimes || {};
+  const dayNum2 = day ? Number(day) : 1;
+  database.meets[meetId].dayStartTimes[dayNum2] = startMinutes;
   const meet = database.meets[meetId];
 
-  // If a specific day is requested, only reflow that day's races
+  // Only reflow the requested day, using the correct start anchor
   const dayFilter = day ? Number(day) : null;
   const items = combinedSchedule(database, meetId, dayFilter);
 
@@ -905,7 +919,7 @@ router.post('/breaks', (req, res) => {
   const { meetId, day, label, durationMinutes, afterRaceId } = req.body;
   if (!database.meets[meetId]) return res.status(400).json({ error: 'Meet not found.' });
   const dur = Number(durationMinutes);
-  if (!dur || dur <= 0) return res.status(400).json({ error: 'durationMinutes must be a positive number.' });
+  if (isNaN(dur) || dur < 0) return res.status(400).json({ error: 'durationMinutes must be 0 or a positive number.' });
 
   const dayNum = day ? Number(day) : 1;
 
@@ -963,7 +977,7 @@ router.patch('/breaks/:id', (req, res) => {
   if (req.body.label !== undefined) brk.label = (String(req.body.label).trim() || 'Break');
   if (req.body.durationMinutes !== undefined) {
     const dur = Number(req.body.durationMinutes);
-    if (!dur || dur <= 0) return res.status(400).json({ error: 'durationMinutes must be a positive number.' });
+    if (isNaN(dur) || dur < 0) return res.status(400).json({ error: 'durationMinutes must be 0 or a positive number.' });
     brk.durationMinutes = dur;
   }
   reflowTimes(database, brk.meetId);
