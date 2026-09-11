@@ -353,4 +353,60 @@ router.get('/prizes.pdf', (req, res) => {
   doc.end();
 });
 
+// ── Trilogy standings export ──────────────────────────────────────
+router.get('/trilogy-standings.xlsx', async (req, res) => {
+  const meetId = req.query.meet;
+  if (!meetId) return res.status(400).json({ error: 'meet param required' });
+  const database = db.load();
+  const meet = database.trilogyMeets[meetId];
+  if (!meet) return res.status(404).json({ error: 'Trilogy meet not found' });
+
+  // Rebuild standings via the same engine the front end uses
+  const T = require('../trilogy');
+  const paddlers = Object.values(database.trilogyPaddlers)
+    .filter(p => p.meetId === meetId)
+    .map(p => { const a = database.athletes[p.athleteId]||{}; return { ...p, name:[a.firstName,a.surname].filter(Boolean).join(' '), psaId:a.psaId||null }; });
+
+  const timeByP = {}, posByP = {};
+  Object.values(database.trilogyRounds).filter(r => r.meetId === meetId).forEach(rd => {
+    rd.races.forEach(race => race.lanes.forEach(l => {
+      if (rd.roundNumber <= 2) { timeByP[l.paddlerId] = timeByP[l.paddlerId]||{}; timeByP[l.paddlerId]['r'+rd.roundNumber] = l.timeMs; }
+      if (l.position) { posByP[l.paddlerId] = posByP[l.paddlerId]||{}; posByP[l.paddlerId][rd.roundNumber] = l.position; }
+    }));
+  });
+  const tuById = {}; paddlers.forEach(p => { const t=timeByP[p.id]||{}; tuById[p.id]=T.timeUsed(t.r1,t.r2); });
+  const st = T.standings(paddlers, posByP, tuById);
+
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet('Trilogy Standings');
+  ws.columns = [{width:8},{width:28},{width:9},{width:9},{width:8},{width:8}];
+  const arial = e => ({name:'Arial',size:10,...e});
+  let r=1;
+  const put = (vals,font,fill) => { const row=ws.getRow(r++); vals.forEach((v,i)=>{row.getCell(i+1).value=v;}); row.eachCell(c=>{c.font=arial(font||{});if(fill)c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF'+fill}};}); return row; };
+  put([meet.name],{bold:true,size:14,color:{argb:'FF'+NAVY}});
+  put(['PaddleSport Gauteng — Trilogy Standings'],{color:{argb:'FF'+GRAY}});
+  put([`Generated ${new Date().toLocaleString('en-GB')}`],{italic:true,color:{argb:'FF999999'}});
+  r++;
+
+  const byCat={};
+  st.forEach(p=>(byCat[p.ageCategory]=byCat[p.ageCategory]||[]).push(p));
+  Object.keys(byCat).sort().forEach(cat => {
+    put([cat],{bold:true,size:12,color:{argb:'FFFFFFFF'}},NAVY);
+    const hdr = put(['POS','NAME','CLUB','PATH','DET. TIME','POINTS'],{bold:true,color:{argb:'FFFFFFFF'}},NAVY);
+    hdr.eachCell(c=>c.alignment={horizontal:'center'});
+    byCat[cat].forEach((p,i)=>{
+      const row=put([p.catPlace,(p.name||'').toUpperCase(),p.clubCode||'',p.path||'',p.timeUsed!=null?p.timeUsed+'s':'',p.points],{},i%2?'F3F6FA':null);
+      [1,3,4,5,6].forEach(ci=>row.getCell(ci).alignment={horizontal:'center'});
+      row.getCell(2).font=arial({bold:true});
+      row.getCell(6).font=arial({bold:true,color:{argb:'FF'+GREEN}});
+    });
+    r++;
+  });
+
+  res.setHeader('Content-Type','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  res.setHeader('Content-Disposition',`attachment; filename="trilogy-standings.xlsx"`);
+  res.setHeader('Cache-Control','no-store,no-cache,must-revalidate');
+  await wb.xlsx.write(res); res.end();
+});
+
 module.exports = router;

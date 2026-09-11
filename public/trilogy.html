@@ -6,42 +6,60 @@
 <title>Trilogy — PaddleSport Gauteng</title>
 <link rel="stylesheet" href="style.css">
 <style>
-  .meet-hdr{background:var(--navy);color:#fff;border-radius:10px;padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
-  .meet-hdr .mn{font-size:20px;font-weight:800;}
-  .meet-hdr .ms{font-size:13px;opacity:.75;}
-  .tabs{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;}
-  .tab{padding:9px 18px;border-radius:8px;border:2px solid var(--line);background:#fff;font-weight:700;font-size:14px;cursor:pointer;}
-  .tab.active{background:var(--navy);color:#fff;border-color:var(--navy);}
-  /* Roster */
-  .roster-add{background:#fff;border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:14px;}
-  .roster-add h3{margin:0 0 10px;font-size:14px;color:var(--navy);}
-  .roster-form{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;}
-  .roster-form .fi{display:flex;flex-direction:column;gap:3px;font-size:11px;color:var(--gray);font-weight:600;}
-  /* Round columns */
-  .rounds-wrap{display:flex;gap:10px;overflow-x:auto;padding-bottom:8px;}
-  .round-col{min-width:280px;flex-shrink:0;}
-  .round-hdr{background:var(--navy);color:#fff;border-radius:8px 8px 0 0;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;}
-  .round-hdr .rn{font-weight:800;font-size:14px;}
-  .round-hdr .rs{font-size:11px;opacity:.75;}
-  .race-card{background:#fff;border:1px solid var(--line);border-bottom:none;padding:10px 12px;}
-  .race-card:last-child{border-bottom:1px solid var(--line);border-radius:0 0 8px 8px;}
-  .race-num{font-size:11px;font-weight:700;color:var(--gray);margin-bottom:6px;letter-spacing:.05em;}
-  .lane-row{display:flex;align-items:center;gap:8px;margin:4px 0;}
-  .lane-row .bib{width:26px;height:26px;border-radius:5px;background:var(--navy);color:#fff;font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
-  .lane-row .buoys{font-size:11px;color:var(--orange);font-weight:700;min-width:28px;}
-  .lane-row .nm{font-weight:700;font-size:12px;flex:1;text-transform:uppercase;}
-  .lane-row .cat{font-size:11px;color:var(--gray);}
-  .lane-row input[type=number]{width:70px;padding:4px 6px;font-size:12px;border-radius:5px;border:1px solid var(--line);}
-  .pos-btn{width:28px;height:28px;border-radius:5px;border:1px solid var(--line);background:#fff;font-weight:700;font-size:13px;cursor:pointer;line-height:1;}
-  .pos-btn.active{background:var(--green);color:#fff;border-color:var(--green);}
-  .rematch-badge{font-size:10px;color:var(--orange);font-weight:700;margin-left:4px;}
-  .round-empty{text-align:center;color:var(--gray);padding:20px;font-size:13px;}
-  .lock-row{padding:8px 12px;border:1px solid var(--line);border-top:none;border-radius:0 0 8px 8px;background:#FAFAFA;}
-  /* Standings */
-  .stand-cat{margin-bottom:18px;}
-  .stand-hdr{background:var(--navy);color:#fff;border-radius:6px;padding:7px 12px;font-weight:700;font-size:13px;margin-bottom:4px;}
-  .r1-chip { display:inline-flex; align-items:center; gap:7px; background:#fff; border:1px solid var(--line); border-radius:8px; padding:8px 12px; cursor:grab; user-select:none; }
-  .r1-chip:active { cursor:grabbing; background:#EAF1FA; }
+/* ── Tabs ── */
+.t-tabs{display:flex;gap:6px;margin-bottom:16px;}
+.t-tab{padding:9px 20px;border-radius:8px;border:2px solid var(--line);background:#fff;font-weight:700;font-size:14px;cursor:pointer;}
+.t-tab.active{background:var(--navy);color:#fff;border-color:var(--navy);}
+
+/* ── Meet header ── */
+.t-hdr{background:var(--navy);color:#fff;border-radius:10px;padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+.t-hdr .mn{font-size:20px;font-weight:800;}
+.t-hdr .ms{font-size:13px;opacity:.75;margin-top:2px;}
+
+/* ── Roster ── */
+.add-row{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;background:#fff;border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:14px;}
+.add-row .fi{display:flex;flex-direction:column;gap:3px;font-size:11px;font-weight:700;color:var(--gray);text-transform:uppercase;letter-spacing:.04em;}
+
+/* ── Round 1 arranger ── */
+.arranger{background:#fff;border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:14px;}
+.arranger h2{margin:0 0 4px;font-size:16px;color:var(--navy);}
+.arranger p{margin:0 0 14px;font-size:13px;color:var(--gray);}
+.chip-grid{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;}
+.chip{display:inline-flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--line);border-radius:8px;padding:8px 12px;cursor:grab;user-select:none;transition:background .1s;}
+.chip:hover{background:#EAF1FA;}
+.chip.drag-over{border:2px solid var(--orange);}
+.chip .bib{background:var(--navy);color:#fff;border-radius:4px;padding:2px 7px;font-weight:800;font-size:12px;font-family:'SF Mono','Menlo','Consolas',monospace;}
+.chip .nm{font-weight:700;font-size:13px;text-transform:uppercase;}
+.chip .cat{font-size:11px;color:var(--gray);}
+.preview-row{font-size:12px;color:var(--gray);margin-bottom:14px;line-height:1.8;}
+.preview-row strong{color:var(--navy);}
+
+/* ── Rounds ── */
+.rounds-scroll{display:flex;gap:10px;overflow-x:auto;padding-bottom:8px;}
+.r-col{min-width:260px;flex-shrink:0;}
+.r-hdr{background:var(--navy);color:#fff;border-radius:8px 8px 0 0;padding:10px 14px;}
+.r-hdr .rn{font-weight:800;font-size:14px;}
+.r-hdr .rs{font-size:11px;opacity:.75;margin-top:1px;}
+.r-empty{background:#fff;border:1px solid var(--line);border-radius:0 0 8px 8px;text-align:center;padding:20px;color:var(--gray);font-size:13px;}
+.race-card{background:#fff;border-left:1px solid var(--line);border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:10px 12px;}
+.race-card:last-of-type{border-radius:0 0 0 0;}
+.race-num{font-size:10px;font-weight:700;color:var(--gray);letter-spacing:.08em;margin-bottom:6px;text-transform:uppercase;}
+.l-row{display:flex;align-items:center;gap:8px;margin:5px 0;}
+.l-bib{width:26px;height:26px;border-radius:5px;background:var(--navy);color:#fff;font-weight:800;font-size:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:'SF Mono','Menlo','Consolas',monospace;}
+.l-buoys{font-size:11px;color:var(--orange);font-weight:700;width:32px;text-align:right;flex-shrink:0;}
+.l-name{font-weight:700;font-size:12px;flex:1;text-transform:uppercase;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.l-cat{font-size:11px;color:var(--gray);flex-shrink:0;}
+.l-time{width:58px;flex-shrink:0;}
+.l-pos{display:flex;gap:3px;flex-shrink:0;}
+.pos-btn{width:26px;height:26px;border-radius:5px;border:1px solid var(--line);background:#fff;font-weight:700;font-size:12px;cursor:pointer;line-height:1;}
+.pos-btn.on{background:var(--green);color:#fff;border-color:var(--green);}
+.rematch{font-size:10px;color:var(--orange);font-weight:700;letter-spacing:.04em;}
+.lock-bar{background:#FAFAFA;border:1px solid var(--line);border-top:2px solid var(--line);border-radius:0 0 8px 8px;padding:8px 12px;display:flex;align-items:center;gap:10px;}
+.locked-bar{background:#E4F5EC;border:1px solid #9FD9BE;border-radius:0 0 8px 8px;padding:8px 12px;font-size:12px;font-weight:700;color:var(--green);}
+
+/* ── Standings ── */
+.s-cat{margin-bottom:20px;}
+.s-hdr{background:var(--navy);color:#fff;border-radius:6px;padding:8px 14px;font-weight:700;font-size:14px;margin-bottom:4px;}
 </style>
 </head>
 <body>
@@ -52,306 +70,320 @@
     <a href="/trilogy.html">Trilogy</a>
     <a href="/live.html">Live</a>
   </nav>
+  <div id="meetBar"></div>
 </header>
-<main id="app"><div class="empty">Loading…</div></main>
+<main>
+  <div id="app"><div class="empty">Loading…</div></div>
+</main>
 <script src="common.js"></script>
 <script>
-const params  = new URLSearchParams(location.search);
-let meetId    = params.get('meet');
-let meetData  = null;
-let paddlers  = [];
-let rounds    = {};          // roundNumber → round object
-let tab       = 'roster';
+const params = new URLSearchParams(location.search);
+let meetId   = params.get('meet');
+let meet     = null;
+let paddlers = [];
+let rounds   = {};
+let tab      = 'roster';
+let r1Order  = [];
+let dragId   = null;
 
-const ROUND_LABELS = ['','Round 1','Round 2','Round 3','Round 4','Round 5','Round 6'];
-const ROUND_DESC   = ['','Age groups · no handicap · timed',
-  'Full field · seeded on R1 · timed',
-  'Winners v winners · 2nds+3rds together',
-  'Winners v winners · 2nds+3rds together',
-  'Winners v winners · 2nds+3rds together',
-  'FINAL · Winners v winners · 2nds+3rds together'];
+const LABELS = ['','Round 1','Round 2','Round 3','Round 4','Round 5','Round 6'];
+const DESC   = ['','Age groups · timed · no handicap',
+  'Full field · seeded on R1 time · timed',
+  '1sts vs 1sts / 2nds+3rds together · buoy handicap',
+  '1sts vs 1sts / 2nds+3rds together · buoy handicap',
+  '1sts vs 1sts / 2nds+3rds together · buoy handicap',
+  'Final · 1sts vs 1sts / 2nds+3rds together · buoy handicap'];
 
-// ── API ───────────────────────────────────────────────────────────
-const api = (p, opts) => fetch('/api/trilogy'+p, opts).then(r => r.json());
+const api = async (p, opts) => {
+  const r = await fetch('/api/trilogy'+p, opts);
+  return r.json();
+};
 
 async function load(){
-  if(!meetId){ document.getElementById('app').innerHTML='<div class="empty">No meet — create one in Race Office.</div>'; return; }
-  [meetData, paddlers] = await Promise.all([api('/'+meetId), api('/'+meetId+'/paddlers')]);
-  const rds = await fetch('/api/trilogy').then(r=>r.json());
+  if(!meetId){ document.getElementById('app').innerHTML='<div class="empty">No meet selected. Create one in Race Office → Trilogy.</div>'; return; }
+  [meet, paddlers] = await Promise.all([api('/'+meetId), api('/'+meetId+'/paddlers')]);
+  const rds = await api('/'+meetId+'/rounds-list');
   rounds = {};
-  // get all rounds for this meet
-  (await fetch('/api/trilogy/'+meetId+'/rounds-list').then(r=>r.ok?r.json():[]).catch(()=>[])).forEach(rd => { rounds[rd.roundNumber] = rd; });
+  if(Array.isArray(rds)) rds.forEach(rd => rounds[rd.roundNumber] = rd);
   render();
 }
 
 function render(){
-  const app = document.getElementById('app');
-  app.innerHTML = `
-    <div class="meet-hdr">
-      <div><div class="mn">${meetData.name}</div><div class="ms">Trilogy · ${meetData.lanes || 2} lanes · 100m</div></div>
+  const pById = {}; paddlers.forEach(p => pById[p.id] = p);
+  document.getElementById('app').innerHTML = `
+    <div class="t-hdr">
+      <div>
+        <div class="mn">${meet.name}</div>
+        <div class="ms">Trilogy · ${meet.lanes||2} lanes · 100m · ${paddlers.length} paddlers</div>
+      </div>
       <div class="btn-row">
-        <button class="navy" onclick="importFile()">Import entries</button>
-        <button onclick="exportStandings()">Export standings</button>
+        <button class="navy" onclick="doImport()">Import entries</button>
+        <button onclick="doExport()">Export standings</button>
       </div>
     </div>
-    <div class="tabs">
-      ${['roster','rounds','standings'].map(t=>`<div class="tab ${t===tab?'active':''}" onclick="setTab('${t}')">${t.charAt(0).toUpperCase()+t.slice(1)}</div>`).join('')}
+    <div class="t-tabs">
+      ${['roster','rounds','standings'].map(t=>`<div class="t-tab ${t===tab?'active':''}" onclick="setTab('${t}')">${t.charAt(0).toUpperCase()+t.slice(1)}</div>`).join('')}
     </div>
-    <div id="tabContent"></div>`;
-  if(tab==='roster')   renderRoster();
-  else if(tab==='rounds')  renderRounds();
-  else renderStandings();
+    <div id="tc"></div>`;
+  if(tab==='roster')      renderRoster(pById);
+  else if(tab==='rounds') renderRounds(pById);
+  else                    renderStandings();
 }
 
 function setTab(t){ tab=t; render(); }
 
 // ── Roster ────────────────────────────────────────────────────────
-function renderRoster(){
-  const el=document.getElementById('tabContent');
-  const AGE=['U8','U10','U12','U14','U16','U18','U23','OPEN','SENIOR'];
-  el.innerHTML=`<div class="roster-add">
-    <h3>Add paddler</h3>
-    <div class="roster-form">
-      <div class="fi">Name<input type="text" id="rName" placeholder="First Last" style="width:160px"></div>
-      <div class="fi">Age<select id="rAge">${AGE.map(a=>`<option>${a}</option>`).join('')}</select></div>
-      <div class="fi">Club<input type="text" id="rClub" placeholder="DABS" style="width:70px"></div>
-      <div class="fi">PSA #<input type="text" id="rPsa" placeholder="optional" style="width:80px"></div>
+function renderRoster(pById){
+  const AGE = ['U8','U10','U12','U14','U16','U18','U23','OPEN','SENIOR'];
+  document.getElementById('tc').innerHTML = `
+    <div class="add-row">
+      <div class="fi">Name<input id="rN" type="text" placeholder="First Last" style="width:160px"></div>
+      <div class="fi">Age<select id="rA">${AGE.map(a=>`<option>${a}</option>`).join('')}</select></div>
+      <div class="fi">Club<input id="rC" type="text" placeholder="DABS" style="width:70px"></div>
+      <div class="fi">PSA #<input id="rP" type="text" placeholder="optional" style="width:80px"></div>
       <button class="green" onclick="addPaddler()">Add</button>
     </div>
-  </div>
-  <div class="table-scroll"><table class="review-table">
-    <tr><th>BIB</th><th>NAME</th><th>AGE</th><th>CLUB</th><th>PSA #</th><th></th></tr>
-    ${paddlers.map(p=>`<tr>
-      <td class="cpos">${p.bib}</td>
-      <td class="pname">${p.name}</td>
-      <td class="pmeta cage">${p.ageCategory||''}</td>
-      <td class="pmeta cclub">${p.clubCode||''}</td>
-      <td class="pmeta cpsa">${p.psaId||''}</td>
-      <td class="cact"><button class="sm red" onclick="removePaddler('${p.id}')">Remove</button></td>
-    </tr>`).join('')}
-  </table></div>
-  <p style="font-size:12px;color:var(--gray);margin-top:8px">${paddlers.length} paddlers · Bibs auto-assigned in registration order</p>`;
+    <div class="table-scroll"><table class="review-table">
+      <tr><th>BIB</th><th>NAME</th><th>AGE</th><th>CLUB</th><th>PSA #</th><th></th></tr>
+      ${paddlers.map(p=>`<tr>
+        <td class="cpos" style="font-family:monospace">${p.bib}</td>
+        <td class="pname">${p.name}</td>
+        <td class="pmeta cage">${p.ageCategory||''}</td>
+        <td class="pmeta cclub">${p.clubCode||''}</td>
+        <td class="pmeta cpsa">${p.psaId||''}</td>
+        <td class="cact"><button class="sm red" onclick="removePaddler('${p.id}')">Remove</button></td>
+      </tr>`).join('')}
+    </table></div>
+    <p style="font-size:12px;color:var(--gray);margin-top:8px">${paddlers.length} paddler${paddlers.length===1?'':'s'} · bibs auto-assigned in order</p>`;
 }
 
 async function addPaddler(){
-  const name = document.getElementById('rName').value.trim();
-  if(!name){ alert('Enter a name.'); return; }
-  const parts = name.split(/\s+/);
+  const n = document.getElementById('rN').value.trim();
+  if(!n){ alert('Enter a name.'); return; }
+  const parts = n.split(/\s+/);
   await api('/'+meetId+'/paddlers', {method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({firstName:parts[0], surname:parts.slice(1).join(' '), ageCategory:document.getElementById('rAge').value,
-      clubCode:document.getElementById('rClub').value.trim(), psaId:document.getElementById('rPsa').value.trim()||null})});
+    body: JSON.stringify({firstName:parts[0], surname:parts.slice(1).join(' '),
+      ageCategory:document.getElementById('rA').value,
+      clubCode:document.getElementById('rC').value.trim(),
+      psaId:document.getElementById('rP').value.trim()||null})});
   paddlers = await api('/'+meetId+'/paddlers');
-  renderRoster();
+  render();
 }
 
 async function removePaddler(pid){
-  if(!await customConfirm('Remove this paddler from the roster?')) return;
+  if(!await customConfirm('Remove this paddler?')) return;
   await api('/'+meetId+'/paddlers/'+pid, {method:'DELETE'});
   paddlers = await api('/'+meetId+'/paddlers');
-  renderRoster();
+  render();
 }
 
-async function importFile(){
-  const inp=document.createElement('input'); inp.type='file'; inp.accept='.xlsx';
-  inp.onchange=async()=>{
-    const fd=new FormData(); fd.append('file',inp.files[0]); fd.append('meetId',meetId);
-    const r=await fetch('/api/trilogy/'+meetId+'/import',{method:'POST',body:fd});
-    const d=await r.json();
-    if(!r.ok){alert(d.error);return;}
-    alert(`Imported ${d.added} paddler(s), ${d.skipped} skipped (already on roster).`);
+async function doImport(){
+  const inp = document.createElement('input'); inp.type='file'; inp.accept='.xlsx';
+  inp.onchange = async () => {
+    const fd = new FormData(); fd.append('file', inp.files[0]);
+    const r = await fetch('/api/trilogy/'+meetId+'/import', {method:'POST', body:fd});
+    const d = await r.json();
+    if(!r.ok){ alert(d.error||'Import failed'); return; }
+    alert(`${d.added} paddler(s) added, ${d.skipped} skipped.`);
     paddlers = await api('/'+meetId+'/paddlers');
     render();
   };
   inp.click();
 }
 
-// ── Rounds ────────────────────────────────────────────────────────
-function renderRounds(){
-  const el=document.getElementById('tabContent');
-  if(!paddlers.length){ el.innerHTML='<div class="empty">Add paddlers to the roster first.</div>'; return; }
-  const cols = [1,2,3,4,5,6].map(rn => {
-    const rd = rounds[rn];
-    const canDraw = !rd && (rn===1 || rounds[rn-1]);
-    const prevLocked = rn===1 || (rounds[rn-1] && rounds[rn-1].locked);
-    return `<div class="round-col">
-      <div class="round-hdr">
-        <span class="rn">${ROUND_LABELS[rn]}</span>
-        <span class="rs">${ROUND_DESC[rn]}</span>
-      </div>
-      ${rd ? roundBody(rd, rn) : `<div class="round-empty">
-        ${canDraw && prevLocked ? `<button class="green" onclick="drawRound(${rn})">Draw Round ${rn}</button>`
-          : rn===1 ? `<button class="green" onclick="drawRound(1)">Draw Round 1</button>`
-          : `<span style="color:var(--line)">Lock Round ${rn-1} first</span>`}
-      </div>`}
-    </div>`;
-  }).join('');
-  el.innerHTML=`<div class="rounds-wrap">${cols}</div>`;
-}
-
-function roundBody(rd, rn){
-  const pById={};
-  paddlers.forEach(p=>pById[p.id]=p);
-  const allDone = rd.races.every(r=>r.lanes.every(l=>l.position));
-  const cards = rd.races.map(r=>{
-    const rematch = r.rematch ? `<span class="rematch-badge">2nd meeting</span>` : '';
-    const rows = r.lanes.map(l=>{
-      const p=pById[l.paddlerId]||{};
-      const buoyStr = l.buoys ? `+${l.buoys}b` : 'scratch';
-      const timeInput = rd.timed && !rd.locked ? `<input type="number" placeholder="secs" value="${l.timeMs||''}"
-        onchange="saveTime('${rd.id}',${r.raceNumber},${l.lane},this.value)" style="width:64px">` :
-        l.timeMs ? `<span style="font-family:'SF Mono','Menlo','Consolas',monospace;font-size:12px;color:var(--green)">${l.timeMs}s</span>` : '';
-      const pos = [1,2,3].slice(0,r.lanes.length).map(pos=>
-        `<button class="pos-btn ${l.position===pos?'active':''}" onclick="savePos('${rd.id}',${r.raceNumber},${l.lane},${pos})">${pos}</button>`).join('');
-      return `<div class="lane-row">
-        <div class="bib">${p.bib||'?'}</div>
-        <span class="buoys">${buoyStr}</span>
-        <span class="nm">${p.name||'?'}</span>
-        <span class="cat">${p.ageCategory||''}</span>
-        ${timeInput}
-        ${!rd.locked ? `<span style="display:flex;gap:3px">${pos}</span>` : (l.position?`<b style="color:var(--navy)">#${l.position}</b>`:'')}
-      </div>`;
-    }).join('');
-    return `<div class="race-card"><div class="race-num">RACE ${r.raceNumber}${rematch}</div>${rows}</div>`;
-  }).join('');
-  const lockBtn = !rd.locked
-    ? `<div class="lock-row"><button class="green" onclick="lockRound('${rd.id}')" ${allDone?'':'disabled'}>Lock Round ${rn}</button>
-       <small style="color:var(--gray);margin-left:8px">${allDone?'':'Enter all positions first'}</small></div>`
-    : `<div class="lock-row" style="color:var(--green);font-size:12px;font-weight:700">✓ Locked</div>`;
-  return cards + lockBtn;
-}
-
-let r1Order = [];   // paddler ids in the order the organiser arranges them
-
-async function drawRound(rn){
-  if(rn === 1){
-    // Round 1: show the arranger first, not the auto-draw
+// ── Round 1 arranger ─────────────────────────────────────────────
+function renderRounds(pById){
+  const tc = document.getElementById('tc');
+  if(!paddlers.length){ tc.innerHTML='<div class="empty">Add paddlers to the roster first.</div>'; return; }
+  if(!rounds[1] && !r1Order.length){
+    // show arranger for Round 1
     r1Order = paddlers.map(p => p.id);
-    showR1Arranger();
+    showArranger(tc, pById);
     return;
   }
-  const r = await api('/'+meetId+'/draw/'+rn, {method:'POST'});
-  if(r.error){ alert(r.error); return; }
-  rounds[rn] = r;
-  await loadRounds();
+  showRoundColumns(tc, pById);
+}
+
+function showArranger(tc, pById){
+  const pairs = buildPairs(r1Order);
+  tc.innerHTML = `
+    <div class="arranger">
+      <h2>Round 1 — arrange pairs</h2>
+      <p>Drag paddlers into order. They are paired top-to-bottom: 1+2 race together, 3+4 together, and so on. An odd total puts the last three together.</p>
+      <div class="chip-grid" id="chipGrid">
+        ${r1Order.map(id => chipHtml(id, pById)).join('')}
+      </div>
+      <div class="preview-row" id="pairPreview">${previewHtml(pairs, pById)}</div>
+      <div class="btn-row">
+        <button class="green" onclick="confirmR1()">Confirm draw</button>
+        <button onclick="r1Order=[];tab='roster';render()">Back to roster</button>
+      </div>
+    </div>`;
+  attachDrag();
+}
+
+function chipHtml(id, pById){
+  const p = pById[id]||{};
+  return `<div class="chip" id="chip-${id}" draggable="true" data-id="${id}">
+    <span class="bib">${p.bib||'?'}</span>
+    <span class="nm">${(p.name||'?').split(' ')[0]}</span>
+    <span class="cat">${p.ageCategory||''}</span>
+  </div>`;
+}
+
+function buildPairs(order){
+  const pairs = [];
+  for(let i=0; i<order.length; i+=2){
+    if(i===order.length-3 && order.length%2===1){ pairs.push([order[i],order[i+1],order[i+2]]); break; }
+    else if(i+1<order.length) pairs.push([order[i],order[i+1]]);
+    else pairs.push([order[i]]);
+  }
+  return pairs;
+}
+
+function previewHtml(pairs, pById){
+  return pairs.map((p,i)=>`<strong>Race ${i+1}:</strong> ${p.map(id=>(pById[id]||{}).name||'?').join(' v ')}`).join(' &nbsp;·&nbsp; ');
+}
+
+function attachDrag(){
+  document.querySelectorAll('.chip').forEach(c => {
+    c.addEventListener('dragstart', e => { dragId = e.currentTarget.dataset.id; e.currentTarget.style.opacity='.4'; });
+    c.addEventListener('dragend',   e => { e.currentTarget.style.opacity='1'; dragId=null; });
+    c.addEventListener('dragover',  e => { e.preventDefault(); e.currentTarget.classList.add('drag-over'); });
+    c.addEventListener('dragleave', e => e.currentTarget.classList.remove('drag-over'));
+    c.addEventListener('drop', e => {
+      e.preventDefault(); e.currentTarget.classList.remove('drag-over');
+      const toId = e.currentTarget.dataset.id;
+      if(!dragId || dragId===toId) return;
+      const from=r1Order.indexOf(dragId), to=r1Order.indexOf(toId);
+      r1Order.splice(from,1); r1Order.splice(to,0,dragId);
+      const pById={}; paddlers.forEach(p=>pById[p.id]=p);
+      const grid = document.getElementById('chipGrid');
+      grid.innerHTML = r1Order.map(id=>chipHtml(id,pById)).join('');
+      document.getElementById('pairPreview').innerHTML = previewHtml(buildPairs(r1Order),pById);
+      attachDrag();
+    });
+  });
+}
+
+async function confirmR1(){
+  const rd = await api('/'+meetId+'/draw/1', {method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({order: r1Order})});
+  if(rd.error){ alert(rd.error); return; }
+  rounds[1] = rd;
   render();
 }
 
-function showR1Arranger(){
-  const tab = document.getElementById('tabContent');
-  const pById = {}; paddlers.forEach(p => pById[p.id] = p);
-  tab.innerHTML = `
-    <div class="card">
-      <h2 style="margin:0 0 6px">Round 1 — arrange pairs</h2>
-      <p style="color:var(--gray);font-size:13px;margin:0 0 14px">Drag paddlers into the order you want. They are paired top-to-bottom: 1+2 race together, 3+4 together, and so on. An odd number puts the last three together.</p>
-      <div id="r1List" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px">
-        ${r1Order.map(id => {
-          const p = pById[id] || {};
-          return \`<div class="r1-chip" draggable="true" data-id="\${id}"
-            ondragstart="r1DragStart(event,'\${id}')"
-            ondragover="r1DragOver(event)"
-            ondrop="r1Drop(event,'\${id}')">
-            <span style="font-size:12px;background:var(--navy);color:#fff;border-radius:4px;padding:2px 6px;font-weight:700">\${p.bib||'?'}</span>
-            <span style="font-weight:700;font-size:13px;text-transform:uppercase">\${p.name||'?'}</span>
-            <span style="font-size:11px;color:var(--gray)">\${p.ageCategory||''}</span>
-          </div>\`;
-        }).join('')}
-      </div>
-      <div style="margin-bottom:14px;color:var(--gray);font-size:13px" id="r1Preview"></div>
-      <div class="btn-row">
-        <button class="green" onclick="confirmR1Draw()">Confirm and draw Round 1</button>
-        <button onclick="setTab('rounds');render()">Cancel</button>
-      </div>
+// ── Round columns ─────────────────────────────────────────────────
+function showRoundColumns(tc, pById){
+  const hasDone = Object.keys(rounds).length > 0;
+  tc.innerHTML = `<div class="rounds-scroll">${[1,2,3,4,5,6].map(rn => colHtml(rn, pById)).join('')}</div>`;
+}
+
+function colHtml(rn, pById){
+  const rd = rounds[rn];
+  const prev = rounds[rn-1];
+  const canDraw = !rd && (rn===1 || (prev && prev.locked));
+  return `<div class="r-col">
+    <div class="r-hdr"><div class="rn">${LABELS[rn]}</div><div class="rs">${DESC[rn]}</div></div>
+    ${rd ? roundBody(rd, rn, pById)
+         : `<div class="r-empty">${canDraw
+             ? `<button class="green" onclick="drawRound(${rn})">${rn===1?'Arrange pairs':'Draw Round '+rn}</button>`
+             : `<span style="color:var(--line);font-size:12px">Lock Round ${rn-1} first</span>`}</div>`}
+  </div>`;
+}
+
+function roundBody(rd, rn, pById){
+  const allDone = rd.races.every(r => r.lanes.every(l => l.position));
+  const cards = rd.races.map(r => {
+    const rows = r.lanes.map(l => {
+      const p = pById[l.paddlerId]||{};
+      const buoyStr = l.buoys ? `+${l.buoys}b` : '—';
+      const timeInp = (rn<=2 && !rd.locked)
+        ? `<input type="number" placeholder="s" value="${l.timeMs||''}" class="sm l-time"
+            onchange="saveField('${rd.id}',${r.raceNumber},${l.lane},'timeMs',this.value)">`
+        : (l.timeMs ? `<span style="font-family:monospace;font-size:12px;color:var(--green)">${l.timeMs}s</span>` : '');
+      const posMax = r.lanes.length;
+      const posBtns = !rd.locked
+        ? `<span class="l-pos">${Array.from({length:posMax},(_,i)=>`<button class="pos-btn ${l.position===i+1?'on':''}"
+            onclick="saveField('${rd.id}',${r.raceNumber},${l.lane},'position',${i+1})">${i+1}</button>`).join('')}</span>`
+        : (l.position ? `<b style="color:var(--navy);font-size:13px">#${l.position}</b>` : '');
+      return `<div class="l-row">
+        <div class="l-bib">${p.bib||'?'}</div>
+        <span class="l-buoys">${buoyStr}</span>
+        <span class="l-name">${p.name||'?'}</span>
+        <span class="l-cat">${p.ageCategory||''}</span>
+        ${timeInp}
+        ${posBtns}
+      </div>`;
+    }).join('');
+    return `<div class="race-card">
+      <div class="race-num">Race ${r.raceNumber}${r.rematch?` <span class="rematch">2nd meeting</span>`:''}</div>
+      ${rows}
     </div>`;
-  updateR1Preview();
+  }).join('');
+  const footer = rd.locked
+    ? `<div class="locked-bar">✓ Locked · ${rd.races.length} races</div>`
+    : `<div class="lock-bar">
+        <button class="green sm" onclick="lockRound('${rd.id}',${rn})" ${allDone?'':'disabled'}>Lock Round ${rn}</button>
+        <span style="font-size:12px;color:var(--gray)">${allDone?'Ready to lock':'Enter all positions first'}</span>
+      </div>`;
+  return cards + footer;
 }
 
-function r1DragStart(e, id){ e.dataTransfer.setData('text/plain', id); }
-function r1DragOver(e){ e.preventDefault(); }
-function r1Drop(e, targetId){
-  e.preventDefault();
-  const dragId = e.dataTransfer.getData('text/plain');
-  if(dragId === targetId) return;
-  const from = r1Order.indexOf(dragId), to = r1Order.indexOf(targetId);
-  r1Order.splice(from, 1); r1Order.splice(to, 0, dragId);
-  showR1Arranger();
+async function drawRound(rn){
+  if(rn===1){ r1Order=paddlers.map(p=>p.id); tab='rounds'; render(); return; }
+  const rd = await api('/'+meetId+'/draw/'+rn, {method:'POST'});
+  if(rd.error){ alert(rd.error); return; }
+  rounds[rn] = rd;
+  render();
 }
 
-function updateR1Preview(){
-  const el = document.getElementById('r1Preview'); if(!el) return;
-  const pById = {}; paddlers.forEach(p => pById[p.id] = p);
-  const pairs = [];
-  for(let i=0; i<r1Order.length; i+=2){
-    if(i+2 === r1Order.length-1 && r1Order.length%2===1){
-      pairs.push([r1Order[i], r1Order[i+1], r1Order[i+2]]); break;
-    } else if(i+1 < r1Order.length){
-      pairs.push([r1Order[i], r1Order[i+1]]);
-    } else {
-      pairs.push([r1Order[i]]);
-    }
-  }
-  el.innerHTML = pairs.map((p,i) => \`Race \${i+1}: \${p.map(id=>(pById[id]||{}).name||'?').join(' v ')}\`).join(' &nbsp;·&nbsp; ');
-}
-
-async function confirmR1Draw(){
-  const r = await api('/'+meetId+'/draw/1', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({order: r1Order})});
-  if(r.error){ alert(r.error); return; }
-  rounds[1] = r;
-  await loadRounds();
-  setTab('rounds'); render();
-}
-
-async function loadRounds(){
-  const rds = await api('/'+meetId+'/rounds-list', method='GET').catch(()=>[]);
-  rounds = {};
-  (Array.isArray(rds)?rds:[]).forEach(rd => rounds[rd.roundNumber] = rd);
-}
-
-async function saveTime(roundId, raceNum, lane, val){
+async function saveField(roundId, raceNum, lane, field, val){
+  const body = {}; body[field] = val===''||val===null ? null : Number(val);
   await api('/'+meetId+'/rounds/'+roundId+'/race/'+raceNum+'/lane/'+lane,
-    {method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({timeMs: val?Number(val):null})});
+    {method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)});
+  // Refresh just this round
+  const rd = await api('/'+meetId+'/rounds/'+roundId+'-get');
+  if(rd && !rd.error){ rounds[rd.roundNumber]=rd; render(); }
 }
-async function savePos(roundId, raceNum, lane, pos){
-  await api('/'+meetId+'/rounds/'+roundId+'/race/'+raceNum+'/lane/'+lane,
-    {method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({position: pos})});
-  // refresh just this column
-  const rd = await api('/'+meetId+'/rounds/'+roundId+'-get').catch(()=>null);
-  if(!rd){ await load(); return; }
-  rounds[rd.roundNumber]=rd; render();
-}
-async function lockRound(roundId){
-  if(!await customConfirm('Lock this round? The next round\'s draw will become available.')) return;
+
+async function lockRound(roundId, rn){
+  if(!await customConfirm(`Lock Round ${rn}? ${rn<6?'Round '+(rn+1)+' draw will become available.':'This is the final round.'}`)) return;
   await api('/'+meetId+'/rounds/'+roundId+'/lock', {method:'POST'});
-  await load();
+  const rds = await api('/'+meetId+'/rounds-list');
+  rounds = {}; if(Array.isArray(rds)) rds.forEach(rd=>rounds[rd.roundNumber]=rd);
+  render();
 }
 
 // ── Standings ─────────────────────────────────────────────────────
 async function renderStandings(){
-  const el=document.getElementById('tabContent');
-  el.innerHTML='<div class="empty">Loading standings…</div>';
+  const tc = document.getElementById('tc');
+  tc.innerHTML = '<div class="empty">Loading…</div>';
   const st = await api('/'+meetId+'/standings');
-  if(!st.length){ el.innerHTML='<div class="empty">No results yet.</div>'; return; }
+  if(!st||!st.length){ tc.innerHTML='<div class="empty">No results yet — complete at least one round.</div>'; return; }
   const byCat={};
-  st.forEach(p=>{ (byCat[p.ageCategory]=byCat[p.ageCategory]||[]).push(p); });
-  const MEDAL={1:'🥇',2:'🥈',3:'🥉'};
-  el.innerHTML=Object.keys(byCat).sort().map(cat=>`
-    <div class="stand-cat">
-      <div class="stand-hdr">${cat}</div>
+  st.forEach(p => (byCat[p.ageCategory]=byCat[p.ageCategory]||[]).push(p));
+  const medal = n => n<=3 ? `<span class="medal ${n===1?'g':n===2?'s':'b'}">${n===1?'G':n===2?'S':'B'}</span>` : '';
+  tc.innerHTML = Object.keys(byCat).sort().map(cat => `
+    <div class="s-cat">
+      <div class="s-hdr">${cat}</div>
       <div class="table-scroll"><table class="review-table">
-        <tr><th>POS</th><th>NAME</th><th>CLUB</th><th>PATH</th><th>DET TIME</th><th>POINTS</th></tr>
+        <tr><th>POS</th><th>NAME</th><th>CLUB</th><th>PATH</th><th>DET. TIME</th><th>POINTS</th></tr>
         ${byCat[cat].map(p=>`<tr>
-          <td class="cpos">${p.catPlace<=3?'<span class="medal '+ (p.catPlace===1?'g':p.catPlace===2?'s':'b') +'">'+(p.catPlace===1?'G':p.catPlace===2?'S':'B')+'</span>':''} ${p.catPlace}</td>
+          <td class="cpos">${medal(p.catPlace)} ${p.catPlace}</td>
           <td class="pname">${p.name}</td>
           <td class="pmeta cclub">${p.clubCode||''}</td>
-          <td class="pmeta" style="font-family:monospace">${p.path||'—'}</td>
-          <td class="ctime">${p.timeUsed||'—'}s</td>
-          <td class="ctime">${p.points}</td>
+          <td class="pmeta" style="font-family:monospace;font-size:11px">${p.path||'—'}</td>
+          <td class="ctime">${p.timeUsed!=null?p.timeUsed+'s':'—'}</td>
+          <td class="ctime" style="font-weight:700">${p.points}</td>
         </tr>`).join('')}
       </table></div>
     </div>`).join('');
 }
 
-async function exportStandings(){
-  window.location.href='/api/export/trilogy-standings.xlsx?meet='+encodeURIComponent(meetId);
+function doExport(){
+  window.location.href = '/api/export/trilogy-standings.xlsx?meet='+encodeURIComponent(meetId);
 }
 
 load();
