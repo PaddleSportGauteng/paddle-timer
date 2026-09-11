@@ -35,6 +35,7 @@ const EMPTY_DB = {
 let db = null;
 
 function load() {
+  // Migrate: add Trilogy tables if missing from an older database file
   if (db) return db;
   try {
     const raw = fs.readFileSync(DATA_FILE, 'utf8');
@@ -43,6 +44,9 @@ function load() {
     db = JSON.parse(JSON.stringify(EMPTY_DB));
     save();
   }
+  if (!db.trilogyMeets)    db.trilogyMeets    = {};
+  if (!db.trilogyPaddlers) db.trilogyPaddlers = {};
+  if (!db.trilogyRounds)   db.trilogyRounds   = {};
   return db;
 }
 
