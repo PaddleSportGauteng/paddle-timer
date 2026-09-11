@@ -224,7 +224,9 @@ function pickVenue(id){
 
 function pickDisc(d) {
   selectedDisc = d;
-  ['sprint','marathon','river','trilogy'].forEach(x =>
+  function pickDisc(disc){
+    selectedDisc = disc;
+    ['sprint','marathon','river','trilogy'].forEach(x =>
     document.getElementById('disc-'+x).classList.toggle('active', x === d)
   );
 }
