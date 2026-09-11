@@ -275,3 +275,5 @@ router.patch('/club-codes', (req, res) => {
 });
 
 module.exports = router;
+module.exports.normalizeAgeCategory = normalizeAgeCategory;
+module.exports.normalizeGender = normalizeGender;

@@ -19,6 +19,11 @@ const EMPTY_DB = {
   entries: {},
   races: {},
   raceResults: {},
+  // Trilogy-specific tables
+  trilogyMeets: {},       // meetId → { id, name, venueId, lanes:2|3, date, paddlers, rounds, history }
+  trilogyPaddlers: {},    // paddlerId (shared with athletes) → { id, bib, ageCategory, sex, clubCode }
+  trilogyRounds: {},      // roundId → { meetId, roundNumber, races:[{lanes:[{paddlerId,buoys,position,timeMs}]}] }
+
   blindCrossings: {},
   lapPasses: {},
   weighIns: {},

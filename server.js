@@ -50,6 +50,7 @@ app.use('/api/results', require('./src/routes/results'));
 app.use('/api/export', require('./src/routes/export'));
 app.use('/api/export', require('./src/routes/export-draws'));
 app.use('/api/export', require('./src/routes/export-results'));
+app.use('/api/trilogy', require('./src/routes/trilogy'));
 
 app.get('/api/health', (req, res) => res.json({ ok: true }));
 

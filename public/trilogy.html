@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Trilogy — PaddleSport Gauteng</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  .meet-hdr{background:var(--navy);color:#fff;border-radius:10px;padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+  .meet-hdr .mn{font-size:20px;font-weight:800;}
+  .meet-hdr .ms{font-size:13px;opacity:.75;}
+  .tabs{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;}
+  .tab{padding:9px 18px;border-radius:8px;border:2px solid var(--line);background:#fff;font-weight:700;font-size:14px;cursor:pointer;}
+  .tab.active{background:var(--navy);color:#fff;border-color:var(--navy);}
+  /* Roster */
+  .roster-add{background:#fff;border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:14px;}
+  .roster-add h3{margin:0 0 10px;font-size:14px;color:var(--navy);}
+  .roster-form{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;}
+  .roster-form .fi{display:flex;flex-direction:column;gap:3px;font-size:11px;color:var(--gray);font-weight:600;}
+  /* Round columns */
+  .rounds-wrap{display:flex;gap:10px;overflow-x:auto;padding-bottom:8px;}
+  .round-col{min-width:280px;flex-shrink:0;}
+  .round-hdr{background:var(--navy);color:#fff;border-radius:8px 8px 0 0;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;}
+  .round-hdr .rn{font-weight:800;font-size:14px;}
+  .round-hdr .rs{font-size:11px;opacity:.75;}
+  .race-card{background:#fff;border:1px solid var(--line);border-bottom:none;padding:10px 12px;}
+  .race-card:last-child{border-bottom:1px solid var(--line);border-radius:0 0 8px 8px;}
+  .race-num{font-size:11px;font-weight:700;color:var(--gray);margin-bottom:6px;letter-spacing:.05em;}
+  .lane-row{display:flex;align-items:center;gap:8px;margin:4px 0;}
+  .lane-row .bib{width:26px;height:26px;border-radius:5px;background:var(--navy);color:#fff;font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .lane-row .buoys{font-size:11px;color:var(--orange);font-weight:700;min-width:28px;}
+  .lane-row .nm{font-weight:700;font-size:12px;flex:1;text-transform:uppercase;}
+  .lane-row .cat{font-size:11px;color:var(--gray);}
+  .lane-row input[type=number]{width:70px;padding:4px 6px;font-size:12px;border-radius:5px;border:1px solid var(--line);}
+  .pos-btn{width:28px;height:28px;border-radius:5px;border:1px solid var(--line);background:#fff;font-weight:700;font-size:13px;cursor:pointer;line-height:1;}
+  .pos-btn.active{background:var(--green);color:#fff;border-color:var(--green);}
+  .rematch-badge{font-size:10px;color:var(--orange);font-weight:700;margin-left:4px;}
+  .round-empty{text-align:center;color:var(--gray);padding:20px;font-size:13px;}
+  .lock-row{padding:8px 12px;border:1px solid var(--line);border-top:none;border-radius:0 0 8px 8px;background:#FAFAFA;}
+  /* Standings */
+  .stand-cat{margin-bottom:18px;}
+  .stand-hdr{background:var(--navy);color:#fff;border-radius:6px;padding:7px 12px;font-weight:700;font-size:13px;margin-bottom:4px;}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <a href="/" class="title">PaddleSport Gauteng</a>
+  <nav>
+    <a href="/admin.html">Race Office</a>
+    <a href="/trilogy.html">Trilogy</a>
+    <a href="/live.html">Live</a>
+  </nav>
+</header>
+<main id="app"><div class="empty">Loading…</div></main>
+<script src="common.js"></script>
+<script>
+const params  = new URLSearchParams(location.search);
+let meetId    = params.get('meet');
+let meetData  = null;
+let paddlers  = [];
+let rounds    = {};          // roundNumber → round object
+let tab       = 'roster';
+
+const ROUND_LABELS = ['','Round 1','Round 2','Round 3','Round 4','Round 5','Round 6'];
+const ROUND_DESC   = ['','Age groups · no handicap · timed',
+  'Full field · seeded on R1 · timed',
+  'Winners v winners · 2nds+3rds together',
+  'Winners v winners · 2nds+3rds together',
+  'Winners v winners · 2nds+3rds together',
+  'FINAL · Winners v winners · 2nds+3rds together'];
+
+// ── API ───────────────────────────────────────────────────────────
+const api = (p, opts) => fetch('/api/trilogy'+p, opts).then(r => r.json());
+
+async function load(){
+  if(!meetId){ document.getElementById('app').innerHTML='<div class="empty">No meet — create one in Race Office.</div>'; return; }
+  [meetData, paddlers] = await Promise.all([api('/'+meetId), api('/'+meetId+'/paddlers')]);
+  const rds = await fetch('/api/trilogy').then(r=>r.json());
+  rounds = {};
+  // get all rounds for this meet
+  (await fetch('/api/trilogy/'+meetId+'/rounds-list').then(r=>r.ok?r.json():[]).catch(()=>[])).forEach(rd => { rounds[rd.roundNumber] = rd; });
+  render();
+}
+
+function render(){
+  const app = document.getElementById('app');
+  app.innerHTML = `
+    <div class="meet-hdr">
+      <div><div class="mn">${meetData.name}</div><div class="ms">Trilogy · ${meetData.lanes || 2} lanes · 100m</div></div>
+      <div class="btn-row">
+        <button class="navy" onclick="importFile()">Import entries</button>
+        <button onclick="exportStandings()">Export standings</button>
+      </div>
+    </div>
+    <div class="tabs">
+      ${['roster','rounds','standings'].map(t=>`<div class="tab ${t===tab?'active':''}" onclick="setTab('${t}')">${t.charAt(0).toUpperCase()+t.slice(1)}</div>`).join('')}
+    </div>
+    <div id="tabContent"></div>`;
+  if(tab==='roster')   renderRoster();
+  else if(tab==='rounds')  renderRounds();
+  else renderStandings();
+}
+
+function setTab(t){ tab=t; render(); }
+
+// ── Roster ────────────────────────────────────────────────────────
+function renderRoster(){
+  const el=document.getElementById('tabContent');
+  const AGE=['U8','U10','U12','U14','U16','U18','U23','OPEN','SENIOR'];
+  el.innerHTML=`<div class="roster-add">
+    <h3>Add paddler</h3>
+    <div class="roster-form">
+      <div class="fi">Name<input type="text" id="rName" placeholder="First Last" style="width:160px"></div>
+      <div class="fi">Age<select id="rAge">${AGE.map(a=>`<option>${a}</option>`).join('')}</select></div>
+      <div class="fi">Club<input type="text" id="rClub" placeholder="DABS" style="width:70px"></div>
+      <div class="fi">PSA #<input type="text" id="rPsa" placeholder="optional" style="width:80px"></div>
+      <button class="green" onclick="addPaddler()">Add</button>
+    </div>
+  </div>
+  <div class="table-scroll"><table class="review-table">
+    <tr><th>BIB</th><th>NAME</th><th>AGE</th><th>CLUB</th><th>PSA #</th><th></th></tr>
+    ${paddlers.map(p=>`<tr>
+      <td class="cpos">${p.bib}</td>
+      <td class="pname">${p.name}</td>
+      <td class="pmeta cage">${p.ageCategory||''}</td>
+      <td class="pmeta cclub">${p.clubCode||''}</td>
+      <td class="pmeta cpsa">${p.psaId||''}</td>
+      <td class="cact"><button class="sm red" onclick="removePaddler('${p.id}')">Remove</button></td>
+    </tr>`).join('')}
+  </table></div>
+  <p style="font-size:12px;color:var(--gray);margin-top:8px">${paddlers.length} paddlers · Bibs auto-assigned in registration order</p>`;
+}
+
+async function addPaddler(){
+  const name = document.getElementById('rName').value.trim();
+  if(!name){ alert('Enter a name.'); return; }
+  const parts = name.split(/\s+/);
+  await api('/'+meetId+'/paddlers', {method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({firstName:parts[0], surname:parts.slice(1).join(' '), ageCategory:document.getElementById('rAge').value,
+      clubCode:document.getElementById('rClub').value.trim(), psaId:document.getElementById('rPsa').value.trim()||null})});
+  paddlers = await api('/'+meetId+'/paddlers');
+  renderRoster();
+}
+
+async function removePaddler(pid){
+  if(!await customConfirm('Remove this paddler from the roster?')) return;
+  await api('/'+meetId+'/paddlers/'+pid, {method:'DELETE'});
+  paddlers = await api('/'+meetId+'/paddlers');
+  renderRoster();
+}
+
+async function importFile(){
+  const inp=document.createElement('input'); inp.type='file'; inp.accept='.xlsx';
+  inp.onchange=async()=>{
+    const fd=new FormData(); fd.append('file',inp.files[0]); fd.append('meetId',meetId);
+    const r=await fetch('/api/trilogy/'+meetId+'/import',{method:'POST',body:fd});
+    const d=await r.json();
+    if(!r.ok){alert(d.error);return;}
+    alert(`Imported ${d.added} paddler(s), ${d.skipped} skipped (already on roster).`);
+    paddlers = await api('/'+meetId+'/paddlers');
+    render();
+  };
+  inp.click();
+}
+
+// ── Rounds ────────────────────────────────────────────────────────
+function renderRounds(){
+  const el=document.getElementById('tabContent');
+  if(!paddlers.length){ el.innerHTML='<div class="empty">Add paddlers to the roster first.</div>'; return; }
+  const cols = [1,2,3,4,5,6].map(rn => {
+    const rd = rounds[rn];
+    const canDraw = !rd && (rn===1 || rounds[rn-1]);
+    const prevLocked = rn===1 || (rounds[rn-1] && rounds[rn-1].locked);
+    return `<div class="round-col">
+      <div class="round-hdr">
+        <span class="rn">${ROUND_LABELS[rn]}</span>
+        <span class="rs">${ROUND_DESC[rn]}</span>
+      </div>
+      ${rd ? roundBody(rd, rn) : `<div class="round-empty">
+        ${canDraw && prevLocked ? `<button class="green" onclick="drawRound(${rn})">Draw Round ${rn}</button>`
+          : rn===1 ? `<button class="green" onclick="drawRound(1)">Draw Round 1</button>`
+          : `<span style="color:var(--line)">Lock Round ${rn-1} first</span>`}
+      </div>`}
+    </div>`;
+  }).join('');
+  el.innerHTML=`<div class="rounds-wrap">${cols}</div>`;
+}
+
+function roundBody(rd, rn){
+  const pById={};
+  paddlers.forEach(p=>pById[p.id]=p);
+  const allDone = rd.races.every(r=>r.lanes.every(l=>l.position));
+  const cards = rd.races.map(r=>{
+    const rematch = r.rematch ? `<span class="rematch-badge">2nd meeting</span>` : '';
+    const rows = r.lanes.map(l=>{
+      const p=pById[l.paddlerId]||{};
+      const buoyStr = l.buoys ? `+${l.buoys}b` : 'scratch';
+      const timeInput = rd.timed && !rd.locked ? `<input type="number" placeholder="secs" value="${l.timeMs||''}"
+        onchange="saveTime('${rd.id}',${r.raceNumber},${l.lane},this.value)" style="width:64px">` :
+        l.timeMs ? `<span style="font-family:'SF Mono','Menlo','Consolas',monospace;font-size:12px;color:var(--green)">${l.timeMs}s</span>` : '';
+      const pos = [1,2,3].slice(0,r.lanes.length).map(pos=>
+        `<button class="pos-btn ${l.position===pos?'active':''}" onclick="savePos('${rd.id}',${r.raceNumber},${l.lane},${pos})">${pos}</button>`).join('');
+      return `<div class="lane-row">
+        <div class="bib">${p.bib||'?'}</div>
+        <span class="buoys">${buoyStr}</span>
+        <span class="nm">${p.name||'?'}</span>
+        <span class="cat">${p.ageCategory||''}</span>
+        ${timeInput}
+        ${!rd.locked ? `<span style="display:flex;gap:3px">${pos}</span>` : (l.position?`<b style="color:var(--navy)">#${l.position}</b>`:'')}
+      </div>`;
+    }).join('');
+    return `<div class="race-card"><div class="race-num">RACE ${r.raceNumber}${rematch}</div>${rows}</div>`;
+  }).join('');
+  const lockBtn = !rd.locked
+    ? `<div class="lock-row"><button class="green" onclick="lockRound('${rd.id}')" ${allDone?'':'disabled'}>Lock Round ${rn}</button>
+       <small style="color:var(--gray);margin-left:8px">${allDone?'':'Enter all positions first'}</small></div>`
+    : `<div class="lock-row" style="color:var(--green);font-size:12px;font-weight:700">✓ Locked</div>`;
+  return cards + lockBtn;
+}
+
+async function drawRound(rn){
+  const r = await api('/'+meetId+'/draw/'+rn, {method:'POST'});
+  if(r.error){ alert(r.error); return; }
+  rounds[rn] = r;
+  render();
+}
+
+async function saveTime(roundId, raceNum, lane, val){
+  await api('/'+meetId+'/rounds/'+roundId+'/race/'+raceNum+'/lane/'+lane,
+    {method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({timeMs: val?Number(val):null})});
+}
+async function savePos(roundId, raceNum, lane, pos){
+  await api('/'+meetId+'/rounds/'+roundId+'/race/'+raceNum+'/lane/'+lane,
+    {method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({position: pos})});
+  // refresh just this column
+  const rd = await api('/'+meetId+'/rounds/'+roundId+'-get').catch(()=>null);
+  if(!rd){ await load(); return; }
+  rounds[rd.roundNumber]=rd; render();
+}
+async function lockRound(roundId){
+  if(!await customConfirm('Lock this round? The next round\'s draw will become available.')) return;
+  await api('/'+meetId+'/rounds/'+roundId+'/lock', {method:'POST'});
+  await load();
+}
+
+// ── Standings ─────────────────────────────────────────────────────
+async function renderStandings(){
+  const el=document.getElementById('tabContent');
+  el.innerHTML='<div class="empty">Loading standings…</div>';
+  const st = await api('/'+meetId+'/standings');
+  if(!st.length){ el.innerHTML='<div class="empty">No results yet.</div>'; return; }
+  const byCat={};
+  st.forEach(p=>{ (byCat[p.ageCategory]=byCat[p.ageCategory]||[]).push(p); });
+  const MEDAL={1:'🥇',2:'🥈',3:'🥉'};
+  el.innerHTML=Object.keys(byCat).sort().map(cat=>`
+    <div class="stand-cat">
+      <div class="stand-hdr">${cat}</div>
+      <div class="table-scroll"><table class="review-table">
+        <tr><th>POS</th><th>NAME</th><th>CLUB</th><th>PATH</th><th>DET TIME</th><th>POINTS</th></tr>
+        ${byCat[cat].map(p=>`<tr>
+          <td class="cpos">${p.catPlace<=3?'<span class="medal '+ (p.catPlace===1?'g':p.catPlace===2?'s':'b') +'">'+(p.catPlace===1?'G':p.catPlace===2?'S':'B')+'</span>':''} ${p.catPlace}</td>
+          <td class="pname">${p.name}</td>
+          <td class="pmeta cclub">${p.clubCode||''}</td>
+          <td class="pmeta" style="font-family:monospace">${p.path||'—'}</td>
+          <td class="ctime">${p.timeUsed||'—'}s</td>
+          <td class="ctime">${p.points}</td>
+        </tr>`).join('')}
+      </table></div>
+    </div>`).join('');
+}
+
+async function exportStandings(){
+  window.location.href='/api/export/trilogy-standings.xlsx?meet='+encodeURIComponent(meetId);
+}
+
+load();
+</script>
+</body>
+</html>
