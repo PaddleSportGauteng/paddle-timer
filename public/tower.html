@@ -239,6 +239,7 @@ function laneCardHtml(race){
       <span class="race-title" style="margin:0">${raceLabel(race)}</span>
       <span class="race-sub" style="margin:0">${raceSub(race)}</span>
     </div>
+      ${(race.checkIn && race.checkIn.note) ? `<div style='font-size:12px;color:var(--orange);font-weight:600;background:#FFF3E0;border-radius:6px;padding:5px 10px;margin-top:4px'>📋 Note: ${race.checkIn.note}</div>` : ''}
     <div class="ctrl-row btn-row equal">
       <div class="clock-block ${stopped?'stopped':''}" id="clock-${race.id}">00:00.00</div>
       ${!stopped?`<button class="orange tap-btn" onclick="tap('${race.id}')">TAP (or Space)</button>`:''}
@@ -309,6 +310,7 @@ function massCardHtml(race){
       <span class="race-title" style="margin:0">${raceLabel(race)}</span>
       <span class="race-sub" style="margin:0">${raceSub(race)}</span>
     </div>
+      ${(race.checkIn && race.checkIn.note) ? `<div style='font-size:12px;color:var(--orange);font-weight:600;background:#FFF3E0;border-radius:6px;padding:5px 10px;margin-top:4px'>📋 Note: ${race.checkIn.note}</div>` : ''}
     <form class="bib-form" onsubmit="return submitBib(event,'${race.id}')">
       <input type="text" inputmode="numeric" placeholder="Slide #" autocomplete="off">
       <button class="green" type="submit">Log pass</button>
