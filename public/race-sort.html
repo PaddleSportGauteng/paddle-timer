@@ -19,8 +19,8 @@
   <div id="meetBar"></div>
 </header>
 <main>
-  <h1>Race Sort</h1>
   <div class="flag" id="meetWarning" style="display:none">No meet selected — pick or create one at the top-right first.</div>
+  <div id="meetCard"></div>
   <div id="progressStrip"></div>
   <div class="card">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
@@ -309,6 +309,7 @@ async function markSortChecked(){
 
 async function init(){
   await initMeetBar('meetBar', {allowCreate:false});
+  renderMeetCard('meetCard', {nextLabel:'Go to Draw',nextHref:'/draw.html'});
   renderProgressStrip('progressStrip');
   if(!getMeetId()){ document.getElementById('meetWarning').style.display = 'block'; return; }
   await loadMeetLanes();

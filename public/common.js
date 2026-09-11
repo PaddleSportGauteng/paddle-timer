@@ -288,3 +288,36 @@ function applyRaceDayMode(){
     applyRaceDayMode();
   });
 })();
+
+// ── Per-page meet info card ───────────────────────────────────────
+// Renders a consistent card at the top of each setup page showing the
+// meet name, meta, and a relevant next-step button. Call after
+// initMeetBar resolves and the meet is known.
+async function renderMeetCard(containerId, opts = {}) {
+  const el = document.getElementById(containerId);
+  const meetId = getMeetId();
+  if (!el || !meetId) return;
+  try {
+    const meet = await fetch(`/api/meets/${encodeURIComponent(meetId)}`).then(r => r.json());
+    if (!meet || meet.error) return;
+    const meta = `${meet.raceType || 'Sprint'} · ${meet.lanes || 9} lanes · created ${new Date(meet.createdAt).toLocaleDateString('en-GB')}`;
+    const nextBtn = opts.nextLabel && opts.nextHref
+      ? `<a href="${opts.nextHref}"><button class="primary">${opts.nextLabel}</button></a>`
+      : '';
+    const extraBtns = (opts.extraButtons || []).map(b =>
+      `<button class="${b.cls||''}" onclick="${b.onclick}">${b.label}</button>`).join('');
+    el.innerHTML = `<div class="card" style="margin-bottom:16px">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap">
+        <div>
+          <div style="font-size:22px;font-weight:800;color:var(--navy);margin-bottom:4px">${meet.name}</div>
+          <div style="font-size:13px;color:var(--gray)">${meta}</div>
+        </div>
+        <div class="btn-row">
+          ${nextBtn}
+          ${extraBtns}
+          <a href="/admin.html"><button>Race Office</button></a>
+        </div>
+      </div>
+    </div>`;
+  } catch (e) {}
+}

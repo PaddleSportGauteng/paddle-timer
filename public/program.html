@@ -42,8 +42,8 @@
   <div id="meetBar"></div>
 </header>
 <main>
-  <h1>Race Program</h1>
   <div class="flag" id="meetWarning" style="display:none">No meet selected — pick or create one at the top-right first.</div>
+  <div id="meetCard"></div>
   <div id="progressStrip"></div>
   <div class="card">
     <h2 style="margin-top:0">Start times</h2>
@@ -819,6 +819,7 @@ async function mergeSelected(){
 
 async function init(){
   await initMeetBar('meetBar', {allowCreate:false});
+  renderMeetCard('meetCard', {});
   renderProgressStrip('progressStrip');
   const meetId = getMeetId();
   if(!meetId){ document.getElementById('meetWarning').style.display = 'block'; return; }

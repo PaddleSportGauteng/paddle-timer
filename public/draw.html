@@ -16,7 +16,7 @@
   <div id="meetBar"></div>
 </header>
 <main>
-  <h1>Draw</h1>
+  <div id="meetCard"></div>
   <div id="progressStrip"></div>
   <div class="flag" id="meetWarning" style="display:none">No meet selected — pick or create one at the top-right first.</div>
   <div id="dayBar" style="margin-bottom:12px"></div>
@@ -281,6 +281,7 @@ async function editLanes(meetId, currentLanes){
 
 async function init(){
   await initMeetBar('meetBar', {allowCreate:false});
+  renderMeetCard('meetCard', {nextLabel:'Go to Race Program',nextHref:'/program.html'});
   renderProgressStrip('progressStrip');
   if(!getMeetId()){ document.getElementById('meetWarning').style.display = 'block'; return; }
   selectedDay = await initDayBar('dayBar');
