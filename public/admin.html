@@ -15,8 +15,6 @@
 
   /* Discipline cards */
   .discipline-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:18px; }
-  .disc-card.soon { opacity:.55; }
-  .disc-card.soon h3::after { content:' · soon'; font-size:11px; color:var(--gray); font-weight:400; }
   .disc-card { border:2px solid var(--line); border-radius:10px; padding:16px 12px; cursor:pointer; text-align:center; transition:border-color 0.15s, background 0.15s; }
   .disc-card.active { border-color:var(--orange); background:#FFF3E0; }
   .disc-card h3 { margin:0 0 4px; font-size:16px; color:var(--navy); }
@@ -122,7 +120,7 @@
         <h3>River</h3>
         <p>Batch starts · Wild water</p>
       </div>
-      <div class="disc-card soon" id="disc-trilogy" onclick="pickDisc('trilogy')">
+      <div class="disc-card" id="disc-trilogy" onclick="pickDisc('trilogy')">
         <h3>Trilogy</h3>
         <p>Series · Points across events</p>
       </div>
