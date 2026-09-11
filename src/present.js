@@ -61,12 +61,18 @@ function enrichRace(database, race) {
   let weighInStatus = null;
   if (race.status === 'finished') {
     const allEntryIds = Object.values(race.lanes || {}).filter(Boolean);
+    // Only boats that crossed the finish line can be weighed —
+    // DNS and DNF boats are not available post-race (ICF 7.3.5.c).
+    const weighableIds = allEntryIds.filter(id => {
+      const r = results[id];
+      return !r || r.status === 'OK' || r.status === 'DQ';
+    });
     const hasPerRace = database.raceWeighIns && allEntryIds.some(id => database.raceWeighIns[`${race.id}:${id}`]);
     const weighedInThisRace = allEntryIds.filter(entryId => {
       if (hasPerRace) return !!(database.raceWeighIns && database.raceWeighIns[`${race.id}:${entryId}`]);
       return !!(database.weighIns && database.weighIns[entryId]);
     });
-    const required = Math.min(3, allEntryIds.length);
+    const required = Math.min(3, weighableIds.length);
     const weighedCount = weighedInThisRace.length;
     const complete = weighedCount >= required;
     weighInStatus = {
