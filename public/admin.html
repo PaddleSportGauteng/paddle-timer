@@ -220,9 +220,10 @@ function pickVenue(id){
   });
 })();
 
-function pickDisc(d) {
-  selectedDisc = d;
-  function pickDisc(disc){
+// Trigger initial disc setup after venue buttons are built
+document.addEventListener("DOMContentLoaded", () => pickDisc(selectedDisc));
+
+function pickDisc(disc){
     selectedDisc = disc;
     ['sprint','marathon','river','trilogy'].forEach(x =>
     document.getElementById('disc-'+x).classList.toggle('active', x === d)
