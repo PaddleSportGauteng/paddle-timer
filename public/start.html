@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Starter — PaddleSport Gauteng</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  .day-tabs{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;}
+  .day-tab{padding:6px 14px;border-radius:20px;border:2px solid var(--line);background:#fff;font-weight:600;font-size:13px;cursor:pointer;}
+  .day-tab.active{background:var(--navy);color:#fff;border-color:var(--navy);}
+
+  .on-water{background:#fff;border:3px solid var(--red);border-radius:14px;padding:16px;margin-bottom:18px;box-shadow:0 4px 16px rgba(0,0,0,.08);}
+  .on-water .flagline{display:inline-block;background:#FBE7E7;color:var(--red);font-weight:700;font-size:13px;padding:5px 12px;border-radius:8px;margin-bottom:8px;}
+  .on-water .rt{font-size:18px;font-weight:700;color:var(--navy);margin-bottom:10px;}
+
+  .next-card{background:#fff;border:3px solid var(--green);border-radius:14px;padding:16px;margin-bottom:18px;}
+  .next-card .lbl{display:inline-block;background:#E4F5EC;color:var(--green);font-weight:700;font-size:13px;padding:5px 12px;border-radius:8px;margin-bottom:8px;}
+  .next-card .rt{font-size:18px;font-weight:700;color:var(--navy);}
+  .next-card .rs{font-size:13px;color:var(--gray);margin-bottom:12px;}
+
+  .ci-row{display:flex;align-items:center;gap:10px;padding:9px 8px;border-bottom:1px dashed var(--line);flex-wrap:wrap;}
+  .ci-row.present{background:#F0FAF4;}
+  .ci-row.absent{background:#FBE7E7;opacity:.75;}
+  .ci-lane{font-weight:700;color:var(--gray);width:46px;font-family:'SF Mono','Menlo','Consolas',monospace;}
+  .ci-name{flex:1;min-width:150px;font-family:Arial,sans-serif;font-weight:700;font-size:13px;text-transform:uppercase;}
+  .ci-meta{font-size:12px;color:var(--gray);font-family:Arial,sans-serif;text-transform:uppercase;}
+  .ci-warn{background:#FFF3E0;color:var(--orange);font-weight:700;font-size:11px;padding:3px 8px;border-radius:5px;white-space:nowrap;}
+
+  .upcoming{background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;}
+  .upcoming .ut{font-weight:700;font-size:14px;color:var(--navy);}
+  .upcoming .us{font-size:12px;color:var(--gray);}
+  .section-label{font-size:12px;font-weight:700;color:var(--gray);letter-spacing:.06em;margin:18px 0 8px;}
+  .empty{color:var(--gray);text-align:center;padding:30px;}
+  .start-btn{font-size:17px;padding:16px;width:100%;border-radius:10px;}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <a href="/" class="title">PaddleSport Gauteng</a>
+  <nav>
+    <a href="/admin.html">Race Office</a><a href="/race-sort.html">Race Sort</a><a href="/draw.html">Draw</a><a href="/program.html">Race Program</a><a href="/start.html">Starter</a><a href="/tower.html">Tower</a><a href="/weigh.html">Weigh</a><a href="/results.html">Results</a><a href="/live.html">Live</a>
+  </nav>
+  <div id="meetBar"></div>
+</header>
+
+<main>
+  <div class="flag" id="meetWarning" style="display:none">No meet selected — pick one at the top right first.</div>
+  <div class="day-tabs" id="dayTabs"></div>
+  <div id="onWater"></div>
+  <div id="nextRace"></div>
+  <div id="upcoming"></div>
+</main>
+
+<script src="common.js"></script>
+<script>
+let selectedDay = 1;
+let races = [];
+let expandedId = null;
+let lastHash = '';
+
+function phaseLabel(r){
+  const m={heat:`Heat ${r.heatNumber}`,semi:`Semi ${r.heatNumber}`,final:'Final A',finalB:'Final B',finalC:'Final C'};
+  return m[r.phase]||r.phase;
+}
+function raceTitle(r){ return `R${r.raceNumber} · ${r.combinedLabel||(r.event?r.event.label:'')} — ${phaseLabel(r)}`; }
+const gl = g => g ? (g.toLowerCase().startsWith('f')?'F':g.toLowerCase().startsWith('m')?'M':g) : '';
+
+function lanesOf(r){
+  return Object.entries(r.laneEntries||{}).filter(([,i]) => i && !i.scratched).sort((a,b)=>Number(a[0])-Number(b[0]));
+}
+
+function checkInRows(r){
+  const st = (r.checkIn && r.checkIn.lanes) || {};
+  const warn = r.falseStartWarnings || {};
+  return lanesOf(r).map(([lane, info]) => {
+    const s = st[lane] || 'unknown';
+    const w = warn[lane] || 0;
+    return `<div class="ci-row ${s}">
+      <span class="ci-lane">${r.isMassStart?'S':'L'}${lane}</span>
+      <span class="ci-name">${(info.names||[]).join(' / ')}</span>
+      <span class="ci-meta">${[info.ageCategory, info.clubCode].filter(Boolean).join(' · ')}</span>
+      ${w ? `<span class="ci-warn">${w} false start warning${w>1?'s':''}</span>` : ''}
+      <span class="btn-row">
+        <button class="sm ${s==='present'?'green':''}" onclick="setState('${r.id}',${lane},'${s==='present'?'unknown':'present'}')">Here</button>
+        <button class="sm ${s==='absent'?'red':''}" onclick="setState('${r.id}',${lane},'${s==='absent'?'unknown':'absent'}')">Not here</button>
+      </span>
+    </div>`;
+  }).join('');
+}
+
+function counts(r){
+  const st = (r.checkIn && r.checkIn.lanes) || {};
+  const all = lanesOf(r);
+  let present=0, absent=0;
+  all.forEach(([lane]) => { if(st[lane]==='present') present++; else if(st[lane]==='absent') absent++; });
+  return { present, absent, total: all.length, unknown: all.length-present-absent };
+}
+
+function render(){
+  const day = races.filter(r => (r.day||1) === selectedDay);
+  const running = day.filter(r => r.status === 'running');
+  const pending = day.filter(r => r.status === 'pending').sort((a,b)=>a.raceNumber-b.raceNumber);
+
+  // Anything on the water — recall lives here
+  document.getElementById('onWater').innerHTML = running.map(r => `
+    <div class="on-water">
+      <span class="flagline">ON THE WATER — started</span>
+      <div class="rt">${raceTitle(r)}</div>
+      <div class="btn-row">
+        <button class="red" onclick="openRecall('${r.id}')">Recall / false start</button>
+      </div>
+      <p style="font-size:12px;color:var(--gray);margin:8px 0 0">Stays here until the Tower locks it. Timing is the Tower's from now on.</p>
+    </div>`).join('');
+
+  // Next race, expanded with check in
+  const el = document.getElementById('nextRace');
+  if(!pending.length){
+    el.innerHTML = running.length ? '' : '<div class="empty">No races waiting. Finalise the programme in Race Program if this looks wrong.</div>';
+    document.getElementById('upcoming').innerHTML = '';
+    return;
+  }
+  const next = pending.find(r => r.id === expandedId) || pending[0];
+  const c = counts(next);
+  el.innerHTML = `<div class="next-card">
+    <span class="lbl">NEXT ON THE START LINE</span>
+    <div class="rt">${raceTitle(next)}</div>
+    <div class="rs">${next.scheduledLabel ? 'Scheduled '+next.scheduledLabel : ''}</div>
+    ${checkInRows(next)}
+    <div style="margin:12px 0 10px">
+      <input type="text" id="noteBox" placeholder="Note — e.g. lane 2 arrived late, allowed to start"
+        value="${(next.checkIn && next.checkIn.note || '').replace(/"/g,'&quot;')}"
+        style="width:100%" onchange="saveNote('${next.id}', this.value)">
+    </div>
+    <button class="green start-btn" onclick="startRace('${next.id}')">
+      Start — ${c.present} here${c.absent?`, ${c.absent} not here`:''}${c.unknown?`, ${c.unknown} unchecked`:''}
+    </button>
+  </div>`;
+
+  const rest = pending.filter(r => r.id !== next.id).slice(0, 6);
+  document.getElementById('upcoming').innerHTML = rest.length
+    ? `<div class="section-label">AFTER THAT</div>` + rest.map(r => {
+        const rc = counts(r);
+        return `<div class="upcoming">
+          <div><div class="ut">${raceTitle(r)}</div><div class="us">${r.scheduledLabel||''}${rc.present?` · ${rc.present} checked in`:''}</div></div>
+          <button class="sm" onclick="expandedId='${r.id}';render()">Check in</button>
+        </div>`;
+      }).join('')
+    : '';
+}
+
+// ── Actions ───────────────────────────────────────────────────────
+async function setState(raceId, lane, state){
+  await fetch(`/api/races/${raceId}/check-in`, {method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({lane, state: state==='unknown' ? null : state})});
+  lastHash=''; await refresh();
+}
+async function saveNote(raceId, note){
+  await fetch(`/api/races/${raceId}/check-in`, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({note})});
+  lastHash=''; await refresh();
+}
+async function startRace(raceId){
+  const r = races.find(x => x.id === raceId);
+  const c = counts(r);
+  if(c.unknown && !(await customConfirm(`${c.unknown} lane(s) not checked in. Start anyway?\n\nUnchecked lanes are left alone — they can still be given a time or marked DNS at the finish.`))) return;
+  const res = await fetch(`/api/races/${raceId}/start`, {method:'POST'});
+  if(!res.ok){ const d=await res.json(); alert(d.error); return; }
+  expandedId = null; lastHash=''; await refresh();
+}
+
+async function openRecall(raceId){
+  const r = races.find(x => x.id === raceId); if(!r) return;
+  const opts = lanesOf(r).map(([lane, info]) => {
+    const w = (r.falseStartWarnings||{})[lane] || 0;
+    return `<button class="red" style="width:100%;text-align:left;margin-bottom:6px" onclick="doRecall('${raceId}','false-start',${lane})">
+      False start — L${lane} ${(info.names||[])[0]||''} ${w?` (already has ${w} warning — this DSQs them)`:''}</button>`;
+  }).join('');
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(11,37,64,.55);display:flex;align-items:center;justify-content:center;z-index:200;padding:16px';
+  overlay.innerHTML = `<div style="background:#fff;border-radius:12px;padding:20px;max-width:460px;width:100%">
+    <h2 style="margin:0 0 4px">Recall the race</h2>
+    <p style="font-size:12px;color:var(--gray);margin:0 0 14px">The clock resets and the race goes back to the start line either way. A false start warns that boat (ICF 10.2.10); a second warning disqualifies it (ICF 10.2.11).</p>
+    ${opts}
+    <button style="width:100%;margin:10px 0 6px" onclick="doRecall('${raceId}','no-fault',null)">Recall, nobody at fault — equipment or other (ICF 10.2.12)</button>
+    <button style="width:100%" onclick="this.closest('div[style*=fixed]').remove()">Cancel</button>
+  </div>`;
+  document.body.appendChild(overlay);
+}
+
+async function doRecall(raceId, reason, lane){
+  document.querySelectorAll('div[style*=fixed]').forEach(x => { if(x.style.zIndex==='200') x.remove(); });
+  const res = await fetch(`/api/races/${raceId}/recall`, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({reason, lane})});
+  const d = await res.json();
+  if(!res.ok){ alert(d.error); return; }
+  if(d.disqualified) alert(`Lane ${d.disqualified} disqualified — second false start (ICF 10.2.11). They must leave the start area.`);
+  expandedId = raceId; lastHash=''; await refresh();
+}
+
+// ── Data ──────────────────────────────────────────────────────────
+function buildDayTabs(){
+  const days=[...new Set(races.map(r=>r.day||1))].sort((a,b)=>a-b);
+  const el=document.getElementById('dayTabs');
+  if(days.length<=1){ el.innerHTML=''; return; }
+  el.innerHTML=days.map(d=>`<button class="day-tab ${d===selectedDay?'active':''}" onclick="selectedDay=${d};lastHash='';refresh()">Day ${d}</button>`).join('');
+}
+
+async function refresh(){
+  const meetId = getMeetId(); if(!meetId) return;
+  try{ races = await (await fetch(`/api/races/active?meetId=${encodeURIComponent(meetId)}`)).json(); }
+  catch(e){ return; }
+  const hash = JSON.stringify(races.map(r => [r.id, r.status, r.checkIn, r.falseStartWarnings, r.raceNumber])) + expandedId + selectedDay;
+  if(hash === lastHash) return;              // don't redraw under the marshal's finger
+  lastHash = hash;
+  buildDayTabs();
+  render();
+}
+
+async function init(){
+  await initMeetBar('meetBar', {allowCreate:false});
+  if(!getMeetId()){ document.getElementById('meetWarning').style.display='block'; return; }
+  await refresh();
+  setInterval(refresh, 2000);
+}
+init();
+</script>
+</body>
+</html>

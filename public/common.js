@@ -204,7 +204,7 @@ async function initMeetBar(containerId, opts){
     if(!nav) return;
     const links = Array.from(nav.querySelectorAll('a'));
     const setup = ['/admin.html','/race-sort.html','/draw.html','/program.html'];
-    const raceDay = ['/tower.html','/weigh.html','/results.html','/live.html'];
+    const raceDay = ['/start.html','/tower.html','/weigh.html','/results.html','/live.html'];
     const mk = (label, hrefs) => {
       const g = document.createElement('span');
       g.className = 'nav-group';

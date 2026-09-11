@@ -27,6 +27,20 @@
 - [ ] Export → Planning sheet PDF, Programme PDF, Draws Excel — open all three
 - [ ] Finalise to Tower
 
+## Starter page (phone at the start line)
+- [ ] Open /start.html, race day mode ON
+- [ ] Next race shows every lane with Here / Not here
+- [ ] Mark one boat "Not here", leave one unchecked, rest "Here"
+- [ ] Add a note ("lane 2 late, allowed to start")
+- [ ] Start button shows the counts; press it
+- [ ] Confirm on Tower: the "Not here" lane is already DNS, the unchecked one is untouched
+- [ ] FALSE START drill: Recall → pick the offending lane → clock resets, race back on the start line, warning shows
+- [ ] Recall the SAME lane again → system auto-DSQs it (ICF 10.2.11) and says so
+- [ ] Try to give that DSQ'd lane a time on the Tower → it should refuse
+- [ ] NO-FAULT drill: Recall → "nobody at fault" → no warning given to anyone
+- [ ] Kill the starter phone's signal, start the same race from the Tower instead (fallback)
+- [ ] Both press Start at once → no error, first press wins
+
 ## Tower (tablet person drives this)
 - [ ] Race day toggle ON — setup nav collapses
 - [ ] Start race 1, tap/space for 3–4 boats, Stop

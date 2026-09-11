@@ -80,15 +80,112 @@ router.get('/:id', (req, res) => {
 // Supports several races running at once (e.g. next 1000m start fires
 // before the current one finishes) — each race has its own independent
 // start timestamp.
+// Race check in, done at the start line (Starter page) or by the Tower
+// from a radio call. Three states per lane: 'present', 'absent', or absent
+// from the object entirely = unknown. Only an explicit 'absent' turns into
+// a DNS at start — never assume a lane is empty just because nobody
+// ticked it, since the Tower may be starting as a fallback with no check
+// in done at all.
+router.post('/:id/check-in', (req, res) => {
+  const database = db.load();
+  const race = database.races[req.params.id];
+  if (!race) return res.status(404).json({ error: 'Race not found' });
+  race.checkIn = race.checkIn || { lanes: {}, note: '' };
+  if (req.body.lane !== undefined) {
+    const lane = String(req.body.lane);
+    const state = req.body.state;
+    if (state === 'present' || state === 'absent') race.checkIn.lanes[lane] = state;
+    else delete race.checkIn.lanes[lane]; // back to unknown
+  }
+  if (req.body.note !== undefined) race.checkIn.note = String(req.body.note || '').slice(0, 300);
+  race.checkIn.updatedAt = Date.now();
+  db.save();
+  res.json(enrichRace(database, race));
+});
+
 router.post('/:id/start', (req, res) => {
   const database = db.load();
   const race = database.races[req.params.id];
   if (!race) return res.status(404).json({ error: 'Race not found' });
-  if (race.status === 'running') return res.status(400).json({ error: 'Already running' });
+  if (race.status === 'finished') return res.status(400).json({ error: 'Race is already finished.' });
+  // Idempotent: if the Starter and the Tower both press Start, the first
+  // one wins and the second gets the running race back rather than an error.
+  if (race.status === 'running') return res.json(enrichRace(database, race));
+
   race.status = 'running';
   race.startTimeMs = Date.now();
+  race.stopTimeMs = null;
+
+  // Apply check in: anyone explicitly marked absent is DNS (ICF 10.2.14/15).
+  const marked = (race.checkIn && race.checkIn.lanes) || {};
+  database.raceResults[race.id] = database.raceResults[race.id] || {};
+  Object.entries(marked).forEach(([lane, state]) => {
+    if (state !== 'absent') return;
+    const entryId = race.lanes[lane];
+    if (!entryId) return;
+    database.raceResults[race.id][entryId] = {
+      finishTimeMs: null, position: 0, status: 'DNS',
+      dqReason: 'Not at the start (ICF 10.2.14)', crossedAt: Date.now(),
+    };
+  });
+
   db.save();
   res.json(enrichRace(database, race));
+});
+
+// Recall a started race (ICF 10.2.9-10.2.13). Two kinds:
+//   reason 'false-start' + lane  → that boat gets a warning (10.2.10);
+//                                  its SECOND warning is an automatic DSQ
+//                                  from this race (10.2.11).
+//   reason 'no-fault'            → equipment malfunction or other
+//                                  unforeseen circumstance, nobody is
+//                                  warned (10.2.12/10.2.13).
+// Either way the clock resets and the race goes back to pending so the
+// Starter can run the sequence again. Crossings are wiped; DNS marks from
+// check in are kept, since those boats are still not there.
+router.post('/:id/recall', (req, res) => {
+  const database = db.load();
+  const race = database.races[req.params.id];
+  if (!race) return res.status(404).json({ error: 'Race not found' });
+  if (race.status !== 'running') return res.status(400).json({ error: 'That race is not running.' });
+
+  const reason = req.body.reason === 'false-start' ? 'false-start' : 'no-fault';
+  const lane = req.body.lane != null ? String(req.body.lane) : null;
+  if (reason === 'false-start' && !lane) return res.status(400).json({ error: 'A false start needs the offending lane.' });
+
+  race.falseStartWarnings = race.falseStartWarnings || {};
+  race.recalls = race.recalls || [];
+
+  let disqualified = null;
+  if (reason === 'false-start') {
+    const entryId = race.lanes[lane];
+    if (!entryId) return res.status(400).json({ error: `No boat in lane ${lane}.` });
+    const priorWarnings = race.falseStartWarnings[lane] || 0;
+    race.falseStartWarnings[lane] = priorWarnings + 1;
+    if (priorWarnings >= 1) {
+      // Second false start by the same crew — DSQ is mandatory, not a choice.
+      database.raceResults[race.id] = database.raceResults[race.id] || {};
+      database.raceResults[race.id][entryId] = {
+        finishTimeMs: null, position: 0, status: 'DQ',
+        dqReason: 'Second false start (ICF 10.2.11)', crossedAt: Date.now(),
+      };
+      disqualified = lane;
+    }
+  }
+
+  race.recalls.push({ at: Date.now(), reason, lane, disqualified: !!disqualified });
+
+  // Reset for the new start
+  race.status = 'pending';
+  race.startTimeMs = null;
+  race.stopTimeMs = null;
+  database.blindCrossings[race.id] = [];
+  // Keep DNS/DQ marks, drop any timed results from the aborted start
+  const results = database.raceResults[race.id] || {};
+  Object.entries(results).forEach(([entryId, r]) => { if (r.status === 'OK') delete results[entryId]; });
+
+  db.save();
+  res.json({ ok: true, reason, lane, disqualified, warnings: race.falseStartWarnings, race: enrichRace(database, race) });
 });
 
 router.post('/:id/capture-crossing', (req, res) => {
@@ -196,6 +293,17 @@ router.post('/:id/assign-crossing', (req, res) => {
   database.raceResults[race.id] = database.raceResults[race.id] || {};
   const results = database.raceResults[race.id];
 
+  // A boat already marked DNS or DQ must not silently pick up a time —
+  // a second false start (ICF 10.2.11) or a no-show is a deliberate
+  // decision, so an accidental lane keystroke shouldn't undo it. Clear
+  // the existing result first if the mark really was wrong.
+  const existing = results[entryId];
+  if (existing && existing.status !== 'OK') {
+    return res.status(409).json({
+      error: `Lane ${lane} is marked ${existing.status}${existing.dqReason ? ` — ${existing.dqReason}` : ''}. Clear that result first if it was wrong.`,
+    });
+  }
+
   // If target lane already has a crossing assigned, unassign it first
   const alreadyTaken = list.find((c) => c.assignedLane === Number(lane) && c.position !== crossing.position);
   if (alreadyTaken) {
@@ -224,10 +332,9 @@ router.post('/:id/assign-crossing', (req, res) => {
 
 function autoAssignLastRemaining(database, race, list, results) {
   const realLanes = Object.entries(race.lanes).filter(([, eid]) => eid);
-  const unassignedLanes = realLanes.filter(([lane]) => {
-    const eid = race.lanes[lane];
-    return !(results[eid] && results[eid].status === 'OK');
-  });
+  // Skip any lane that already has a result of any kind — an OK time, or
+  // a DNS/DQ. Only genuinely unresolved lanes are candidates.
+  const unassignedLanes = realLanes.filter(([lane]) => !results[race.lanes[lane]]);
   const unassignedCrossings = list.filter((c) => c.assignedLane == null);
   if (unassignedLanes.length === 1 && unassignedCrossings.length === 1) {
     const [lane, entryId] = unassignedLanes[0];

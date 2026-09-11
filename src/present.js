@@ -77,7 +77,8 @@ function enrichRace(database, race) {
     };
   }
 
-  return { ...race, laneEntries, results, blindCrossings, weighInStatus, conditions: race.conditions || null };
+  return { ...race, laneEntries, results, blindCrossings, weighInStatus, conditions: race.conditions || null,
+    checkIn: race.checkIn || { lanes: {}, note: '' }, falseStartWarnings: race.falseStartWarnings || {}, recalls: race.recalls || [] };
 }
 
 // A race normally belongs to one event (race.eventId). Combined-start

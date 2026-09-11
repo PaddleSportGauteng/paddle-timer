@@ -66,7 +66,7 @@
     <a href="/race-sort.html">Race Sort</a>
     <a href="/draw.html">Draw</a>
     <a href="/program.html">Race Program</a>
-    <a href="/tower.html">Tower</a>
+    <a href="/start.html">Starter</a><a href="/tower.html">Tower</a>
     <a href="/weigh.html">Weigh</a>
     <a href="/results.html">Results</a>
     
@@ -155,7 +155,7 @@ let lastFinishedHash = '';
 function renderRunning(races){
   const hash = JSON.stringify(races.map(r => ({
     id:r.id, status:r.status, start:r.startTimeMs, stop:r.stopTimeMs,
-    cross:(r.blindCrossings||[]).map(c=>[c.position,c.assignedLane]),
+    cross:(r.blindCrossings||[]).map(c=>[c.position,c.assignedLane]), warn:r.falseStartWarnings,
     res:Object.entries(r.results||{}).map(([k,v])=>[k,v.status,v.position]),
     laps:Object.entries(r.laneEntries||{}).map(([l,i])=>i&&i.laps?i.laps.length:0)
   })));
@@ -247,6 +247,8 @@ function laneCardHtml(race){
       <button class="green" ${allDone?'':'disabled'} onclick="lockRace('${race.id}')">Lock</button>
     </div>
 
+    <div style="margin:-4px 0 10px"><button class="sm red" onclick="openRecall('${race.id}')" title="Race is being re-run from the start line">Recall / false start</button></div>
+
     ${crossings.length?`
     <table class="assign-table">
       <tr><th>POS</th><th>TIME</th><th>LANE</th><th>NAME</th><th></th></tr>
@@ -327,7 +329,7 @@ function massCardHtml(race){
 
 // ── Upcoming / Finished ───────────────────────────────────────────
 function renderUpcoming(races){
-  const hash = JSON.stringify(races.map(r=>[r.id,r.raceNumber,r.scheduledLabel]));
+  const hash = JSON.stringify(races.map(r=>[r.id,r.raceNumber,r.scheduledLabel,r.checkIn,r.falseStartWarnings]));
   if(hash === lastUpcomingHash) return;
   lastUpcomingHash = hash;
   const el=document.getElementById('upcomingSection');
@@ -339,6 +341,7 @@ function renderUpcoming(races){
         <div class="u-sub">${lanesPreview(r)}</div>
       </div>
       <div style="display:flex;align-items:center;gap:6px">
+        ${checkInPill(r)}
         ${r.scheduledLabel?`<span class="u-time">${r.scheduledLabel}</span>`:''}
         <button class="sm" onclick="reorderRace('${r.id}','up')" ${i===0?'disabled':''} title="Move up">Up</button>
         <button class="sm" onclick="reorderRace('${r.id}','down')" ${i===races.length-1?'disabled':''} title="Move down">Down</button>
@@ -370,6 +373,43 @@ async function reorderRace(id, direction){
   });
   if(!res.ok){ const d=await res.json(); alert(d.error); return; }
   await refresh();
+}
+
+function checkInPill(r){
+  const st = (r.checkIn && r.checkIn.lanes) || {};
+  const lanes = Object.entries(r.laneEntries||{}).filter(([,i]) => i && !i.scratched);
+  let present=0, absent=0;
+  lanes.forEach(([lane]) => { if(st[lane]==='present') present++; else if(st[lane]==='absent') absent++; });
+  if(!present && !absent) return '<span style="font-size:11px;color:var(--gray)">not checked in</span>';
+  return `<span style="font-size:11px;color:var(--green);font-weight:700">${present} here${absent?`, ${absent} out`:''}</span>`;
+}
+
+function openRecall(raceId){
+  const r = racesById[raceId]; if(!r) return;
+  const lanes = Object.entries(r.laneEntries||{}).filter(([,i]) => i && !i.scratched).sort((a,b)=>Number(a[0])-Number(b[0]));
+  const opts = lanes.map(([lane, info]) => {
+    const w = (r.falseStartWarnings||{})[lane] || 0;
+    return `<button class="red" style="width:100%;text-align:left;margin-bottom:6px" onclick="doRecall('${raceId}','false-start',${lane})">False start — L${lane} ${(info.names||[])[0]||''}${w?` (already warned — this DSQs them)`:''}</button>`;
+  }).join('');
+  const o = document.createElement('div');
+  o.style.cssText = 'position:fixed;inset:0;background:rgba(11,37,64,.55);display:flex;align-items:center;justify-content:center;z-index:200;padding:16px';
+  o.innerHTML = `<div style="background:#fff;border-radius:12px;padding:20px;max-width:460px;width:100%">
+    <h2 style="margin:0 0 4px">Recall the race</h2>
+    <p style="font-size:12px;color:var(--gray);margin:0 0 14px">Clock resets and the race goes back to the start line. A false start warns that boat (ICF 10.2.10); a second warning disqualifies it (ICF 10.2.11).</p>
+    ${opts}
+    <button style="width:100%;margin:10px 0 6px" onclick="doRecall('${raceId}','no-fault',null)">Recall, nobody at fault (ICF 10.2.12)</button>
+    <button style="width:100%" onclick="this.closest('div[style*=fixed]').remove()">Cancel</button>
+  </div>`;
+  document.body.appendChild(o);
+}
+
+async function doRecall(raceId, reason, lane){
+  document.querySelectorAll('div[style*=fixed]').forEach(x => { if(x.style.zIndex==='200') x.remove(); });
+  const res = await fetch(`/api/races/${raceId}/recall`, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({reason, lane})});
+  const d = await res.json();
+  if(!res.ok){ alert(d.error); return; }
+  if(d.disqualified) alert(`Lane ${d.disqualified} disqualified — second false start (ICF 10.2.11).`);
+  lastRunningHash=''; lastUpcomingHash=''; await refresh(true);
 }
 
 async function startRace(id){
